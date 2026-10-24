@@ -136,7 +136,7 @@ export default function FmcgLanding() {
     }
   }, [selectedNodeId, activeEdges, nodesById])
 
-  // Domain selection handler - filter canvas or navigate
+  // Domain selection handler - navigate directly to domain copilot & workflow page (like Finance project)
   const handleDomainSelect = (dKey) => {
     if (dKey === 'all') {
       setSelectedDomain('all')
@@ -144,9 +144,10 @@ export default function FmcgLanding() {
       setActiveFlowIdx(-1)
       return
     }
-    setSelectedDomain(dKey)
-    setSelectedNodeId(null)
-    setActiveFlowIdx(-1)
+    const targetSlug = DOMAIN_SLUGS[dKey]
+    if (targetSlug) {
+      nav(`/fmcg/${targetSlug}`)
+    }
   }
 
   // Open full domain workflow page
