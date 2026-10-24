@@ -30,9 +30,6 @@ import {
   DISPLAY_ORDER,
   DOMAIN_SLUGS,
   SLUG_TO_DOM,
-  NODES,
-  EDGES,
-  FLOWS,
 } from '../lib/ontologyData'
 
 export default function FmcgLanding() {
@@ -53,37 +50,28 @@ export default function FmcgLanding() {
   const { data, loading, error, reload } = useAsync(() => ontology.overviewGraph(), [])
   const progress = data?.progress || {}
 
-  // Dynamic nodes from backend with FMCG canonical dataset fallback
+  // Dynamic nodes ONLY from backend API (strictly no hardcoded fallback)
   const activeNodes = useMemo(() => {
-    if (Array.isArray(data?.nodes) && data.nodes.length > 0) {
-      const hasFmcg = data.nodes.some((n) => DOMMETA[n.d || n.group_key])
-      if (hasFmcg) return data.nodes
-    }
-    return NODES
+    return Array.isArray(data?.nodes) ? data.nodes : []
   }, [data])
 
-  // Dynamic edges from backend with FMCG canonical dataset fallback
+  // Dynamic edges ONLY from backend API (strictly no hardcoded fallback)
   const activeEdges = useMemo(() => {
-    if (Array.isArray(data?.edges) && data.edges.length > 0) {
-      return data.edges
-    }
-    return EDGES
+    return Array.isArray(data?.edges) ? data.edges : []
   }, [data])
 
-  // Dynamic flows with FMCG canonical dataset fallback
+  // Dynamic flows ONLY from backend API (strictly no hardcoded fallback)
   const activeFlows = useMemo(() => {
-    if (Array.isArray(data?.flows) && data.flows.length > 0) {
-      return data.flows.map((f) => ({
-        ...f,
-        t: f.t || f.title || f.key,
-        title: f.title || f.t || f.key,
-        ids: f.ids || f.steps || [],
-        steps: f.steps || f.ids || [],
-        x: f.x || f.narrative || '',
-        narrative: f.narrative || f.x || '',
-      }))
-    }
-    return FLOWS
+    const list = Array.isArray(data?.flows) ? data.flows : []
+    return list.map((f) => ({
+      ...f,
+      t: f.t || f.title || f.key,
+      title: f.title || f.t || f.key,
+      ids: f.ids || f.steps || [],
+      steps: f.steps || f.ids || [],
+      x: f.x || f.narrative || '',
+      narrative: f.narrative || f.x || '',
+    }))
   }, [data])
 
   // Map API domain objects by code
@@ -308,20 +296,50 @@ export default function FmcgLanding() {
       <div className="flex flex-col lg:flex-row gap-4 items-stretch">
         {/* Left: SVG Canvas / Loader / Error */}
         <div className="flex-1 min-w-0 rounded-2xl border border-line bg-surface overflow-hidden relative min-h-[550px] h-[74vh] flex flex-col justify-center items-center shadow-card">
-          {loading && activeNodes.length === 0 && (
+          {loading && (
             <div className="flex flex-col items-center justify-center gap-3 p-8">
               <div className="relative flex items-center justify-center">
                 <div className="h-14 w-14 rounded-full border-4 border-brand/20 border-t-brand animate-spin" />
                 <Network className="absolute text-brand animate-pulse" size={20} />
               </div>
               <div className="text-center mt-2">
-                <p className="text-sm font-semibold text-ink">Loading FMCG Knowledge Graph...</p>
-                <p className="text-xs text-muted mt-1">Conforming entities, relationships and value-chain domains</p>
+                <p className="text-sm font-semibold text-ink">Fetching FMCG Knowledge Graph...</p>
+                <p className="text-xs text-muted mt-1">ontology nodes, edges and governance definitions</p>
               </div>
             </div>
           )}
 
-          {activeNodes.length > 0 && (
+          {!loading && error && (
+            <div className="flex flex-col items-center justify-center gap-3 p-8 max-w-lg text-center">
+              <div className="h-12 w-12 rounded-2xl bg-bad/10 text-bad flex items-center justify-center mb-1">
+                <AlertTriangle size={24} />
+              </div>
+              <h3 className="text-base font-bold text-ink">Failed to Load Knowledge Graph</h3>
+              <p className="text-xs text-muted leading-relaxed">
+                {error?.message || String(error) || 'Could not connect to the backend database server.'}
+              </p>
+              <div className="mt-2 flex items-center gap-3">
+                <button
+                  onClick={reload}
+                  className="btn-primary btn-sm flex items-center gap-1.5 px-4 py-2 text-xs font-semibold shadow-sm"
+                >
+                  <RotateCcw size={13} />
+                  <span>Retry Connection</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && activeNodes.length === 0 && (
+            <div className="flex flex-col items-center justify-center gap-2 p-8 text-center text-muted">
+              <Database size={28} className="text-muted/60 mb-1" />
+              <p className="text-sm font-semibold text-ink">No Graph Data Found</p>
+              <p className="text-xs max-w-md">The backend did not return any ontology nodes or edges from the database.</p>
+              <button onClick={reload} className="mt-2 btn-ghost btn-sm">Refresh</button>
+            </div>
+          )}
+
+          {!loading && !error && activeNodes.length > 0 && (
             <OntologyGraphCanvas
               ref={canvasRef}
               selectedNodeId={selectedNodeId}
