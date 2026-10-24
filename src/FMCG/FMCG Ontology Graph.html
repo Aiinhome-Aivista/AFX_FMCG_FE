@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FMCG Ontology Graph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F4F7FC; --card:#FFFFFF; --text:#122991; --muted:#4A5878; --border:#D8DFEA;
+  --accent:#5A8AC3; --grad-a:#122991; --grad-b:#510EA9; --chip-bg:#EDF2FA; --code-bg:#EFF3FA;
+  --shadow:0 1px 3px rgba(18,41,145,.08); --edge:#8CA0C0;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101828; --card:#182338; --text:#AAB6CC; --muted:#7E8CA6; --border:#2A3548;
+    --accent:#6C8FEF; --grad-a:#6C8FEF; --grad-b:#B084F0; --chip-bg:#1F2C45; --code-bg:#1E2A42;
+    --shadow:0 1px 3px rgba(0,0,0,.35); --edge:#4A5C7E;
+  }
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font:400 14px/1.5 'Inter',system-ui,Helvetica,Arial,sans-serif;margin:0;padding:16px 20px 40px}
+h1,h2,h3{font-family:'Barlow','Inter',sans-serif;font-weight:700;letter-spacing:-0.02em;margin:0;line-height:1.2}
+a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+.top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+h1{font-size:28px;background:linear-gradient(90deg,var(--grad-a),var(--grad-b));-webkit-background-clip:text;background-clip:text;color:transparent;padding-bottom:2px}
+.top .links{font-size:12.5px}
+p.lede{font-size:12.5px;color:var(--muted);max-width:1100px;margin:4px 0 10px}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips button{font:500 11.5px 'Inter';padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:5px}
+.chips button .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.chips button:hover{border-color:var(--accent);color:var(--accent)}
+.chips button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chips button.on .dot{outline:1.5px solid #fff}
+.rightctl{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.rightctl input[type=search]{padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font:400 12.5px 'Inter';width:210px;outline:none}
+.rightctl input[type=search]:focus{border-color:var(--accent)}
+.rightctl label{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:4px;cursor:pointer}
+.zoomctl{display:flex;gap:5px}
+.zoomctl button{font:600 14px 'Inter';width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;line-height:1}
+.zoomctl button.wide{width:auto;padding:0 10px;font-size:11.5px;font-weight:500}
+.zoomctl button:hover{border-color:var(--accent);color:var(--accent)}
+.main{display:flex;gap:14px;align-items:stretch}
+.vpwrap{flex:1;min-width:0}
+.mapviewport{border:1px solid var(--border);border-radius:12px;background:var(--card);overflow:hidden;height:74vh;min-height:480px;cursor:grab;position:relative;box-shadow:var(--shadow)}
+.mapviewport.panning{cursor:grabbing}
+.mapviewport .inner{transform-origin:0 0;width:1900px}
+.panel{width:350px;flex:0 0 350px;border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:var(--shadow);padding:16px 18px;height:74vh;min-height:480px;overflow-y:auto}
+.panel .ph{font-size:12.5px;color:var(--muted)}
+.panel h2{font-size:18px;margin-bottom:2px}
+.panel .dom{font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:7px;background:var(--chip-bg);color:var(--muted);margin:4px 0 8px}
+.panel .dom .dot{width:8px;height:8px;border-radius:50%}
+.panel .def{font-size:12.5px;color:var(--text);margin-bottom:10px}
+.panel h3{font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 5px}
+.attrs{display:flex;flex-wrap:wrap;gap:4px}
+.attrs span{font:500 10.5px ui-monospace,Menlo,monospace;background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:2px 7px;color:var(--text)}
+.joins a{display:inline-block;font-size:12px;font-weight:500;margin:2px 8px 2px 0;cursor:pointer}
+.reledges{font-size:12px;color:var(--muted)}
+.reledges li{margin:3px 0}
+.reledges b{color:var(--text);font-weight:600}
+.ev{font-size:11.5px;color:var(--muted);font-style:italic}
+.flows{margin-top:14px;border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:var(--shadow)}
+.flows summary{cursor:pointer;padding:12px 18px;font-family:'Barlow';font-weight:700;font-size:15px;color:var(--accent);letter-spacing:-0.02em;list-style:none;display:flex;gap:8px;align-items:center}
+.flows summary::-webkit-details-marker{display:none}
+.flows summary::before{content:"▸";font-size:12px;color:var(--muted);transition:transform .15s}
+.flows[open] summary::before{transform:rotate(90deg)}
+.flowgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;padding:4px 18px 16px}
+.flow{border:1px solid var(--border);border-radius:10px;padding:10px 13px;background:var(--bg);cursor:pointer}
+.flow:hover{border-color:var(--accent)}
+.flow.on{border-color:var(--accent);outline:1px solid var(--accent)}
+.flow b{display:block;font-size:12.5px;margin-bottom:3px;color:var(--accent)}
+.flow span{font:400 11px ui-monospace,Menlo,monospace;color:var(--muted);word-break:break-word}
+/* svg */
+.gnode{cursor:pointer}
+.gnode rect{fill:var(--card);stroke-width:1.6;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.12))}
+.gnode text{font:600 12px 'Inter',sans-serif;fill:var(--text);pointer-events:none}
+.gnode .sub{font:400 9.5px 'Inter';fill:var(--muted)}
+.gnode.sel rect{stroke-width:3.2}
+.gnode.found rect{stroke-dasharray:5 3;stroke-width:2.6}
+.gnode.dimN{opacity:.10;pointer-events:none}
+.gnode.nb{opacity:.38}
+.gedge{stroke:var(--edge);stroke-width:1.15;fill:none;opacity:.5}
+.gedge.hl{stroke:var(--accent);stroke-width:2;opacity:1}
+.gedge.dimE{opacity:.05}
+.elab{font:500 10px 'Inter';fill:var(--accent);paint-order:stroke;stroke:var(--card);stroke-width:3px;display:none}
+.elab.show{display:block}
+.domlab{font:700 15px 'Barlow','Inter';letter-spacing:-0.02em;opacity:.85}
+@media(max-width:1000px){.main{flex-direction:column}.panel{width:100%;flex:auto;height:auto;max-height:50vh}}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>FMCG Ontology Graph</h1>
+  <span class="links"><a href="FMCG ONTOLOGY.md">canon (ONTOLOGY.md)</a> · <a href="FMCG Industry Ontology.html">full reference</a> · <a href="FMCG Ontology Map.html">value-chain map</a></span>
+</div>
+<p class="lede">Every entity class and typed relationship from FMCG ONTOLOGY.md v1.0, mined from the 3,609-document engagement corpus. Filter by domain to isolate a sub-function's slice of the overarching ontology (its cross-domain neighbours stay faintly visible so the seams remain honest). Click any entity for its definition, attributes, relationships and evidence; click a flow below to trace an end-to-end loop. Scroll to zoom, drag to pan.</p>
+
+<div class="ctl">
+  <div class="chips" id="chips"></div>
+  <div class="rightctl">
+    <input type="search" id="q" placeholder="Find entity or attribute…">
+    <label><input type="checkbox" id="nb" checked> show cross-domain neighbours</label>
+    <div class="zoomctl">
+      <button id="zin" title="Zoom in">＋</button><button id="zout" title="Zoom out">−</button><button id="zfit" class="wide">Reset</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="vpwrap"><div class="mapviewport" id="vp"><div class="inner" id="inner"><svg id="g" xmlns="http://www.w3.org/2000/svg"></svg></div></div></div>
+  <div class="panel" id="panel">
+    <p class="ph">Click an entity on the graph to see its definition, attributes (verbatim from the corpus where possible), relationships and evidence.<br><br>The five master-data dimensions sit at the centre — the conformed spine every domain keys on. Domain clusters ring around it; arrows are typed relationships evidenced in the engagement corpus.</p>
+    <div id="pcontent" style="display:none">
+      <h2 id="pname"></h2>
+      <div class="dom" id="pdom"><span class="dot"></span><span id="pdomname"></span></div>
+      <div class="def" id="pdef"></div>
+      <h3>Attributes</h3><div class="attrs" id="pattrs"></div>
+      <h3>Relationships</h3><ul class="reledges" id="prels"></ul>
+      <h3>Joins</h3><div class="joins" id="pjoins"></div>
+      <h3>Evidence</h3><div class="ev" id="pev"></div>
+    </div>
+  </div>
+</div>
+
+<details class="flows" open>
+<summary>End-to-end flows (§3 of the canon) — click to trace on the graph</summary>
+<div class="flowgrid" id="flowgrid"></div>
+</details>
+
+<script>
+/* ============ DATA (from FMCG ONTOLOGY.md v1.0) ============ */
+var DOMMETA={
+ spine:{n:"Master-data spine",c:"#5A8AC3"},
+ rtm:{n:"01 Sales & Distribution (RtM)",c:"#2E6FCA"},
+ trade:{n:"02 Trade, Promotions & RGM",c:"#8A4FD0"},
+ marketing:{n:"03 Marketing & Consumer",c:"#C05A9E"},
+ supply:{n:"04 Supply Chain & Procurement",c:"#2FA096"},
+ mfg:{n:"05 Manufacturing & Quality",c:"#A0784A"},
+ npd:{n:"06 Innovation & NPD",c:"#4EA36A"},
+ finance:{n:"07 Finance & EPM",c:"#6E7FBF"},
+ ecom:{n:"08 E-commerce, D2C & Strategy",c:"#D08A3E"},
+ data:{n:"09 Data & Analytics Foundation",c:"#64748B"}
+};
+var N=[
+{id:"product",n:"Product / SKU",d:"spine",def:"The sellable item and its roll-ups. Two evidenced hierarchy patterns: tobacco (Category→Brand Family→Variant→Product→Trade SKU→Factory SKU) and household (Brand→Price Band→Sub-brand→Form→Size→Flavor; TPM roll-up Division→Category→Brand→MPG→GTIN/UPC).",
+ a:["skuId","ean/upc/gtin","packType","packSize","uomConversions","priceSegment","isVolumeDriveProduct","isSellable/isReturnable","skuStatus","newProductFlag","statCaseFactor","abcCode","materialClass (ZFIN/ZSEM/ZRAW/ZPAC)","bomId","mpg","brandFamily/brandVariant"],
+ ev:"tobacco major Data Dictionary V4.0 · trade-transformation master-data spec v1.0 · HPC major group data warehouse Master Data List · TPM-program requirements"},
+{id:"outlet",n:"CustomerOutlet",d:"spine",def:"The demand-side counterparty at every level. Layer model: Outlet → Delivery Point → Legal Customer → Retail Account → Supplier (multi-layer). Finance ladder: Class of Trade → Parent → Planning Account → Sold-to → Ship-to.",
+ a:["customerCode","tradeChannelCode (~40 codes)","outletType/subType","ownershipType (COCO/DODO/INDEP)","volumeClass (1–9)","shopperChannel","creditPeriod/creditLimit","geoCoordinates","weightOfOutlet","oosRate","facingShare","suggestedAssortment","creditScore","churnPropensity","footfall","planningAccount","soldTo/shipTo"],
+ ev:"beverage bottler Outlet Data Solution · tobacco major Data Dictionary · HPC major Customer Profitability reference · the TPM program account model"},
+{id:"geo",n:"GeographyNode / Territory",d:"spine",def:"Commercial geography — each field-force type may carry its own territory hierarchy over the same outlets. Chain: Outlet → Route/Beat → Territory → Area → Region → End Market → Cluster → Global Region; supply variant Sales Area ↔ Depot with lead-time maps.",
+ a:["nodeId","level","parentId","ffType","urbanRuralFlag","salesArea","depot","leadTimeMap"],
+ ev:"TMD KPIs dimension sheets · trade-transformation master-data spec · tobacco major's driver-management forecasting model workshop"},
+{id:"time",n:"TimePeriod",d:"spine",def:"Dual calendar/fiscal date spine plus the FMCG-specific cycle/campaign grain. Conventions: MTD/QTD/YTD/CTD + prior-period comparatives; performance period vs posting period; as-is vs as-was reporting.",
+ a:["calendarDate","fiscalPeriod","adjustmentPeriod (P13)","cycle/campaign","performancePeriod","postingPeriod","asWasFlag"],
+ ev:"Indian FMCG major MT date dimension · tobacco major CC DATE_DIM · HPC major customer-profitability reference · CPG Template principles"},
+{id:"org",n:"OrganizationNode",d:"spine",def:"Company → division/BU → function → cost/profit center → role → employee. Roles are first-class: KPI dictionaries assign each metric an owning role dashboard with RAG thresholds (line of sight).",
+ a:["nodeId","nodeType","parentId","roleName","kpiOwnership[]","ragThresholds","costCenter","profitCenter"],
+ ev:"tobacco major Outlet Dashboard specs · HPC major dashboard landscapes · bakery group SCM org charts"},
+/* RTM */
+{id:"distributor",n:"Distributor / Wholesaler",d:"rtm",def:"The indirect-RtM intermediary carrying the three sales flows: primary (manufacturer→distributor, sell-in), secondary (distributor→outlet, sell-out), tertiary (outlet→consumer).",
+ a:["distributorId","type (WS/distributor, multi-layer)","marginStructure","warehouses[]","servedOutlets[]","dcRdcPlantMapping","creditLimit","receivables","pipelineStock","sellOutFeedStatus"],
+ ev:"food major TM&D analytics + a distributor-reporting platform RFP · bakery group / diversified manufacturer secondary-sales model · tobacco major DSS workstream"},
+{id:"rep",n:"FieldForceRep",d:"rtm",def:"The field seller/merchandiser. Call economics derived per rep: productive-call %, average vs break-even drop size, plan/route/time-standard adherence.",
+ a:["repId","ffType (promptSales/preSales/TMR/merchandiser/telesales)","supervisor","depot","skillGrade","handheldId","incentivePlanId","callRate","costPerCall","avgDropSize","breakEvenDropSize"],
+ ev:"field performance-management model · TMD KPIs · salesforce-incentive deck"},
+{id:"coverage",n:"CoveragePlan (TCP / TCR)",d:"rtm",def:"Decides who visits which outlet how often. TCP sets universe/FF-type/frequency; TCR is the periodic capacity-vs-demand review consolidating workload from coverage, assortment, media and incentive plans with scenario levers.",
+ a:["outletUniverse","coveredFlag","ffTypeAssignment","callFrequency","callType","workloadMinutes","capacityMinutes","scenarioLevers","approvalBody"],
+ ev:"SAO Toolkit · TCR Final process flow · trade-planning analysis deck"},
+{id:"assortment",n:"AssortmentPlan (SAO / SAT)",d:"rtm",def:"Check→Plan→Act assortment object: core range / must-stock lists by outlet cluster, target distribution by SKU, rationalization; SAT is the outlet-level target whose achievement is SAT compliance %.",
+ a:["outletCluster","skuCapacityByVolumeClass","coreRange[]","mustStockList[]","targetDistributionBySku","delistings[]","cycleInstructionId","satCompliancePct"],
+ ev:"SAO Toolkit (+ SKU Distribution Optimiser & Assortment Generator)"},
+{id:"call",n:"CallVisit",d:"rtm",def:"The atomic execution event: activities executing plans, surveys, stock count, audit, order capture — with GPS stamp and productive/partial/unproductive outcome.",
+ a:["callId","plannedFlag/adHoc","callType","activities[]","surveysTaken[]","stockCount[]","orderCaptured","callDuration","gpsStamp","outcome"],
+ ev:"trade-execution scope document · Execution@Outlet user journey · tobacco major Data Dictionary (Call, Survey suite)"},
+{id:"audit",n:"RetailAudit",d:"rtm",def:"Per product × outlet × date: isDistributed, isAvailable (→ OOS derived), facings, POSM inventory, planogram compliance, observed RSP (→ price-compliance index). External twin: Nielsen retail audit.",
+ a:["isDistributed","isAvailable","numFacings","posmInventory[]","planogramComplianceFlag","photoAuditRef","rspObserved","auditDate"],
+ ev:"tobacco major Data Dictionary Retail Audit entity · TMD KPI definitions · Indian FMCG major MT OOS/SOS audit facts"},
+{id:"soq",n:"SuggestedOrder (SOQ)",d:"rtm",def:"Recommendation object: baseline forecast + collaborative-filtering order enhancement → suggested quantity; tracked via acceptance, execution rate, serviceability (~85% baseline accuracy reported).",
+ a:["baselineForecast","orderEnhancement","suggestedQty","acceptanceFlag","executionRate","serviceability","forecastAccuracy"],
+ ev:"HPC major S&M analytics deck (AOP/ASOP) · field performance-management model"},
+{id:"tci",n:"TradeInvestment (TCI) / IncentiveScheme (CIS)",d:"rtm",def:"The customer-facing money: front margin (customer's earn) + back-margin buckets; SONA and CROI derived. CIS: outlet-level incentive schemes with PfP/PfC buckets, enrolment, reward ledger, disputes.",
+ a:["frontMargin","backMarginBuckets[]","perMille","pctOfCptoNetOfTax","sona","croiIndex","schemeId","buckets (PfP/PfC-OOS/SAT/RSP)","enrolledOutlets[]","rewardLedger","payoutPct"],
+ ev:"legacy trade-platform customer scorecard · trade-terms policy manual · CIS PfP/PfC KPI sub-catalog · B2B Engagement Platform requirements"},
+/* TRADE */
+{id:"accountplan",n:"AccountPlan",d:"trade",def:"Keyed planning account × brand × year; parent of promotions. Carries volume method (demand-planning baseline / % historic shipments / manual), loaded targets, plan rates, shipment-drop profiles and the approval state model.",
+ a:["volumeMethod (B&I Gold/Silver/TVP)","tfaTargets (growth%, grossSales$, tradeRate%, slotting$)","planRates (sraRate, cashDiscountRate)","shipmentDropProfile","stateModel"],
+ ev:"HPC-major TPM program Account Plan/Checkbook/SVP design · consumer-products manufacturer TPM manual"},
+{id:"promotion",n:"Promotion",d:"trade",def:"The promo event: status lifecycle Draft→Submitted→Planned→Committed→Closed with re-approval on budget breach; tactics; uplift% sourced from lift tables/TPO/manual; grain header→MPG→UPC-week; dead-net-price guardrail.",
+ a:["promotionId","status","performanceDates","shipmentDates","promotionType","tactics[] (TPR/display/feature/slotting/overlay)","pctAcv","upliftPct","scenarioFlag","grain","deadNetGuardrail"],
+ ev:"consumer-products manufacturer + the TPM program promotion-planning requirements · beauty major EMEA RFP"},
+{id:"deal",n:"Deal",d:"trade",def:"Settlement-facing child of a promotion: variable (off-invoice, bill-back, scan) or fixed (feature, display, slotting, overlay); cost = volume × rate × redemption% or lump sum; identifies the fund/GL it spends against.",
+ a:["dealType (variable/fixed)","subType","level (header/MPG/SKU)","estimatedCost","actualCost","redemptionPct","fundId","glMapping"],
+ ev:"the TPM program Deals & Settlements design · consumer-products manufacturer deductions requirements"},
+{id:"fund",n:"TradeFund / Checkbook",d:"trade",def:"Budget container mapped to GL codes with the lifecycle Budget → Planned → Committed → Expended → Free Balance (= budget − committed − expended); live accruals convert liability to expense on shipment; kept open ~1yr post plan-year.",
+ a:["fundId","fundType (fixed/accrual)","parentChildWithReserve","spendCategories[]→glAccounts","freeBalance","liveAccrualForecast","closingWindow"],
+ ev:"consumer-products manufacturer Fund Management requirements · the TPM program checkbook design"},
+{id:"deduction",n:"Deduction",d:"trade",def:"AR event — customer short-pays an invoice; matched to deals via resolutions (deal/no-deal), performance date must fall inside the deal window, reason code ties to GL; small deductions auto write-off; repay link for invalid ones.",
+ a:["deductionCode","amount","status","reasonCode→glAccount","resolutions[]","performanceDate","autoWriteOffThreshold","repayLink","erpRoundTrip"],
+ ev:"consumer-products manufacturer Deductions/Claims/Settlement requirements · TPM-program as-built"},
+{id:"claim",n:"Claim / CheckRequest",d:"trade",def:"Customer- or broker-submitted settlement with deal and no-deal payments; remaining amount = request − deal − no-deal; SAP check/credit-memo round-trip; post-audit and pre-pay variants.",
+ a:["claimId","claimType","payments[] (deal/noDeal)","remainingAmount","sapCheckNo","creditMemoNo","postAuditFlag","prePayFlag"],
+ ev:"consumer-products manufacturer + the TPM program settlement requirements"},
+{id:"pricelist",n:"PriceList / ADL",d:"trade",def:"Single list price + COGS + dead-net floors per country/division; ADL = account × product intersection carrying retail price, distribution flags with effective dates and store counts per GTIN (drives %ACV).",
+ a:["listPrice","cogs","deadNetPriceEdla","deadNetPriceScan","adl: retailPrice","inOutDistributionFlags","storeCountPerGtin","caseConversionFactors"],
+ ev:"TPM-program requirements · beauty major price-group spec"},
+{id:"lift",n:"LiftModel / TPO",d:"trade",def:"The econometric object: log-log mixed-effects demand model decomposing sales into base / trade promo / consumer promo / competition / halo / cannibalization; true lift & true ROI; what-if simulators and scheme recommendation engines.",
+ a:["modelForm (log-log mixed effects)","decomposition[]","trueLift","trueRoi","whatIfSimulator","schemeRecommender (genetic algo, Lagrange slabs)","dataRequirements (2yr invoice-level sales)"],
+ ev:"global brewer TPO approach · beverage bottler Trade Analytics · smokeless-tobacco company workshop"},
+{id:"g2n",n:"GrossToNetWaterfall",d:"trade",def:"The revenue-side P&L contract between the commercial domains and finance. Three verbatim instances: beer (GT → duty → conditional/unconditional discounts → NT), HPC (GS → SRA → trade → realized → net → GP → marketing profit), tobacco (CPTO net of tax → TCI → supplier share).",
+ a:["waterfallInstance (beer/HPC/tobacco)","lineItems[]","conditionalVsUnconditional","sraSubtotal","totalTrade","realizedSales","marketingProfit","cptoNetOfTax","tciBlock"],
+ ev:"High Level PnL Structure xlsx · HPC major Customer Profitability reference · tobacco major trade-terms policy manual"},
+/* MARKETING */
+{id:"consumer",n:"Consumer / LoyaltyMember",d:"marketing",def:"The end consumer with identity, demographics, contactability, tier and points; scored with engagement, share of wallet, churn propensity, NPS, LTV; ~68-column physical schema evidenced.",
+ a:["customerId","loyaltyId","demographics","contactabilityFlags","tier","pointsBalance","registrationChannel","engagementScore","shareOfWallet","churnPropensity","nps","ltv","rfmProfile"],
+ ev:"Shopperinsight customer attributes · CVM Data Dictionary · persona decks"},
+{id:"segment",n:"Segment / Persona",d:"marketing",def:"Segment: typed (value/behaviour/attitude) with parameters, centroids and archived assignments. Persona: narrative instance on micro-segments with propensity-score matching, evolution stages and functional/emotional needs; white-space method exposes underserved segments.",
+ a:["segmentId","segmentType","parameters","centroid","archivedAssignments[]","referencePersona","propensityScoreMatch","evolutionStage","functionalNeed","emotionalNeed"],
+ ev:"CVM data model · Persona Development Approach · a vaping product line lifecycle · brewer beer personas"},
+{id:"campaign",n:"Campaign",d:"marketing",def:"Hierarchy Marketing Plan → Program → Stage → Campaign → Wave → Offer → Communication → Response; measured TG-vs-CG with incremental response/spend, cost and ROI; contact-fatigue rules.",
+ a:["objective","targetGroup/controlGroup/referenceGroup","channel","sourceCode","wave","offer","incrementalResponse","incrementalSpend","campaignCost","campaignRoi","contactFatigueRules"],
+ ev:"Shopper Insights user guide · CVM metrics workbook"},
+{id:"media",n:"Touchpoint / MediaSpend",d:"marketing",def:"Channel taxonomy (paid/owned/earned × ATL/BTL/TTL × digital × physical) and the Nielsen-style spend record: market → advertiser → category → product → media → network → outlet × period, with companion TRP data.",
+ a:["channelClass (paid/owned/earned)","atlBtlTtl","mediaType","network","outlet (title/station)","spend","trp"],
+ ev:"oral-care major media-spend & TRP samples · Traditional ATL/BTL deck · MPM KPI catalogue"},
+{id:"cdp",n:"CDPProfile / IdentityKey",d:"marketing",def:"Identity resolution: hard keys (phone, email), private keys (cookie, device), soft keys (name, address, IP), unmatched pool re-matched later; pipeline sources → match → unified store → segmentation → activation/syndication. CDP ≠ DMP ≠ CRM distinctions evidenced.",
+ a:["hardKeys","privateKeys","softKeys","unmatchedPool","unifiedProfileStore","activationSyndication (DMP/DSP/CRM)"],
+ ev:"Indian FMCG major CDP Technical Solution Design (AWS) · CDP assessment framework · a web-personalization CDP data model"},
+{id:"research",n:"MarketResearch / SocialSignal",d:"marketing",def:"MR study objects (U&A, concept test, conjoint/MaxDiff/TURF, NPS, brand equity) across the product lifecycle; social listening signals (mentions, sentiment, influencers, crisis alerts) as command-center consumables.",
+ a:["studyType","mode (online/phone/F2F)","lifecycleStage","panelSource (Nielsen/IRI/Kantar)","mentions","sentiment","influencers[]","crisisAlerts"],
+ ev:"Market Research Overview · a social-listening platform · Rapid Insight hypothesis library"},
+/* SUPPLY */
+{id:"forecast",n:"DemandForecast",d:"supply",def:"The demand signal: FCSTRPT schema (demand unit/group/location, base vs non-base history & forecast), decomposition into base + influenced demand, driver models (WAS × seasonality × elasticity × calendar), 27-method library + ML, abnormal-demand log.",
+ a:["demandUnit (SKU)","demandGroup","location","baseHist/nonBaseHist","baseFcst/nonBaseFcst","fcstDate","modelType","decomposition","methodLibrary (27 + ML)","abnormalDemandLog","consensusVariance"],
+ ev:"HPC major FCSTRPT export · tobacco major Demand Forecast Workshop (driver-management model) · Anaplan connected planning"},
+{id:"sandop",n:"S&OP Plan",d:"supply",def:"The 18-month rolling integrated plan run as a monthly 5-meeting cycle with named owners: Product Review → Demand Review → Supply & Material Review → Pre-S&OP → Executive S&OP; extends financially to gross profit and EBITDA with scenarios.",
+ a:["cycleMonth","meetings[] (owner, participants)","gapClosingActions[]","unconstrainedDemand","constrainedDemand","scenarioSet","financialExtension"],
+ ev:"bakery group S&OP IT Roadmap (5 meetings, owners, weekly calendar) · consultancy/Anaplan variant"},
+{id:"supplyplan",n:"SupplyPlan / RCCP",d:"supply",def:"Production & material response: requirement analyses, make-vs-subcontract, allocation & sourcing plans, constrained flags; RCCP maps SKU families to factory lines with speeds and scenario levers (speed/OEE, shift pattern, add line).",
+ a:["productionRequirement","rmRequirement","makeVsSubcontract","allocationPlan","sourcingPlan","constrainedFlag","skuFamily→factoryLine","lineSpeed","utilizationPct","scenarioLevers"],
+ ev:"Anaplan SC planning deck · bakery group planning org"},
+{id:"inventory",n:"InventoryPosition / Policy",d:"supply",def:"Position per SKU × location (net stock, open orders, inbound STOs, days of supply) and MEIO-optimized policy: segmentation → service targets → optimization minimizing carrying + lost-sales + replenishment cost; slow-moving (>18d) and remnant (>90d) flags.",
+ a:["totalStock","netStockAvailable","openSalesOrders","pendingInboundStos","businessDaysOfSupply","segmentation","serviceLevelTarget","safetyStock","strategy (MTS/MTO/VMI)","slowMovingFlag","remnantFlag"],
+ ev:"MEIO framework (Anaplan deck) · HPC major SMR reports & stock classes"},
+{id:"network",n:"NetworkNode / Lane",d:"supply",def:"Physical network: supplier → factory → hub → RDC/DC/wholesale point → customer; nodes carry capacity, costs and days-of-supply norms; lanes carry mode, freight cost, lead time, FTL constraints. Redesign is a regular exercise.",
+ a:["nodeType","capacity","fixedOpeningClosingCost","handlingCost","dosNorm","lane: mode","freightCost","leadTime","ftlConstraints","moq"],
+ ev:"Network Design & Optimization RACI (Llamasoft/JDA) · industry benchmark (2016/18) benchmark"},
+{id:"orders",n:"SupplyOrders (SO/STO/PO/Shipment)",d:"supply",def:"The transactional movement objects: sales orders, stock transfer orders, purchase orders (PO vs non-PO), shipments with carriers and late-reason categories, trailer loads, pallets, invoices (3-way match).",
+ a:["salesOrder","stockTransferOrder","transferOrder","purchaseOrder","shipment (carrier, lateReason)","trailerLoad","pallet","invoice (3-way match)"],
+ ev:"HPC major SC metric model & information model"},
+{id:"supplier",n:"Supplier / ProcurementCategory",d:"supply",def:"Vendor master with OTIF, lead time, reject/waiver rates and scorecards; category taxonomy direct (raw materials, packaging, logistics) vs indirect & traded; savings initiatives with the pipeline identified → approved → budgeted → booked and the finance-to-procurement bridge.",
+ a:["vendorId","categoryAssignment","otif","leadTime","rejectRate","waiverRate","concentrationShare","scorecard","savingsPipelineStage","commodityPriceVsBudget","contractCoverage"],
+ ev:"bakery group procurement org + dashboard vision · strategy consultancy digital-procurement booklet (12 use cases)"},
+/* MFG */
+{id:"plant",n:"Plant / Line / Machine",d:"mfg",def:"Region → site → production line → machine → shift → operator; carries line speeds, changeover matrices, raw OEE (observed ~40–50% on real lines) and capacity utilization.",
+ a:["lineSpeed","plannedRunTime","changeoverMatrix","rawOee","capacityUtilization","shift","operator"],
+ ev:"HPC major plant financial report + manufacturing metric model · tobacco major global MES program"},
+{id:"prodorder",n:"ProductionOrder / BOM",d:"mfg",def:"The make event: planned vs actual quantity, TECO timestamp (→ production lead time), yield, verbatim variance formulas (labour efficiency, material usage/price); BOM with costing and the 42-day on-time release rule.",
+ a:["orderId","plannedQty/actualQty","tecoTimestamp","productionLeadTime","yield","varianceSet","bom: costedFlag","releaseWindow (42-day)","bomAccuracy"],
+ ev:"HPC major manufacturing metric model · quality scorecard"},
+{id:"quality",n:"Maintenance / Quality / LossEvent",d:"mfg",def:"Maintenance (notification→order, MTTR/MTBF, preventive vs breakdown), quality records (NCR, complaints PPM, RFT, rework/recall, vendor rejects) and the OEE loss tree (availability / performance / quality losses) with waste causality.",
+ a:["mttr","mtbf","pmCompletionPct","preventiveVsBreakdownRatio","ncr","complaintsPpm","rft","reworkCost","lossClass (availability/performance/quality)","wasteCategory","dartRate"],
+ ev:"HPC major metric model — manufacturing (verbatim formulas) · tobacco major digital-manufacturing booklet"},
+/* NPD */
+{id:"npd",n:"NPDProject",d:"npd",def:"The innovation pipeline object: gate status, project class, launch window × country, pipeline value (k€) with deltas vs prior snapshot, FY1/Y2 sales & GP%, health RAGs, private-label and on-hold flags.",
+ a:["projectId","market(s)","brand","skuCount","gateStatus","projectClass","launchWindow","pipelineValueKeur","fy1Sales/y2Sales/gpPct","healthRags","onHoldFlag"],
+ ev:"bakery group NPD pipeline + 1-pager · HPC major NPI review"},
+{id:"gate",n:"Gate",d:"npd",def:"Stage-gate governance: Discovery → Charter → Feasibility → Development → Qualification → SKU/Launch approval → Implementation (or G1/G2 embedded in the S&OP cycle); investment decisions precede approval.",
+ a:["gateMeetingDate","approvalType","sandOPCycleLink","ragStatuses"],
+ ev:"HPC major NPD Apr-16 NPI review · bakery group gate labels"},
+{id:"launch",n:"LaunchRecord",d:"npd",def:"Per SKU × retailer: presentation date, listing decision, in-store date target vs actual, marketing & production dates, distribution build (store counts, WTD%), price point, exclusivity — reviewed post-launch vs the launchgate case.",
+ a:["presentationDate","listingDecision","inStoreDateTargetActual","distributionBuild (stores, wtdPct)","pricePoint","exclusivityFlag","vsLaunchgateReview"],
+ ev:"HPC major NPD Tracker 2016 · UK NPD 2015 summary"},
+/* FINANCE */
+{id:"pnl",n:"PnL ReportingLineItem",d:"finance",def:"The account roll-up (BPC RLI pattern) instantiating a gross-to-net waterfall down to net income; fourth instance: global brewer IBP with MACO (= gross turnover − variable industrial − variable logistics cost) → ZBB → EBITDA → operational free cash flow.",
+ a:["rliCode","parent","sign","formulaRefs (ISP%, retention, MPC/statCase)","granularityMatrix (SKU vs brand vs company)","maco","zbbBlock"],
+ ev:"PNL Report by RU and PC1 (beverage major BPC) · HPC major consolidated P&L · Anaplan COE overview"},
+{id:"version",n:"PlanningVersion / Scenario",d:"finance",def:"Version set: actual · plan/budget (annual plan, 1YP) · reforecasts (PPR-n = n months actual + remainder forecast) · latest estimate · prior year · constant-FX variants · scenarios; performance vs posting period; organic flags; ZBB workflow.",
+ a:["versionType","pprN","latestEstimate","constantFxVariants","organicFlag","driverBasedInputs","zbbWorkflow"],
+ ev:"HPC major BPC dimension set + Finance MoM (PPR cycle) · beverage group FP&A proposal · global-brewer ZBB"},
+{id:"profitability",n:"ProfitabilityRecord",d:"finance",def:"Performance-date-based customer × SKU P&L, COPA-extended: full G2N to marketing profit with allocation logic, TPM-liability reconciliation, cost-to-serve extension and the CPP margin ladder (material → contribution → plant margin); whale-curve analysis.",
+ a:["grain (customer × brand/MPG × size × month)","allocationLogic","tpmLiabilityReconciliation","costToServe","marginLadder (MM→CM→PM)","whaleCurve"],
+ ev:"HPC major Customer Profitability reference + solution options · nutrition group CPP · dairy cooperative EPM"},
+{id:"debtor",n:"DebtorPosition / CreditPolicy",d:"finance",def:"Receivables analytics: ARDSO, ageing buckets with migration % (leading bad-debt indicator), follow-up efficiency, dispute taxonomy, Altman Z-score banding, payer-behaviour segments, insured exposure, provisioning models.",
+ a:["arDso","ageingBuckets[]","bucketMigrationPct","overduePct","doubtfulRule (>120d)","followUpEfficiency","disputes[]","zScore","payerBehaviourSegment","insuredExposure","creditOverrides"],
+ ev:"nutrition group metric lists + debtor dashboards (verbatim formulas) · HPC major working-capital report"},
+{id:"coe",n:"PlanningCoE / EPM Model",d:"finance",def:"The governance object: 4 operating-model structure options, hub-spoke-crew roles, 90-day scorecards and SLA tiers; v1.1 adds the CFO-agenda pillars, the 4-phase finance-transformation lifecycle, the Lagging→Pioneering maturity model, shared-services scope and finance-cost benchmarks (median 1.24% of sales, best-in-class 0.61%; world-class close ≈2 days).",
+ a:["structureOptions[]","hubSpokeCrewRoles","ninetyDayScorecard","slaTiers","epmMaturity","cfoAgendaPillars[]","transformationLifecycle","maturityModel (Lagging→Pioneering)","sharedServicesScope","financeCostPctSales"],
+ ev:"global-brewer planning-CoE decks · tobacco major Approach for Planning COE · consultancy CFO-agenda deck · FPM practice decks · benchmark studies"},
+{id:"costing",n:"CostingAllocationModel",d:"finance",def:"The formal costing machinery: standard costing (4-element system, management by exception) with the full variance taxonomy (material price/usage incl. mix & yield, labour, overhead expenditure/efficiency/volume, planning vs operational), marginal vs absorption reconciliation, two-stage ABC and time-driven ABC, the cost build-up ladder and shared-services chargeback (actual-cost vs standard-price; waterfall/recursive/reciprocal).",
+ a:["costingTechnique","standardCostingSystem","varianceTaxonomy","costBuildUpLadder (Prime→Works→COGM→COGS→COS)","abcCalculationPath","tdAbcTimeEquations","absorptionMechanics","sharedServicesChargeback","idleCapacityCost","responsibilityCenterTaxonomy"],
+ ev:"professional-accounting-body costing guides (verbatim) · FPM costing framework & battle cards · worked ABC examples · shared-services costing white papers"},
+{id:"treasury",n:"TreasuryFunction / WC Program",d:"finance",def:"The instrument-and-program layer above DebtorPosition: treasury lead roles (survey-evidenced), the CCC managed through the P2P / Forecast-to-Fulfill / O2C process triad, working-capital governance splits, financing instruments (reverse factoring, factoring, forfaiting, cash pooling), bad-debt value management, and sector WCR/CCC benchmarks.",
+ a:["treasuryLeadRoles[]","strategicShift","cccProcessTriad (P2P/F2F/O2C)","wcGovernance","instruments[]","badDebtValueMgmt","benchmarks (WCR 15–25% consumer goods)"],
+ ev:"treasury-association & pan-European treasurer surveys · Big-4/strategy-consultancy WC papers · FPM working-capital offering · treasury case studies"},
+{id:"riskctrl",n:"RiskControlFramework",d:"finance",def:"Governance, risk & internal control: control components (environment → risk assessment → response → control activities → monitoring), risk/control universes with fraud flags, DOA & SOD matrices, KRIs, 100%-population risk analytics, the full P2P policy anatomy (verbatim thresholds, 3-way match, 11 KPIs), and accounting-standard events (IAS 36 impairment, dual-GST mechanics).",
+ a:["controlComponents[]","riskUniverse/controlUniverse","doaMatrix","sodMatrix","kriRepository","riskAnalyticsMode (100% population)","policyAnatomy (P2P)","accountingStandardEvents (IAS 36, GST)","emergingRiskErm"],
+ ev:"FPM GRC capability decks · risk-analytics offering · GCC services company P2P policy (worked artifact) · Big-4 IAS 36 guide · GST readiness decks"},
+{id:"valuation",n:"ValuationModel / StatementAnalysis",d:"finance",def:"Financial statement analysis and enterprise valuation: the four-category ratio taxonomy (verbatim formulas incl. DuPont), analytical-restatement plays (LIFO↔FIFO, OBS add-backs, consolidation recasts), enterprise DCF ↔ economic-profit equivalence (EVA/CFROI/MVA), residual-income models, target-multiple formulas from ROIC/WACC/g, and M&A synergy-premium logic.",
+ a:["ratioTaxonomy (activity/liquidity/solvency/profitability)","analyticalRestatements[]","dcfModel (NOPLAT, FCF, continuing value)","economicProfitEquivalence","residualIncomeModel","targetMultiples (EV/EBITDA, P/E, PEG…)","maSynergyLogic","riskPredictionModels (Z-score lineage)"],
+ ev:"statement-analysis courseware (incl. a beverage major's bottler-consolidation recast) · strategy-consultancy valuation handbook & model · investment-bank multiples primer · academic EVA/CFROI references"},
+{id:"epmplat",n:"EPMPlatformModel",d:"finance",def:"The technology object finance runs on: the canonical five-component CPM suite (BP&F, profitability modeling, strategy management, consolidation & close, reporting & disclosure), a 17-dimension reference planning model, the ABC allocation engine's calculation path, implementation methodology (phased releases, parallel run, hypercare; failure statistics), and the platform landscape with cloud-vs-on-premise economics.",
+ a:["cpmSuiteComponents[] (5)","referenceDimensionModel (17 dims)","allocationEngine (LineItem→Driver→Activity→CostObject)","implementationMethodology","platformLandscape","integrationPatterns (drill-back, audit trail)"],
+ ev:"analyst-research suite definitions (verbatim) · wind-turbine manufacturer 17-dimension blueprint · bank shared-services costing re-engineering · glass-manufacturer phased implementation · platform white papers"},
+/* ECOM */
+{id:"web",n:"WebSession / eB2BOrder",d:"ecom",def:"Digital ordering & behaviour: web sessions with UTM/funnel attributes; eB2B orders with order-method (platform vs call centre — the adoption metric), deal incrementality, cart abandonment. Adoption datum: B2B ~40% of sales → 70% ambition.",
+ a:["utmParams","funnelSteps","device/geo","orderMethod (platform vs callCentre)","customerTier","dealIncrementality","cartAbandonmentEvent","channelSwitchFlag"],
+ ev:"global brewer B2B Overall Brief · B2B Engagement Platform requirements"},
+{id:"d2c",n:"D2CLead / FunnelStage",d:"ecom",def:"Direct-to-consumer funnel: leads by source (popup, email capture, referral, SEO), stages acquire → convert → retain → advocacy, HyperCare trial check-ins, party-of-sale (1st/2nd/3rd); common consumer key as the data-maturity gate.",
+ a:["lead (email, sourceChannel)","funnelStage (ACR)","hyperCareCheckIns","partyOfSale","commonConsumerKey"],
+ ev:"tobacco major D2C Activation framework · next-gen products ACR journey · vaping-brand e-commerce performance"},
+{id:"benchmark",n:"BenchmarkPeerSet / CategorySegment",d:"ecom",def:"Strategy objects: peer benchmarking (financial levers, operations KPIs, project-level process benchmarking) and category segmentation with per-segment CAGR, share and decline drivers.",
+ a:["peerSet","financialLevers[]","method (financial/operations/process)","market→category→segment","segmentCagr","volumeShare","declineDrivers"],
+ ev:"global brewer Benchmarking 2013 + workbook · Market Overview for GAC"},
+/* DATA */
+{id:"metric",n:"MetricDefinition",d:"data",def:"The atom of the measurement system — the metric-model row: name, base data, source system, verbatim formula, UOM, time grains, dimension flags, priority, complexity, owning role, RAG thresholds, non-aggregation rules. 600+ catalogued; the join between business ontology and BI.",
+ a:["area/function","metricName","baseData","dataSource (t-codes)","formula","uom","timeGrains[]","dimensionFlags[]","priority","technicalComplexity","leadLagClass","owningRole","ragThresholds","nonAggregationRule"],
+ ev:"Metric List Appendix A · HPC major metric models · tobacco major PI Metrics · MT Insights · nutrition group metric lists"},
+{id:"fact",n:"FactSubject",d:"data",def:"The transactional grains a CPG warehouse conforms (13-fact star pattern): sell-in · sell-out · syndicated sell-out · category sell-out · sales plan · estimates · fill rate (8 drop reasons) · OOS audit · SOS audit · asset visibility · promo implementation · competitor promo · P&L actuals.",
+ a:["factName","grain (dims subset)","dropReasonDecomposition","etlAuditColumns","syndicatedTwin (Nielsen/IRI)"],
+ ev:"tobacco major MT Sales Data Mart dictionary (27 dims / 13 facts)"},
+{id:"hier",n:"HierarchyNode (governance)",d:"data",def:"Three governed classes: source hierarchies (maintained in ERP, replicated), attribute fields (governed master-data groupings) and attribute hierarchies (hierarchy-like reporting from governed attributes); MDM obligations to keep mapping/text tables in sync.",
+ a:["hierClass (source/attributeField/attributeHierarchy)","maintainedIn","mappingTables","textTables","syncObligations"],
+ ev:"HPC major Business Hierarchies position paper · BW InfoObject design"},
+{id:"source",n:"SourceSystem",d:"data",def:"The canonical CPG landscape (pattern): SAP ECC/BW/APO/DSD/BPC · CRM/SFA · planning engines · TPM · EPOS/retailer POS · EDI · distributor feeds · syndicated data · loyalty/web/social · MES/SCADA/LIMS · 3rd-party feeds; with MDM ownership per object and the lakehouse principle 'no tool connects directly to sources'.",
+ a:["systemId","dataDomains[]","extractMechanism","latency","mdmOwnership","lakehouseLayer (raw→enrich→serve→consume)"],
+ ev:"Data Assessment Report · tobacco major Data Platform Architecture v18 · HPC major & beverage group architectures"},
+{id:"dq",n:"DataQualityDefect / MDM",d:"data",def:"Logged defect classes (negative sell-in, share >100%, achievement >500%, plan = 0, drifting branch counts, missing history) and the MDM process: maturity ladder, six solution components, field-level CRUD ownership.",
+ a:["defectClass","affectedSource","mdmMaturityLevel","sixComponents","fieldOwnership (CRUD per SAP field)","numberingStandards (GDS/GDSN/RFID)"],
+ ev:"MT Insights DQ log · HPC major MDM discussion · group data warehouse master-data lists"},
+{id:"usecase",n:"AnalyticsUseCase",d:"data",def:"The AI/ML portfolio object: algorithm class, maturity stage (descriptive→optimization), success probability, change-management risk ('planners might think their decision rights are taken away'), measured outcomes (TPO ROI 8→20; suggested order +3.2% revenue; MAPE 9–11%).",
+ a:["useCase","domain","algorithmClass","maturityStage","successProbability","changeManagementRisk","measuredOutcome","deliveryVehicle (command center)"],
+ ev:"CPG Advanced Analytics decks · tobacco major planning use-case matrix · HPC major Enterprise Analytics Roadmap"}
+];
+var E=[
+["product","fact","conforms"],["outlet","fact","conforms"],["geo","fact","conforms"],["time","fact","conforms"],["org","fact","conforms"],
+["fact","metric","computes"],["metric","org","owned by role (line of sight)"],
+["coverage","call","schedules calls"],["assortment","call","deploys via cycle instructions"],["assortment","outlet","sets SAT per outlet"],
+["tci","coverage","adds incentive workload"],["rep","call","executes"],["rep","geo","covers territory"],
+["call","audit","captures"],["call","soq","generates"],["soq","orders","becomes sales order"],
+["distributor","outlet","supplies (multi-layer)"],["distributor","fact","reports sell-out (DSR)"],
+["audit","metric","derives OOS · WD · facing share"],["audit","tci","measures PfP/PfC compliance"],
+["tci","g2n","funds front & back margin"],["tci","outlet","enrols in CIS"],
+["assortment","forecast","feeds S&OP demand review"],["distributor","debtor","carries receivables"],
+["accountplan","promotion","parents"],["accountplan","outlet","keyed on planning account"],
+["promotion","deal","auto-creates"],["deal","fund","spends against"],
+["lift","promotion","sets uplift %"],["pricelist","promotion","constrains range & dead-net floor"],
+["deduction","deal","resolves against (accrual↔actual)"],["claim","deal","settles (credit memo)"],
+["fund","pnl","accrues into"],["promotion","g2n","populates trade lines"],
+["promotion","lift","post-event analysis (learning loop)"],["promotion","forecast","promo uplift input"],
+["deduction","profitability","restates to performance period"],
+["source","cdp","identity resolution"],["cdp","consumer","unifies profile"],["consumer","segment","clustered into"],
+["segment","campaign","targets"],["campaign","media","delivers via"],["campaign","metric","TG-vs-CG ROI"],
+["media","pnl","marketing spend line"],["segment","npd","white space feeds"],
+["research","segment","hypothesis input"],["research","campaign","evaluates"],["campaign","consumer","responses enrich"],
+["forecast","sandop","consensus input"],["sandop","supplyplan","constrains (RCCP)"],
+["supplyplan","prodorder","schedules production"],["supplyplan","inventory","plans stock (MEIO)"],
+["inventory","network","positioned across echelons"],["network","orders","ships via lanes"],
+["orders","outlet","delivers (OTIF)"],["supplier","orders","fulfils POs"],
+["supplier","pnl","PPV & savings bridge"],["inventory","pnl","DIO → working capital"],
+["orders","fact","fill-rate / OTIF facts"],["orders","debtor","invoices age into"],
+["prodorder","plant","runs on line"],["plant","quality","losses & maintenance"],
+["prodorder","pnl","DMC + variances"],["quality","metric","OEE · PPM · RFT · DART"],["product","prodorder","BOM / materials"],
+["npd","gate","passes gates"],["gate","sandop","rides S&OP cycle"],["npd","launch","sell-in & launch"],
+["launch","assortment","distribution build (missile)"],["npd","product","creates SKUs"],["npd","forecast","NPI curves"],
+["g2n","pnl","instantiated as RLI tree"],["pnl","version","versioned (actual/plan/PPR/LE)"],
+["profitability","outlet","customer × SKU P&L"],["profitability","g2n","reallocates waterfall"],
+["debtor","pnl","DSO → C2C"],["coe","version","governs planning"],
+["web","outlet","eB2B ordering"],["web","soq","platform order twin"],
+["d2c","consumer","converts to consumer"],["d2c","campaign","nurtured by"],["benchmark","pnl","targets & peers"],
+["costing","profitability","allocates (ABC / std costing)"],["costing","pnl","variance & idle-capacity lines"],
+["plant","costing","capacity supply & demand"],
+["treasury","debtor","owns DSO program"],["treasury","inventory","DIO lever"],["treasury","supplier","DPO · supply-chain finance"],["treasury","pnl","C2C & capital charge"],
+["riskctrl","orders","3-way match · SOD · DOA"],["riskctrl","supplier","vendor-master controls"],["riskctrl","pnl","impairment & provisions"],["riskctrl","metric","KRIs & P2P KPIs"],
+["version","valuation","forecasts feed DCF"],["valuation","benchmark","target multiples"],["valuation","pnl","values the statements"],
+["epmplat","version","implements planning"],["epmplat","pnl","consolidation & close"],["epmplat","profitability","profitability engines"],["epmplat","source","member of landscape"],
+["source","fact","feeds"],["hier","product","governs roll-ups"],["hier","outlet","governs roll-ups"],["hier","geo","governs roll-ups"],
+["dq","source","profiles & masters"],["dq","hier","maintains mappings"],
+["usecase","metric","targets KPIs"],["usecase","fact","consumes facts"]
+];
+var FLOWS=[
+{t:"Master spine",ids:["product","outlet","geo","time","org","fact","metric"],x:"5 dimensions ──conform──▶ FactSubject ──computes──▶ MetricDefinition ──owned-by──▶ role dashboards"},
+{t:"RtM execution loop",ids:["coverage","assortment","tci","rep","call","audit","soq","orders","distributor","fact","forecast"],x:"TCP/SAO/CIP ──▶ CallVisit ──▶ RetailAudit + SuggestedOrder ──▶ SalesOrder ──▶ Outlet; Distributor ──▶ sell-out; SAO ──▶ S&OP demand"},
+{t:"Trade closed loop",ids:["accountplan","promotion","deal","fund","deduction","claim","pricelist","lift","g2n"],x:"AccountPlan ──▶ Promotion ──▶ Deal ──▶ Fund; short-pay ──▶ Deduction/Claim ──settle──▶ Deal; post-event ──learn──▶ LiftModel ──▶ next plan"},
+{t:"Consumer engagement loop",ids:["source","cdp","consumer","segment","campaign","media","research","npd"],x:"Sources ──identity-resolve──▶ CDP ──▶ Consumer ──▶ Segment/Persona ──▶ Campaign ──▶ Touchpoints; white space ──▶ NPD"},
+{t:"Plan-make-move loop",ids:["forecast","sandop","supplyplan","prodorder","plant","quality","inventory","network","orders","supplier"],x:"Forecast ──▶ S&OP ──▶ SupplyPlan/RCCP ──▶ ProductionOrder on Plant; MEIO stock across Network ──▶ Shipments (OTIF)"},
+{t:"NPD lifecycle",ids:["segment","npd","gate","sandop","launch","assortment","product","forecast"],x:"White space ──▶ NPDProject ──gates ride──▶ S&OP ──▶ LaunchRecord ──▶ distribution build ──▶ new SKU demand"},
+{t:"Money loop (finance hub)",ids:["g2n","pnl","version","profitability","debtor","coe","tci","fund","media","prodorder","inventory"],x:"Trade + marketing + COGS ──populate──▶ G2N ──▶ RLI tree ──versioned──▶ PPR/LE; customer×SKU P&L; C2C = DSO + DIO − DPO"},
+{t:"Finance deep loop (v1.1)",ids:["costing","profitability","pnl","plant","treasury","debtor","inventory","supplier","riskctrl","orders","version","valuation","benchmark","epmplat","coe"],x:"Costing ──allocates──▶ Profitability ──▶ P&L; Treasury manages DSO/DIO/DPO ──▶ C2C; Controls gate P2P; Forecasts ──▶ DCF/EP ──▶ target multiples; EPM platform implements it all"}
+];
+
+/* ============ LAYOUT ============ */
+var W=1900,H=1650,CX=950,CY=800;
+var ORDER=["rtm","trade","finance","data","supply","mfg","npd","marketing","ecom"];
+var byId={};N.forEach(function(n){byId[n.id]=n});
+var domNodes={};N.forEach(function(n){(domNodes[n.d]=domNodes[n.d]||[]).push(n)});
+/* spine ring */
+domNodes.spine.forEach(function(n,i){
+  var a=-Math.PI/2+i*2*Math.PI/domNodes.spine.length;
+  n.x=CX+170*Math.cos(a);n.y=CY+150*Math.sin(a);
+});
+ORDER.forEach(function(d,di){
+  var a=-Math.PI/2+di*2*Math.PI/ORDER.length;
+  var cx=CX+560*Math.cos(a),cy=CY+520*Math.sin(a);
+  var nodes=domNodes[d],r=nodes.length<=3?85:(nodes.length<=6?150:185);
+  DOMMETA[d].cx=cx;DOMMETA[d].cy=cy;DOMMETA[d].r=r;
+  nodes.forEach(function(n,i){
+    var na=a+ i*2*Math.PI/nodes.length; /* start ring at the cluster's own angle so nodes lean outward */
+    n.x=cx+r*Math.cos(na);n.y=cy+r*Math.sin(na);
+  });
+});
+/* node box sizing + label split */
+N.forEach(function(n){
+  var t=n.n;
+  if(t.length>21){
+    var mid=Math.floor(t.length/2),best=-1;
+    for(var i=0;i<t.length;i++)if(t[i]===' '&&(best<0||Math.abs(i-mid)<Math.abs(best-mid)))best=i;
+    if(best>0){n.l1=t.slice(0,best);n.l2=t.slice(best+1)}else{n.l1=t}
+  }else n.l1=t;
+  var wtext=Math.max((n.l1||'').length,(n.l2||'').length);
+  n.w=Math.min(215,Math.max(105,wtext*7.3+22));
+  n.h=n.l2?46:32;
+});
+
+/* ============ RENDER ============ */
+var svg=document.getElementById('g');
+svg.setAttribute('viewBox','0 0 '+W+' '+H);svg.setAttribute('width',W);svg.setAttribute('height',H);
+function el(t,attrs,parent){var e=document.createElementNS('http://www.w3.org/2000/svg',t);for(var k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e}
+var defs=el('defs',{});
+var mk=el('marker',{id:'arr',viewBox:'0 0 10 10',refX:'8.5',refY:'5',markerWidth:'6.5',markerHeight:'6.5',orient:'auto-start-reverse'},defs);
+el('path',{d:'M0,0 L10,5 L0,10 z',fill:'currentColor'},mk);
+/* domain halos + labels */
+ORDER.forEach(function(d){
+  var m=DOMMETA[d];
+  el('circle',{cx:m.cx,cy:m.cy,r:m.r+72,fill:m.c,opacity:'0.055'});
+  el('text',{x:m.cx,y:m.cy+m.r+100,'text-anchor':'middle',class:'domlab',fill:m.c}).textContent=m.n;
+});
+el('circle',{cx:CX,cy:CY,r:250,fill:DOMMETA.spine.c,opacity:'0.06'});
+el('text',{x:CX,y:CY+8,'text-anchor':'middle',class:'domlab',fill:DOMMETA.spine.c,opacity:'.6'}).textContent="Master-data spine";
+/* edges */
+var edgeEls=[];
+var gE=el('g',{});
+E.forEach(function(e,idx){
+  var a=byId[e[0]],b=byId[e[1]];
+  var dx=b.x-a.x,dy=b.y-a.y,len=Math.sqrt(dx*dx+dy*dy);
+  var ux=dx/len,uy=dy/len;
+  var sx=a.x+ux*(a.w/2+8)*Math.min(1,Math.abs(dx)/(Math.abs(dy)+1e-6)+0.35),sy=a.y+uy*(a.h/2+10);
+  sx=a.x+ux*Math.min(len/2,a.w/2+6);sy=a.y+uy*Math.min(len/2,a.h/2+8);
+  var tx=b.x-ux*Math.min(len/2,b.w/2+10),ty=b.y-uy*Math.min(len/2,b.h/2+12);
+  var mx=(sx+tx)/2-uy*len*0.09,my=(sy+ty)/2+ux*len*0.09;
+  var p=el('path',{d:'M'+sx+','+sy+' Q'+mx+','+my+' '+tx+','+ty,class:'gedge','marker-end':'url(#arr)',style:'color:var(--edge)'},gE);
+  var lab=el('text',{x:mx,y:my-4,'text-anchor':'middle',class:'elab'},gE);lab.textContent=e[2];
+  edgeEls.push({p:p,lab:lab,a:e[0],b:e[1],label:e[2]});
+});
+/* nodes */
+var nodeEls={};
+var gN=el('g',{});
+N.forEach(function(n){
+  var g=el('g',{class:'gnode','data-id':n.id},gN);
+  el('rect',{x:n.x-n.w/2,y:n.y-n.h/2,width:n.w,height:n.h,rx:9,stroke:DOMMETA[n.d].c},g);
+  el('circle',{cx:n.x-n.w/2+11,cy:n.y-n.h/2+10,r:3.4,fill:DOMMETA[n.d].c},g);
+  if(n.l2){
+    el('text',{x:n.x,y:n.y-3,'text-anchor':'middle'},g).textContent=n.l1;
+    el('text',{x:n.x,y:n.y+11,'text-anchor':'middle'},g).textContent=n.l2;
+  }else{
+    el('text',{x:n.x,y:n.y+4,'text-anchor':'middle'},g).textContent=n.l1;
+  }
+  g.addEventListener('click',function(ev){ev.stopPropagation();selectNode(n.id)});
+  nodeEls[n.id]=g;
+});
+
+/* ============ INTERACTION ============ */
+var curDom='all',curSel=null,curFlow=-1;
+var adj={};N.forEach(function(n){adj[n.id]=new Set()});
+E.forEach(function(e){adj[e[0]].add(e[1]);adj[e[1]].add(e[0])});
+
+function visibleSet(){
+  if(curDom==='all')return null;
+  var v=new Set();
+  N.forEach(function(n){if(n.d===curDom||n.d==='spine')v.add(n.id)});
+  return v;
+}
+function applyState(){
+  var v=visibleSet(),nbOn=document.getElementById('nb').checked;
+  var nb=new Set();
+  if(v&&nbOn){
+    N.forEach(function(n){if(v.has(n.id))adj[n.id].forEach(function(o){if(!v.has(o))nb.add(o)})});
+  }
+  var flowIds=curFlow>=0?new Set(FLOWS[curFlow].ids):null;
+  N.forEach(function(n){
+    var g=nodeEls[n.id];
+    g.classList.remove('dimN','nb');
+    if(v){
+      if(v.has(n.id)){}
+      else if(nb.has(n.id))g.classList.add('nb');
+      else g.classList.add('dimN');
+    }
+    if(flowIds){ if(!flowIds.has(n.id)) g.classList.add(v&&!v.has(n.id)&&!nb.has(n.id)?'dimN':'nb'); }
+  });
+  edgeEls.forEach(function(e){
+    e.p.classList.remove('hl','dimE');e.lab.classList.remove('show');
+    var aOk=!v||v.has(e.a)||nb.has(e.a),bOk=!v||v.has(e.b)||nb.has(e.b);
+    var shown=aOk&&bOk;
+    if(v){ var strong=(v.has(e.a)||v.has(e.b)); if(!shown||!strong){e.p.classList.add('dimE')} }
+    if(flowIds){ if(!(flowIds.has(e.a)&&flowIds.has(e.b))) e.p.classList.add('dimE'); else {e.p.classList.add('hl');} }
+    if(curSel&&(e.a===curSel||e.b===curSel)&&!e.p.classList.contains('dimE')){e.p.classList.add('hl');e.lab.classList.add('show')}
+  });
+  if(curSel)nodeEls[curSel].classList.add('sel');
+}
+function selectNode(id){
+  if(curSel)nodeEls[curSel].classList.remove('sel');
+  curSel=id;curFlow=-1;refreshFlowChips();
+  var n=byId[id];
+  document.querySelector('#panel .ph').style.display='none';
+  document.getElementById('pcontent').style.display='block';
+  document.getElementById('pname').textContent=n.n;
+  document.getElementById('pdomname').textContent=DOMMETA[n.d].n;
+  document.querySelector('#pdom .dot').style.background=DOMMETA[n.d].c;
+  document.getElementById('pdef').textContent=n.def;
+  var pa=document.getElementById('pattrs');pa.innerHTML='';
+  n.a.forEach(function(x){var s=document.createElement('span');s.textContent=x;pa.appendChild(s)});
+  var pr=document.getElementById('prels');pr.innerHTML='';
+  E.forEach(function(e){
+    if(e[0]===id||e[1]===id){
+      var li=document.createElement('li');
+      var other=e[0]===id?e[1]:e[0];
+      li.innerHTML=(e[0]===id?'<b>'+esc(n.n)+'</b> ──'+esc(e[2])+'──▶ '+esc(byId[e[1]].n):'<b>'+esc(byId[e[0]].n)+'</b> ──'+esc(e[2])+'──▶ '+esc(n.n));
+      pr.appendChild(li);
+    }
+  });
+  var pj=document.getElementById('pjoins');pj.innerHTML='';
+  adj[id].forEach(function(o){
+    var a=document.createElement('a');a.textContent=byId[o].n;
+    a.addEventListener('click',function(){selectNode(o)});
+    pj.appendChild(a);
+  });
+  document.getElementById('pev').textContent=n.ev;
+  applyState();
+}
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+svg.addEventListener('click',function(){ if(curSel){nodeEls[curSel].classList.remove('sel');curSel=null;applyState();} });
+
+/* chips */
+var chipsEl=document.getElementById('chips');
+function addChip(dom,label){
+  var b=document.createElement('button');b.setAttribute('data-dom',dom);
+  if(dom!=='all'){var d=document.createElement('span');d.className='dot';d.style.background=DOMMETA[dom].c;b.appendChild(d)}
+  b.appendChild(document.createTextNode(label));
+  if(dom==='all')b.classList.add('on');
+  b.addEventListener('click',function(){
+    chipsEl.querySelectorAll('button').forEach(function(c){c.classList.remove('on')});
+    b.classList.add('on');curDom=dom;curFlow=-1;refreshFlowChips();applyState();
+  });
+  chipsEl.appendChild(b);
+}
+addChip('all','All domains');
+ORDER.concat().sort(function(a,b){return DOMMETA[a].n.localeCompare(DOMMETA[b].n)}).forEach(function(d){addChip(d,DOMMETA[d].n.replace(/ \(.*\)/,''))});
+document.getElementById('nb').addEventListener('change',applyState);
+
+/* flows */
+var fg=document.getElementById('flowgrid');
+FLOWS.forEach(function(f,i){
+  var d=document.createElement('div');d.className='flow';
+  d.innerHTML='<b>'+esc(f.t)+'</b><span>'+esc(f.x)+'</span>';
+  d.addEventListener('click',function(){
+    curFlow=(curFlow===i?-1:i);
+    if(curSel){nodeEls[curSel].classList.remove('sel');curSel=null}
+    refreshFlowChips();applyState();
+  });
+  fg.appendChild(d);
+});
+function refreshFlowChips(){
+  [].slice.call(fg.children).forEach(function(c,i){c.classList.toggle('on',i===curFlow)});
+}
+
+/* search */
+document.getElementById('q').addEventListener('input',function(){
+  var v=this.value.trim().toLowerCase();
+  N.forEach(function(n){
+    var hit=v&&(n.n.toLowerCase().indexOf(v)>-1||n.a.join(' ').toLowerCase().indexOf(v)>-1||n.def.toLowerCase().indexOf(v)>-1);
+    nodeEls[n.id].classList.toggle('found',!!hit);
+  });
+});
+
+/* zoom / pan */
+var vp=document.getElementById('vp'),inner=document.getElementById('inner');
+var scale=1,tx=0,ty=0;
+function apply(){inner.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')'}
+function fit(){var w=vp.clientWidth,h=vp.clientHeight;scale=Math.max(0.25,Math.min(1.6,Math.min((w-20)/W,(h-20)/H)));tx=(w-W*scale)/2;ty=10;apply()}
+fit();window.addEventListener('resize',fit);
+function zoomAt(f,cx,cy){
+  var ns=Math.max(0.2,Math.min(4,scale*f));
+  var r=vp.getBoundingClientRect();
+  cx=(cx===undefined)?r.width/2:cx;cy=(cy===undefined)?r.height/2:cy;
+  tx=cx-(cx-tx)*(ns/scale);ty=cy-(cy-ty)*(ns/scale);scale=ns;apply();
+}
+document.getElementById('zin').addEventListener('click',function(){zoomAt(1.25)});
+document.getElementById('zout').addEventListener('click',function(){zoomAt(0.8)});
+document.getElementById('zfit').addEventListener('click',fit);
+vp.addEventListener('wheel',function(e){e.preventDefault();var r=vp.getBoundingClientRect();zoomAt(e.deltaY<0?1.12:0.89,e.clientX-r.left,e.clientY-r.top)},{passive:false});
+var panning=false,px=0,py=0,moved=false;
+vp.addEventListener('pointerdown',function(e){panning=true;moved=false;px=e.clientX;py=e.clientY;vp.classList.add('panning')});
+window.addEventListener('pointermove',function(e){if(!panning)return;var dx=e.clientX-px,dy=e.clientY-py;if(Math.abs(dx)+Math.abs(dy)>3)moved=true;tx+=dx;ty+=dy;px=e.clientX;py=e.clientY;apply()});
+window.addEventListener('pointerup',function(){panning=false;vp.classList.remove('panning')});
+inner.addEventListener('click',function(e){if(moved){e.preventDefault();e.stopPropagation();moved=false}},true);
+
+applyState();
+</script>
+</body>
+</html>
