@@ -56,6 +56,14 @@ export default function DomainGraph() {
   const iframeRef = useRef(null)
   const pending = useRef(null)
 
+  // Safety watchdog: clear updatingGraph if it ever stays stuck
+  useEffect(() => {
+    if (!updatingGraph) return
+    const watchdogMs = Number(import.meta.env.VITE_GRAPH_UPDATE_TIMEOUT) || 45000
+    const t = setTimeout(() => setUpdatingGraph(false), watchdogMs)
+    return () => clearTimeout(t)
+  }, [updatingGraph])
+
   const wf = useAsync(() => domains.workflow(slug), [slug])
   const dom = useAsync(() => domains.list(), [])
   const g = useAsync(() => domains.graph(slug, neighbours), [slug, neighbours])
@@ -486,34 +494,60 @@ export default function DomainGraph() {
           </label>
         </div> */}
 
-        {/* Domain filter chips */}
-        <div className="mt-3 flex flex-wrap items-center gap-1.5" aria-label="Sub-domain filters">
-          {/* <span className="h-section mr-1">Show</span> */}
-          <button
-            type="button"
-            className={`chip cursor-pointer ${activeDomainFilter === 'all' ? 'chip-on' : 'opacity-70'}`}
-            onClick={() => setActiveDomainFilter('all')}
-          >
-            All Domains
-          </button>
-          {domainKey !== 'all' && DOMMETA[domainKey] && (
+        {/* Domain filter chips and Active Version Badge */}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2" aria-label="Sub-domain filters">
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
-              className={`chip cursor-pointer ${activeDomainFilter === domainKey ? 'chip-on' : 'opacity-70'}`}
-              onClick={() => setActiveDomainFilter(domainKey)}
+              className={`chip cursor-pointer ${activeDomainFilter === 'all' ? 'chip-on' : 'opacity-70'}`}
+              onClick={() => setActiveDomainFilter('all')}
             >
-              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: DOMMETA[domainKey].c }} />
-              {DOMMETA[domainKey].n}
+              All Domains
             </button>
-          )}
-          <button
-            type="button"
-            className={`chip cursor-pointer ${activeDomainFilter === 'spine' ? 'chip-on' : 'opacity-70'}`}
-            onClick={() => setActiveDomainFilter(activeDomainFilter === 'spine' ? domainKey : 'spine')}
-          >
-            <span className="h-2 w-2 rounded-full shrink-0" style={{ background: DOMMETA.spine.c }} />
-            {DOMMETA.spine.n}
-          </button>
+            {domainKey !== 'all' && DOMMETA[domainKey] && (
+              <button
+                type="button"
+                className={`chip cursor-pointer ${activeDomainFilter === domainKey ? 'chip-on' : 'opacity-70'}`}
+                onClick={() => setActiveDomainFilter(domainKey)}
+              >
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ background: DOMMETA[domainKey].c }} />
+                {DOMMETA[domainKey].n}
+              </button>
+            )}
+            <button
+              type="button"
+              className={`chip cursor-pointer ${activeDomainFilter === 'spine' ? 'chip-on' : 'opacity-70'}`}
+              onClick={() => setActiveDomainFilter(activeDomainFilter === 'spine' ? domainKey : 'spine')}
+            >
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: DOMMETA.spine.c }} />
+              {DOMMETA.spine.n}
+            </button>
+          </div>
+
+          {/* Prominent Active Version Badge */}
+          <div className="flex items-center gap-2">
+            <div
+              className={`flex items-center gap-1.5 rounded-xl border px-3 py-1 text-xs font-semibold shadow-2xs ${
+                (base?.version?.number || 0) > 0
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                  : 'border-line bg-surface2 text-muted'
+              }`}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  (base?.version?.number || 0) > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-muted/60'
+                }`}
+              />
+              <span className="font-bold">
+                {base?.version?.label || (base?.version?.number ? `KG${base.version.number}` : 'KG0 (Baseline)')}
+              </span>
+              {(base?.version?.number || 0) > 0 && (
+                <span className="text-[10.5px] font-medium opacity-80">
+                  • Customized
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

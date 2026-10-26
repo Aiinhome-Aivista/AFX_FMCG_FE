@@ -45,7 +45,8 @@ export default function ChatPanel({
   }, [askNode])
 
   const merge = (r) => {
-    setSnap((s) => ({ ...r, messages: [...(s?.messages || []), ...r.messages] }))
+    if (!r) return
+    setSnap((s) => ({ ...r, messages: [...(s?.messages || []), ...(r?.messages || [])] }))
     if (r?.graph_updated || r?.graph) {
       onGraphUpdate?.(r)
     }
@@ -56,8 +57,10 @@ export default function ChatPanel({
     try {
       const r = await fn()
       after?.(r)
+      return r
     } catch (e) {
-      toast.error(e.message)
+      toast.error(e?.message || 'Action failed.')
+      throw e
     } finally {
       setBusy(false)
     }
@@ -66,7 +69,7 @@ export default function ChatPanel({
   const start = () => run(() => chat.start(slug), (r) => {
     setSnap(r)
     if (r?.graph_updated || r?.graph) onGraphUpdate?.(r)
-  })
+  }).catch(() => {})
 
   const handleDecision = (action) => {
     run(
@@ -74,10 +77,10 @@ export default function ChatPanel({
       (r) => {
         merge(r)
       }
-    )
+    ).catch(() => {})
   }
 
-  const send = (e) => {
+  const send = async (e) => {
     e?.preventDefault()
     const msg = text.trim()
     if (!msg) return
@@ -86,31 +89,34 @@ export default function ChatPanel({
     if (isAnsweringQuestion) {
       onAnsweringChange?.(true)
     }
-    if (mode === 'ask' && askNode) {
-      run(() => chat.askNode(slug, askNode, msg), merge)
-    } else if (isAnsweringQuestion) {
-      run(
-        () => chat.answer(slug, msg),
-        (r) => {
-          merge(r)
-          onAnsweringChange?.(false)
-        }
-      ).catch(() => onAnsweringChange?.(false))
-    } else {
-      run(() => chat.message(slug, msg, askNode), merge)
+    try {
+      if (mode === 'ask' && askNode) {
+        await run(() => chat.askNode(slug, askNode, msg), merge)
+      } else if (isAnsweringQuestion) {
+        await run(() => chat.answer(slug, msg), merge)
+      } else {
+        await run(() => chat.message(slug, msg, askNode), merge)
+      }
+    } catch (err) {
+      console.error('Chat error:', err)
+    } finally {
+      if (isAnsweringQuestion) {
+        onAnsweringChange?.(false)
+      }
     }
   }
 
-  const skip = () => {
+  const skip = async () => {
     onAnsweringChange?.(true)
-    run(
-      () => chat.answer(slug, 'skip'),
-      (r) => {
-        merge(r)
-        onAnsweringChange?.(false)
-      }
-    ).catch(() => onAnsweringChange?.(false))
+    try {
+      await run(() => chat.answer(slug, 'skip'), merge)
+    } catch (err) {
+      console.error('Skip error:', err)
+    } finally {
+      onAnsweringChange?.(false)
+    }
   }
+
 
   const propose = () =>
     run(

@@ -54,13 +54,23 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
   }, [propNodes, propEdges, activeDomain, propDomainMeta])
   const { W, H, CX, CY, nodes, byId, edges, domMetas, spineMeta, adj } = layout
 
-  // Visible set of nodes based on active domain
+  // Visible set of nodes based on active domain (always include user customizations and added nodes)
   const visibleSet = useMemo(() => {
     if (activeDomain === 'all' || !activeDomain) return null
     const s = new Set()
     nodes.forEach((n) => {
       const gKey = String(n.group_key || n.d || '').toLowerCase()
-      if (gKey === activeDomain || gKey === 'spine' || n.d === activeDomain || n.d === 'spine') {
+      if (
+        gKey === activeDomain ||
+        gKey === 'spine' ||
+        n.d === activeDomain ||
+        n.d === 'spine' ||
+        n.role === 'client' ||
+        n.change_state === 'added' ||
+        n.change_state === 'modified' ||
+        gKey.includes('client') ||
+        gKey.includes('custom')
+      ) {
         s.add(n.id)
       }
     })
@@ -765,16 +775,28 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                     width={n.w}
                     height={n.h}
                     rx={9}
-                    stroke={isSelected ? themeColors.accent : nodeColor}
-                    strokeWidth={strokeWidth}
+                    stroke={
+                      isSelected
+                        ? themeColors.accent
+                        : n.change_state === 'added'
+                          ? '#10B981'
+                          : n.change_state === 'modified'
+                            ? '#F59E0B'
+                            : nodeColor
+                    }
+                    strokeWidth={n.change_state === 'added' || n.change_state === 'modified' ? 2.4 : strokeWidth}
                     strokeDasharray={isFound ? '5 3' : undefined}
                     style={{
                       fill: themeColors.card,
                       filter: isSelected
                         ? `drop-shadow(0 0 10px ${nodeColor}88)`
-                        : isDark
-                          ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))'
-                          : 'drop-shadow(0 1px 1.5px rgba(0,0,0,0.12))',
+                        : n.change_state === 'added'
+                          ? 'drop-shadow(0 0 8px rgba(16,185,129,0.45))'
+                          : n.change_state === 'modified'
+                            ? 'drop-shadow(0 0 8px rgba(245,158,11,0.45))'
+                            : isDark
+                              ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))'
+                              : 'drop-shadow(0 1px 1.5px rgba(0,0,0,0.12))',
                       transition: 'stroke 0.2s, stroke-width 0.2s',
                     }}
                   />
@@ -783,8 +805,25 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                     cx={n.x - n.w / 2 + 11}
                     cy={n.y - n.h / 2 + 10}
                     r={3.4}
-                    fill={nodeColor}
+                    fill={n.change_state === 'added' ? '#10B981' : n.change_state === 'modified' ? '#F59E0B' : nodeColor}
                   />
+                  {/* Status badge for modified or newly added nodes */}
+                  {n.change_state === 'added' && (
+                    <g transform={`translate(${n.x + n.w / 2 - 28}, ${n.y - n.h / 2 - 7})`}>
+                      <rect width={32} height={15} rx={5} fill="#10B981" />
+                      <text x={16} y={11} textAnchor="middle" fill="#FFFFFF" fontSize="9" fontWeight="bold" fontFamily="system-ui">
+                        NEW
+                      </text>
+                    </g>
+                  )}
+                  {n.change_state === 'modified' && (
+                    <g transform={`translate(${n.x + n.w / 2 - 38}, ${n.y - n.h / 2 - 7})`}>
+                      <rect width={42} height={15} rx={5} fill="#F59E0B" />
+                      <text x={21} y={11} textAnchor="middle" fill="#FFFFFF" fontSize="8.5" fontWeight="bold" fontFamily="system-ui">
+                        EDITED
+                      </text>
+                    </g>
+                  )}
                   {/* Label (1 or 2 lines) */}
                   {n.l2 ? (
                     <>
