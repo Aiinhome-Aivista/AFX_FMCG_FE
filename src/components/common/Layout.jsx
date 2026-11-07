@@ -20,9 +20,9 @@ export default function Layout({ children, wide }) {
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#10b981] text-black shadow-sm transition-transform duration-150 group-hover:scale-105">
               <Brain size={18} strokeWidth={2.4} className="text-black" />
             </span>
-            <div className="flex flex-col text-left leading-none">
-              <span className="text-[15px] font-bold tracking-tight text-ink">AgentForgeXFMCG</span>
-              <span className="text-[9.5px] font-bold tracking-widest text-[#10b981] uppercase mt-0.5">
+            <div className="flex items-center justify-center text-center gap-1.5 leading-none">
+              <span className="text-[15px] font-bold tracking-wide text-ink">AgentForgeXFMCG</span>
+              <span className="text-[15px] font-bold tracking-tight text-[#10b981] uppercase rounded-xl border border-[#10b981]/30 bg-[#10b981]/10 px-2.5 py-1 text-xs shadow-2xs transition-colors hover:border-[#10b981]/50 hover:bg-[#10b981]/15 ">
                 {subTitle}
               </span>
             </div>
