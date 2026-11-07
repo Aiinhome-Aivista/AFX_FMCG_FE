@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Mail, Lock, Eye, EyeOff, BrainCircuit } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, Brain } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { Spinner } from '../components/common/States'
 
@@ -39,38 +39,34 @@ export default function AuthPage({ mode }) {
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-white selection:bg-purple-500 selection:text-white">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-bg selection:bg-brand selection:text-black">
       {/* Centered Login Card */}
-      <div className="w-full max-w-[420px] rounded-2xl border border-slate-200/80 bg-white p-7 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
-        {/* Top Icon: Glowing purple-blue AI brain/network icon centered at the top */}
+      <div className="w-full max-w-[420px] rounded-2xl border border-line bg-surface p-7 sm:p-8 shadow-card">
+        {/* Top Icon: Emerald AI brain icon centered at the top */}
         <div className="flex flex-col items-center text-center mb-6">
           <div className="relative mb-4 flex items-center justify-center">
             {/* Glowing background blur effect */}
             <div
-              className="absolute -inset-2 rounded-full opacity-60 blur-md"
-              style={{
-                background: 'linear-gradient(135deg, rgba(69, 101, 255, 0.4) 0%, rgba(139, 92, 246, 0.5) 100%)',
-              }}
+              className="absolute -inset-2 rounded-full opacity-60 blur-md bg-brand/30"
               aria-hidden="true"
             />
             <div
-              className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-indigo-100 shadow-sm"
-              style={{
-                background: 'linear-gradient(135deg, #1E1B4B 0%, #0F172A 100%)',
-                boxShadow: '0 4px 14px rgba(69, 101, 255, 0.25)',
-              }}
+              className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-[#10b981] text-black shadow-lg shadow-emerald-500/25"
             >
-              <BrainCircuit className="h-7 w-7 text-[#A78BFA] drop-shadow-[0_0_8px_rgba(167,139,250,0.6)]" strokeWidth={2.1} />
+              <Brain className="h-7 w-7 text-black" strokeWidth={2.4} />
             </div>
           </div>
 
-          {/* Heading with bold purple gradient text */}
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-800 bg-clip-text text-transparent">
-            FMCG Knowledge Graph
+          {/* Heading */}
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">
+            AgentForgeX
           </h1>
+          <span className="text-[11px] font-bold tracking-widest text-[#10b981] uppercase mt-0.5">
+            FMCG Knowledge Graph
+          </span>
 
-          {/* Subtitle in muted light gray */}
-          <p className="mt-1 text-xs sm:text-sm text-slate-500">
+          {/* Subtitle in muted text */}
+          <p className="mt-2 text-xs sm:text-sm text-muted">
             {isReg ? 'Create your account to continue' : 'Sign in to continue'}
           </p>
         </div>
@@ -165,7 +161,7 @@ export default function AuthPage({ mode }) {
             <button
               type="submit"
               disabled={busy}
-              className="auth-btn-gradient w-full flex items-center justify-center gap-2 rounded-xl py-2.5 px-4 text-sm font-semibold text-white cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              className="auth-btn-gradient w-full flex items-center justify-center gap-2 rounded-xl py-2.5 px-4 text-sm font-semibold text-black cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {busy ? (
                 <Spinner />
@@ -177,13 +173,13 @@ export default function AuthPage({ mode }) {
         </form>
 
         {/* Bottom Section */}
-        <p className="mt-5 text-center text-xs text-slate-500">
+        <p className="mt-5 text-center text-xs text-muted">
           {isReg ? (
             <>
               Already registered?{' '}
               <Link
                 to="/login"
-                className="font-semibold text-[#753BFF] hover:text-[#5B21B6] transition underline-offset-2 hover:underline ml-1"
+                className="font-semibold text-brand hover:text-[#6ee7b7] transition underline-offset-2 hover:underline ml-1"
               >
                 Sign in
               </Link>
@@ -193,7 +189,7 @@ export default function AuthPage({ mode }) {
               New here?{' '}
               <Link
                 to="/register"
-                className="font-semibold text-[#753BFF] hover:text-[#5B21B6] transition underline-offset-2 hover:underline ml-1"
+                className="font-semibold text-brand hover:text-[#6ee7b7] transition underline-offset-2 hover:underline ml-1"
               >
                 Create an account
               </Link>

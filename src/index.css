@@ -5,14 +5,24 @@
 @tailwind utilities;
 
 :root {
+  --color-brand-primary: #10b981;
+  --color-brand-accent: #34d399;
+  --color-brand-hover: #6ee7b7;
+  --color-brand-glow: rgba(16, 185, 129, 0.1);
+  --color-brand-dark: #0a0a0a;
+  --color-brand-surface: #171717;
+  --color-brand-pure-black: #000000;
+  --color-brand-glass: rgba(255, 255, 255, 0.05);
+  --color-brand-cyan: #22d3ee;
+
   --bg: 255 255 255;
   --surface: 255 255 255;
   --surface2: 245 247 250;
   --line: 226 232 240;
   --ink: 15 23 42;
   --muted: 100 116 139;
-  --brand: 79 70 229;
-  --brand-ink: 255 255 255;
+  --brand: 16 185 129;
+  --brand-ink: 0 0 0;
   --ok: 16 185 129;
   --warn: 217 119 6;
   --bad: 239 68 68;
@@ -21,33 +31,43 @@
   --ont-text: #0F172A;
   --ont-muted: #64748B;
   --ont-border: #E2E8F0;
-  --ont-accent: #4F46E5;
+  --ont-accent: #10b981;
   --ont-edge: #94A3B8;
-  --ont-chip-bg: #EEF2FF;
+  --ont-chip-bg: #ECFDF5;
   --ont-code-bg: #F1F5F9;
 }
 
 .dark {
-  --bg: 10 15 26;
-  --surface: 16 23 38;
-  --surface2: 24 35 56;
-  --line: 36 50 78;
+  --color-brand-primary: #10b981;
+  --color-brand-accent: #34d399;
+  --color-brand-hover: #6ee7b7;
+  --color-brand-glow: rgba(16, 185, 129, 0.1);
+  --color-brand-dark: #0a0a0a;
+  --color-brand-surface: #171717;
+  --color-brand-pure-black: #000000;
+  --color-brand-glass: rgba(255, 255, 255, 0.05);
+  --color-brand-cyan: #22d3ee;
+
+  --bg: 10 10 10;
+  --surface: 23 23 23;
+  --surface2: 32 32 32;
+  --line: 38 38 38;
   --ink: 248 250 252;
-  --muted: 148 163 184;
-  --brand: 99 102 241;
-  --brand-ink: 10 15 26;
+  --muted: 161 161 170;
+  --brand: 16 185 129;
+  --brand-ink: 0 0 0;
   --ok: 52 211 153;
   --warn: 245 158 11;
   --bad: 248 113 113;
-  --ont-bg: #0A0F1A;
-  --ont-card: #101726;
+  --ont-bg: #0a0a0a;
+  --ont-card: #171717;
   --ont-text: #F8FAFC;
-  --ont-muted: #94A3B8;
-  --ont-border: #24334E;
-  --ont-accent: #818CF8;
-  --ont-edge: #475569;
-  --ont-chip-bg: #1E293B;
-  --ont-code-bg: #182338;
+  --ont-muted: #A1A1AA;
+  --ont-border: #262626;
+  --ont-accent: #10b981;
+  --ont-edge: #404040;
+  --ont-chip-bg: #171717;
+  --ont-code-bg: #121212;
 }
 
 html,
@@ -78,7 +98,7 @@ body {
   }
 
   .btn-primary {
-    @apply btn bg-brand text-brand-ink hover:opacity-90;
+    @apply btn bg-brand text-brand-ink font-semibold hover:bg-[#6ee7b7] hover:text-black;
   }
 
   .btn-ghost {
@@ -192,35 +212,48 @@ body {
   border-radius: 8px;
 }
 
+/* Glass Card Overlay and Glow Utilities */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.1);
+}
+
 /* Premium AI SaaS Login Styling */
 .auth-bg-gradient {
-  background: radial-gradient(circle at 15% 20%, rgba(224, 215, 255, 0.45) 0%, transparent 45%),
-    radial-gradient(circle at 85% 80%, rgba(200, 214, 255, 0.4) 0%, transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(243, 240, 255, 0.6) 0%, transparent 60%),
-    linear-gradient(135deg, #FAF8FF 0%, #F3F1FA 50%, #ECE9F8 100%);
+  background: radial-gradient(circle at 15% 20%, rgba(16, 185, 129, 0.15) 0%, transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(34, 211, 238, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 60%),
+    linear-gradient(135deg, #0a0a0a 0%, #121212 50%, #171717 100%);
 }
 
 .auth-card-shadow {
-  box-shadow: 0 20px 50px -10px rgba(17, 27, 50, 0.35),
+  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.6),
     0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 40px -10px rgba(117, 59, 255, 0.15);
+    0 0 40px -10px rgba(16, 185, 129, 0.18);
 }
 
 .auth-btn-gradient {
-  background: linear-gradient(135deg, #4565FF 0%, #753BFF 100%);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #000000 !important;
+  font-weight: 600;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .auth-btn-gradient:hover:not(:disabled) {
-  background: linear-gradient(135deg, #3754F0 0%, #682EEB 100%);
-  box-shadow: 0 8px 24px -4px rgba(117, 59, 255, 0.5),
-    0 0 16px 2px rgba(69, 101, 255, 0.35);
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  box-shadow: 0 8px 24px -4px rgba(16, 185, 129, 0.45),
+    0 0 16px 2px rgba(34, 211, 238, 0.25);
   transform: translateY(-1px);
 }
 
 .auth-btn-gradient:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 4px 12px -2px rgba(117, 59, 255, 0.4);
+  box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.35);
 }
 
 .auth-input-field {

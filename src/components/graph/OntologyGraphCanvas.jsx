@@ -328,15 +328,15 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
     if (selId) onSelectNode?.(null)
   }
 
-  // Colors tuned exactly to FMCG Finance Ontology Graph.html
+  // Colors tuned exactly to AgentForgeX dark emerald theme
   const themeColors = {
-    bg: isDark ? '#101828' : '#F4F7FC',
-    card: isDark ? '#182338' : '#FFFFFF',
-    text: isDark ? '#AAB6CC' : '#122991',
-    muted: isDark ? '#7E8CA6' : '#4A5878',
-    border: isDark ? '#2A3548' : '#D8DFEA',
-    accent: isDark ? '#6C8FEF' : '#5A8AC3',
-    edge: isDark ? '#4A5C7E' : '#8CA0C0',
+    bg: isDark ? '#0a0a0a' : '#F4F7FC',
+    card: isDark ? '#171717' : '#FFFFFF',
+    text: isDark ? '#F8FAFC' : '#0F172A',
+    muted: isDark ? '#A1A1AA' : '#4A5878',
+    border: isDark ? '#262626' : '#D8DFEA',
+    accent: isDark ? '#34d399' : '#10b981',
+    edge: isDark ? '#404040' : '#8CA0C0',
   }
 
   // Selected node details for full-screen inspection overlay
@@ -427,7 +427,7 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
           }}
           className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
             isFullscreen
-              ? 'bg-brand text-white shadow-sm'
+              ? 'bg-brand text-brand-ink shadow-sm'
               : 'text-ink hover:bg-surface2 hover:text-brand'
           }`}
           title={isFullscreen ? 'Exit Full Screen (Esc)' : 'Full Screen'}

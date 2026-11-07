@@ -383,7 +383,7 @@ export default function DomainGraph() {
                 key={dKey}
                 type="button"
                 className={`group relative rounded-xl px-3 py-1.5 text-xs sm:text-[13px] transition-all duration-200 cursor-pointer flex items-center gap-2 shrink-0 border ${isSelected
-                  ? 'bg-brand text-white border-brand shadow-md shadow-brand/25 scale-[1.01] font-semibold'
+                  ? 'bg-brand text-brand-ink border-brand shadow-md shadow-brand/25 scale-[1.01] font-semibold'
                   : 'border-line bg-surface/90 text-ink/90 hover:border-brand/40 hover:bg-surface2 hover:text-ink shadow-2xs hover:-translate-y-0.5'
                   }`}
                 onClick={() => {
@@ -396,8 +396,8 @@ export default function DomainGraph() {
                 <span
                   className="h-2 w-2 rounded-full shrink-0 transition-transform group-hover:scale-125"
                   style={{
-                    backgroundColor: isSelected ? '#FFFFFF' : meta.c,
-                    boxShadow: isSelected ? '0 0 8px rgba(255,255,255,0.8)' : undefined,
+                    backgroundColor: isSelected ? '#000000' : meta.c,
+                    boxShadow: isSelected ? '0 0 6px rgba(0,0,0,0.5)' : undefined,
                   }}
                 />
                 <span className="font-semibold text-xs sm:text-[13px] tracking-tight whitespace-nowrap">
@@ -575,14 +575,14 @@ export default function DomainGraph() {
                 type="button"
                 onClick={() => setActiveRightTab('chat')}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${activeRightTab === 'chat'
-                  ? 'bg-brand text-white shadow-2xs'
+                  ? 'bg-brand text-brand-ink shadow-2xs'
                   : 'text-muted hover:text-ink'
                   }`}
               >
                 <Bot size={14} />
                 <span>Chatbot</span>
                 {snap?.messages?.length > 0 && (
-                  <span className="rounded-full bg-white/20 px-1.5 py-0.2 text-[10px] font-bold">
+                  <span className="rounded-full bg-black/20 px-1.5 py-0.2 text-[10px] font-bold text-black">
                     {snap.messages.length}
                   </span>
                 )}
@@ -592,7 +592,7 @@ export default function DomainGraph() {
                 type="button"
                 onClick={() => setActiveRightTab('details')}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${activeRightTab === 'details'
-                  ? 'bg-brand text-white shadow-2xs'
+                  ? 'bg-brand text-brand-ink shadow-2xs'
                   : 'text-muted hover:text-ink'
                   }`}
               >

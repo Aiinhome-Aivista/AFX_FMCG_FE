@@ -8,14 +8,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script>
-      // Default to light theme (clean white background)
+      // Default to dark theme matching AgentForgeX design
       try {
-        var userDark = localStorage.getItem('fkg-user-chose-dark');
-        if (userDark === 'true') {
-          document.documentElement.classList.add('dark');
-        } else {
-          localStorage.setItem('fkg-theme', 'light');
+        var savedTheme = localStorage.getItem('fkg-theme');
+        if (savedTheme === 'light') {
           document.documentElement.classList.remove('dark');
+        } else {
+          document.documentElement.classList.add('dark');
         }
       } catch (e) {}
     </script>

@@ -1,14 +1,16 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 
-const Ctx = createContext({ theme: 'light', toggle: () => {} })
+const Ctx = createContext({ theme: 'dark', toggle: () => {} })
 export const useTheme = () => useContext(Ctx)
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     try {
-      return localStorage.getItem('fkg-user-chose-dark') === 'true' ? 'dark' : 'light'
+      const saved = localStorage.getItem('fkg-theme')
+      if (saved) return saved
+      return 'dark'
     } catch {
-      return 'light'
+      return 'dark'
     }
   })
 
@@ -19,7 +21,7 @@ export function ThemeProvider({ children }) {
       if (theme === 'dark') {
         localStorage.setItem('fkg-user-chose-dark', 'true')
       } else {
-        localStorage.removeItem('fkg-user-chose-dark')
+        localStorage.setItem('fkg-user-chose-dark', 'false')
       }
     } catch { /* private mode */ }
   }, [theme])

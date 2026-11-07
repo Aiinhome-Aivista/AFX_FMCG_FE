@@ -174,7 +174,7 @@ export default function FmcgLanding() {
       <div className="relative mb-5 overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-surface via-surface to-surface2 p-6 sm:p-8 shadow-card">
         {/* Ambient subtle glow background */}
         <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-purple-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-cyan-400/10 blur-3xl" />
 
         <div className="relative z-10 max-w-5xl">
 
@@ -182,7 +182,7 @@ export default function FmcgLanding() {
           {/* Main Title with high-contrast gradient */}
           <h1 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-4xl">
             <span className="text-ink">FMCG </span>
-            <span className="bg-gradient-to-r from-brand via-indigo-500 to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-brand via-emerald-400 to-cyan-400 bg-clip-text text-transparent">
               Ontology Knowledge Graph
             </span>
           </h1>
@@ -207,12 +207,12 @@ export default function FmcgLanding() {
             id="tab-all"
             type="button"
             className={`group relative rounded-xl px-3.5 py-2 text-xs sm:text-[13px] font-semibold transition-all duration-200 cursor-pointer flex items-center gap-2 shrink-0 border ${selectedDomain === 'all'
-                ? 'bg-brand text-white border-brand shadow-md shadow-brand/25 scale-[1.01]'
+                ? 'bg-brand text-brand-ink border-brand shadow-md shadow-brand/25 scale-[1.01]'
                 : 'border-line bg-surface/90 text-muted hover:text-ink hover:border-brand/40 hover:bg-surface2 shadow-2xs hover:-translate-y-0.5'
               }`}
             onClick={() => handleDomainSelect('all')}
           >
-            <Compass size={15} className={selectedDomain === 'all' ? 'text-white' : 'text-brand'} />
+            <Compass size={15} className={selectedDomain === 'all' ? 'text-brand-ink' : 'text-brand'} />
             <span className="tracking-tight">All Domains</span>
           </button>
 
@@ -227,7 +227,7 @@ export default function FmcgLanding() {
                 key={dKey}
                 type="button"
                 className={`group relative rounded-xl px-3.5 py-2 text-xs sm:text-[13px] transition-all duration-200 cursor-pointer flex items-center gap-2 shrink-0 border ${isSelected
-                    ? 'bg-brand text-white border-brand shadow-md shadow-brand/25 scale-[1.01] font-semibold'
+                    ? 'bg-brand text-brand-ink border-brand shadow-md shadow-brand/25 scale-[1.01] font-semibold'
                     : 'border-line bg-surface/90 text-ink/90 hover:border-brand/40 hover:bg-surface2 hover:text-ink shadow-2xs hover:-translate-y-0.5'
                   }`}
                 onClick={() => handleDomainSelect(dKey)}
@@ -236,8 +236,8 @@ export default function FmcgLanding() {
                 <span
                   className="h-2 w-2 rounded-full shrink-0 transition-transform group-hover:scale-125"
                   style={{
-                    backgroundColor: isSelected ? '#FFFFFF' : meta.c,
-                    boxShadow: isSelected ? '0 0 8px rgba(255,255,255,0.8)' : undefined,
+                    backgroundColor: isSelected ? '#000000' : meta.c,
+                    boxShadow: isSelected ? '0 0 6px rgba(0,0,0,0.5)' : undefined,
                   }}
                 />
                 <span className="font-semibold text-xs sm:text-[13px] tracking-tight whitespace-nowrap">
