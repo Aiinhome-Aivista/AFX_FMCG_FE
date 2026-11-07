@@ -29,6 +29,8 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
     edges: propEdges,
     flows: propFlows,
     domainMeta: propDomainMeta,
+    gapAnalysis = false,
+    discrepancies = null,
   },
   ref
 ) {
@@ -685,7 +687,22 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
               const isTouchesSelected = selId && (e.srcId === selId || e.tgtId === selId)
               const isHighlighted = isFlowHighlighted || (isTouchesSelected && !isDim)
 
-              const edgeColor = isHighlighted ? themeColors.accent : themeColors.edge
+              const isDiscrepancyEdge = gapAnalysis && (
+                discrepancies?.addedKeys?.has(e.srcId) ||
+                discrepancies?.addedKeys?.has(e.tgtId) ||
+                discrepancies?.missingKeys?.has(e.srcId) ||
+                discrepancies?.missingKeys?.has(e.tgtId)
+              )
+
+              const edgeColor = isHighlighted
+                ? themeColors.accent
+                : gapAnalysis
+                  ? isDiscrepancyEdge
+                    ? '#EF4444'
+                    : isDark
+                      ? '#334155'
+                      : '#CBD5E1'
+                  : themeColors.edge
 
               return (
                 <g key={e.id}>
@@ -695,10 +712,10 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                     style={{
                       color: edgeColor,
                       stroke: edgeColor,
-                      strokeWidth: isHighlighted ? 2.4 : 1.15,
-                      opacity: isDim ? 0.05 : isHighlighted ? 1 : 0.5,
+                      strokeWidth: isHighlighted ? 2.4 : isDiscrepancyEdge ? 2 : 1.15,
+                      opacity: isDim ? 0.05 : isHighlighted ? 1 : gapAnalysis && !isDiscrepancyEdge ? 0.35 : 0.5,
                       fill: 'none',
-                      strokeDasharray: isFlowHighlighted ? '6 4' : undefined,
+                      strokeDasharray: isFlowHighlighted || isDiscrepancyEdge ? '6 4' : undefined,
                       transition: 'stroke 0.2s, stroke-width 0.2s, opacity 0.2s',
                     }}
                   />
@@ -757,7 +774,79 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
               }
 
               const opacity = isDim ? 0.1 : isNeighbour ? 0.38 : 1
-              const strokeWidth = isSelected ? 3.2 : isFound ? 2.6 : 1.6
+
+              // Check if node is a discrepancy during Gap Analysis (KG1 vs KG2)
+              const isAddedDiscrepancy = gapAnalysis && (
+                discrepancies?.addedKeys?.has(n.id) ||
+                discrepancies?.addedKeys?.has(n.key) ||
+                n.change_state === 'added' ||
+                (n.added_in_version && n.added_in_version >= 2) ||
+                n.kind === 'datasource' ||
+                n.isDiscrepancy
+              )
+              const isMissingDiscrepancy = gapAnalysis && (
+                discrepancies?.missingKeys?.has(n.id) ||
+                discrepancies?.missingKeys?.has(n.key) ||
+                n.isMissing
+              )
+              const isDiscrepancy = isAddedDiscrepancy || isMissingDiscrepancy
+
+              // Stroke: In Gap Analysis, discrepancies are RED (#EF4444), matching elements are NEUTRAL slate
+              const strokeColor = isSelected
+                ? themeColors.accent
+                : gapAnalysis
+                  ? isDiscrepancy
+                    ? '#EF4444'
+                    : (isDark ? '#475569' : '#CBD5E1')
+                  : n.change_state === 'added'
+                    ? '#10B981'
+                    : n.change_state === 'modified'
+                      ? '#F59E0B'
+                      : nodeColor
+
+              const strokeW = isSelected
+                ? 3.2
+                : gapAnalysis
+                  ? isDiscrepancy
+                    ? 2.8
+                    : 1.4
+                  : isFound
+                    ? 2.6
+                    : n.change_state === 'added' || n.change_state === 'modified'
+                      ? 2.4
+                      : 1.6
+
+              const dropShadow = isSelected
+                ? `drop-shadow(0 0 10px ${nodeColor}88)`
+                : gapAnalysis
+                  ? isDiscrepancy
+                    ? 'drop-shadow(0 0 10px rgba(239,68,68,0.65))'
+                    : isDark
+                      ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))'
+                      : 'drop-shadow(0 1px 1.5px rgba(0,0,0,0.06))'
+                  : n.change_state === 'added'
+                    ? 'drop-shadow(0 0 8px rgba(16,185,129,0.45))'
+                    : n.change_state === 'modified'
+                      ? 'drop-shadow(0 0 8px rgba(245,158,11,0.45))'
+                      : isDark
+                        ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))'
+                        : 'drop-shadow(0 1px 1.5px rgba(0,0,0,0.12))'
+
+              const dotColor = gapAnalysis
+                ? isDiscrepancy
+                  ? '#EF4444'
+                  : (isDark ? '#64748B' : '#94A3B8')
+                : n.change_state === 'added'
+                  ? '#10B981'
+                  : n.change_state === 'modified'
+                    ? '#F59E0B'
+                    : nodeColor
+
+              const labelTextColor = gapAnalysis
+                ? isDiscrepancy
+                  ? (isDark ? '#FCA5A5' : '#DC2626')
+                  : (isDark ? '#94A3B8' : '#64748B')
+                : themeColors.text
 
               return (
                 <g
@@ -775,28 +864,12 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                     width={n.w}
                     height={n.h}
                     rx={9}
-                    stroke={
-                      isSelected
-                        ? themeColors.accent
-                        : n.change_state === 'added'
-                          ? '#10B981'
-                          : n.change_state === 'modified'
-                            ? '#F59E0B'
-                            : nodeColor
-                    }
-                    strokeWidth={n.change_state === 'added' || n.change_state === 'modified' ? 2.4 : strokeWidth}
-                    strokeDasharray={isFound ? '5 3' : undefined}
+                    stroke={strokeColor}
+                    strokeWidth={strokeW}
+                    strokeDasharray={isMissingDiscrepancy ? '6 3' : isFound ? '5 3' : undefined}
                     style={{
                       fill: themeColors.card,
-                      filter: isSelected
-                        ? `drop-shadow(0 0 10px ${nodeColor}88)`
-                        : n.change_state === 'added'
-                          ? 'drop-shadow(0 0 8px rgba(16,185,129,0.45))'
-                          : n.change_state === 'modified'
-                            ? 'drop-shadow(0 0 8px rgba(245,158,11,0.45))'
-                            : isDark
-                              ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))'
-                              : 'drop-shadow(0 1px 1.5px rgba(0,0,0,0.12))',
+                      filter: dropShadow,
                       transition: 'stroke 0.2s, stroke-width 0.2s',
                     }}
                   />
@@ -805,10 +878,18 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                     cx={n.x - n.w / 2 + 11}
                     cy={n.y - n.h / 2 + 10}
                     r={3.4}
-                    fill={n.change_state === 'added' ? '#10B981' : n.change_state === 'modified' ? '#F59E0B' : nodeColor}
+                    fill={dotColor}
                   />
-                  {/* Status badge for modified or newly added nodes */}
-                  {n.change_state === 'added' && (
+                  {/* Status badge: Red for discrepancies in Gap Analysis, or regular status */}
+                  {gapAnalysis && isDiscrepancy && (
+                    <g transform={`translate(${n.x + n.w / 2 - 40}, ${n.y - n.h / 2 - 8})`}>
+                      <rect width={isMissingDiscrepancy ? 54 : 74} height={16} rx={5} fill="#EF4444" />
+                      <text x={isMissingDiscrepancy ? 27 : 37} y={11.5} textAnchor="middle" fill="#FFFFFF" fontSize="8" fontWeight="bold" fontFamily="system-ui">
+                        {isMissingDiscrepancy ? 'MISSING' : 'DISCREPANCY'}
+                      </text>
+                    </g>
+                  )}
+                  {!gapAnalysis && n.change_state === 'added' && (
                     <g transform={`translate(${n.x + n.w / 2 - 28}, ${n.y - n.h / 2 - 7})`}>
                       <rect width={32} height={15} rx={5} fill="#10B981" />
                       <text x={16} y={11} textAnchor="middle" fill="#FFFFFF" fontSize="9" fontWeight="bold" fontFamily="system-ui">
@@ -816,7 +897,7 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                       </text>
                     </g>
                   )}
-                  {n.change_state === 'modified' && (
+                  {!gapAnalysis && n.change_state === 'modified' && (
                     <g transform={`translate(${n.x + n.w / 2 - 38}, ${n.y - n.h / 2 - 7})`}>
                       <rect width={42} height={15} rx={5} fill="#F59E0B" />
                       <text x={21} y={11} textAnchor="middle" fill="#FFFFFF" fontSize="8.5" fontWeight="bold" fontFamily="system-ui">
@@ -833,7 +914,7 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                         textAnchor="middle"
                         className="pointer-events-none select-none text-[12px] font-semibold"
                         style={{
-                          fill: themeColors.text,
+                          fill: labelTextColor,
                           fontFamily: "'Inter', system-ui, sans-serif",
                         }}
                       >
@@ -845,7 +926,7 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                         textAnchor="middle"
                         className="pointer-events-none select-none text-[12px] font-semibold"
                         style={{
-                          fill: themeColors.text,
+                          fill: labelTextColor,
                           fontFamily: "'Inter', system-ui, sans-serif",
                         }}
                       >
@@ -859,7 +940,7 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                       textAnchor="middle"
                       className="pointer-events-none select-none text-[12px] font-semibold"
                       style={{
-                        fill: themeColors.text,
+                        fill: labelTextColor,
                         fontFamily: "'Inter', system-ui, sans-serif",
                       }}
                     >

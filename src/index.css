@@ -258,3 +258,52 @@ body {
   caret-color: #111827 !important;
   transition: background-color 5000s ease-in-out 0s;
 }
+
+/* Chevron workflow tracker */
+.chevron-arrow {
+  clip-path: polygon(
+    0% 0%,
+    calc(100% - 12px) 0%,
+    100% 50%,
+    calc(100% - 12px) 100%,
+    0% 100%,
+    12px 50%
+  );
+}
+
+.chevron-arrow-start {
+  clip-path: polygon(
+    0% 0%,
+    calc(100% - 12px) 0%,
+    100% 50%,
+    calc(100% - 12px) 100%,
+    0% 100%
+  );
+}
+
+/* Hide scrollbar across all browsers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Prevent rectangular focus/hover/click outline box around workflow chevron steps */
+.chevron-tracker-step,
+.chevron-tracker-step:hover,
+.chevron-tracker-step:focus,
+.chevron-tracker-step:focus-visible,
+.chevron-tracker-step:active {
+  outline: none !important;
+  outline-width: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+

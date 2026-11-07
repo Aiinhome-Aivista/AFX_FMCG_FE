@@ -25,7 +25,7 @@ export function ThemeProvider({ children }) {
   }, [theme])
 
   return (
-    <Ctx.Provider value={{ theme, toggle: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')) }}>
+    <Ctx.Provider value={{ theme, toggle: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')), setTheme }}>
       {children}
     </Ctx.Provider>
   )

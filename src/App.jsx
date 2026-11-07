@@ -38,7 +38,7 @@ export default function App() {
       <Route path="/finance/:slug/finalize" element={<P app><Finalize /></P>} />
       <Route path="/finance/:slug/telemetry" element={<P app><Telemetry /></P>} />
 
-      <Route path="*" element={<Navigate to={user ? (user.selected_app ? '/fmcg' : '/apps') : '/login'} replace />} />
+      <Route path="*" element={<Navigate to={user ? '/apps' : '/login'} replace />} />
     </Routes>
   )
 }

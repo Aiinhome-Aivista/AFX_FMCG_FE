@@ -14,7 +14,7 @@ export default function AuthPage({ mode }) {
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
-  if (user) return <Navigate to={user.selected_app ? '/fmcg' : '/apps'} replace />
+  if (user) return <Navigate to="/apps" replace />
 
   const submit = async (e) => {
     e.preventDefault()
@@ -28,7 +28,7 @@ export default function AuthPage({ mode }) {
     setBusy(true)
     try {
       const u = isReg ? await register(f.email, f.name, f.password) : await login(f.email, f.password)
-      nav(loc.state?.from || (u.selected_app ? '/fmcg' : '/apps'), { replace: true })
+      nav(loc.state?.from || '/apps', { replace: true })
     } catch (e2) {
       setErr(e2.message)
     } finally {

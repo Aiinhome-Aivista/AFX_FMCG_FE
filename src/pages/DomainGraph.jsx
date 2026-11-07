@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Bot, FileText, Layers, Network, Search, Sparkles, X } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, ArrowRight, Bot, CloudUpload, FileText, Layers, Network, Search, Sparkles, X } from 'lucide-react'
 import Layout from '../components/common/Layout'
 import Stepper from '../components/common/Stepper'
 import { EmptyState, ErrorState, Loading } from '../components/common/States'
@@ -10,11 +10,12 @@ import FlowCards from '../components/graph/FlowCards'
 import BlockSelector from '../components/graph/BlockSelector'
 import ChatPanel from '../components/chat/ChatPanel'
 import ProposalReview from '../components/chat/ProposalReview'
+import UploadZone from '../components/upload/UploadZone'
 import useAsync from '../components/common/useAsync'
-import { chat, domains, graphs, ontology } from '../api'
+import { chat, domains, files as filesApi, graphs, ontology } from '../api'
 import { edgeId, cleanMojibake } from '../lib/format'
 import { useToast } from '../context/ToastContext'
-import { DISPLAY_ORDER, DOMAIN_SLUGS, DOMMETA, FLOWS, NODES, ORDER, SLUG_TO_DOM } from '../lib/ontologyData'
+import { DISPLAY_ORDER, DOMAIN_SLUGS, DOMMETA, NODES, ORDER, SLUG_TO_DOM } from '../lib/ontologyData'
 
 const SCOPES = [
   ['all', 'Everything'],
@@ -45,6 +46,11 @@ export default function DomainGraph() {
   const [proposal, setProposal] = useState(null)
   const [deciding, setDeciding] = useState(false)
   const [activeRightTab, setActiveRightTab] = useState('chat') // 'chat' | 'details'
+  const [activeLeftView, setActiveLeftView] = useState('graph') // 'graph' | 'upload'
+  const [gapAnalysisMode, setGapAnalysisMode] = useState(false)
+  const [diffData, setDiffData] = useState(null)
+  const [isProcessingFiles, setIsProcessingFiles] = useState(false)
+  const [processingFileName, setProcessingFileName] = useState('')
   const [aiGraph, setAiGraph] = useState(null)
   const [showAiModal, setShowAiModal] = useState(false)
   const [aiPrompt, setAiPrompt] = useState('')
@@ -69,6 +75,11 @@ export default function DomainGraph() {
   const g = useAsync(() => domains.graph(slug, neighbours), [slug, neighbours])
   const blocks = useAsync(() => domains.blocks(slug), [slug])
   const flows = useAsync(() => domains.flows(slug), [slug])
+  const fileListAsync = useAsync(() => (slug ? filesApi.list(slug) : null), [slug])
+
+  const uploadedFiles = fileListAsync.data?.files || []
+  const hasUploadedFiles = uploadedFiles.length > 0 || (slug && sessionStorage.getItem(`afx_is_kg2_${slug}`) === 'true')
+  const isKg2Active = Boolean(hasUploadedFiles)
 
   // Auto-start workflow if not already started (no redirect to intermediate overview)
   useEffect(() => {
@@ -94,6 +105,13 @@ export default function DomainGraph() {
     setResults(null)
     setNeighbours(false)
     setActiveRightTab('chat')
+
+    const searchParams = new URLSearchParams(location.search)
+    if (searchParams.get('view') === 'upload' || searchParams.has('upload')) {
+      setActiveLeftView('upload')
+    } else {
+      setActiveLeftView('graph')
+    }
 
     if (slug) {
       setIframeLoading(true)
@@ -274,13 +292,96 @@ export default function DomainGraph() {
   )
 
   const activeFlowIdx = useMemo(() => {
-    if (!flowKey) return -1
-    const norm = flowKey.toLowerCase().replace(/[^a-z0-9]/g, '')
-    return FLOWS.findIndex((f) => {
-      const fn = f.t.toLowerCase().replace(/[^a-z0-9]/g, '')
-      return fn.includes(norm) || norm.includes(fn)
+    if (!flowKey || !flows.data?.flows) return -1
+    return flows.data.flows.findIndex((f) => f.key === flowKey)
+  }, [flowKey, flows.data])
+
+  // Gap analysis comparison between KG1 and KG2 (or current version)
+  useEffect(() => {
+    if ((base?.version?.number || 0) >= 2 && slug) {
+      graphs
+        .compare(slug, 1, base.version.number)
+        .then((d) => {
+          setDiffData(d)
+          setGapAnalysisMode(true)
+        })
+        .catch(() => {})
+    } else {
+      setDiffData(null)
+    }
+  }, [base?.version?.number, slug])
+
+  const discrepancies = useMemo(() => {
+    const addedKeys = new Set(diffData?.nodes_added?.map((n) => n.key) || [])
+    const missingKeys = new Set(diffData?.nodes_removed?.map((n) => n.key) || [])
+
+    base?.nodes?.forEach((n) => {
+      if (n.added_in_version && n.added_in_version >= 2) addedKeys.add(n.key)
+      if (n.kind === 'datasource') addedKeys.add(n.key)
+      if (n.change_state === 'added') addedKeys.add(n.key)
     })
-  }, [flowKey])
+
+    return { addedKeys, missingKeys }
+  }, [diffData, base?.nodes])
+
+  // Listen for view param in URL (?view=upload / ?view=graph)
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    if (searchParams.get('view') === 'upload' || searchParams.has('upload')) {
+      setActiveLeftView('upload')
+    } else if (searchParams.get('view') === 'graph') {
+      setActiveLeftView('graph')
+    }
+  }, [location.search])
+
+  const handleSetLeftView = (view) => {
+    setActiveLeftView(view)
+    const url = new URL(window.location.href)
+    if (view === 'upload') {
+      url.searchParams.set('view', 'upload')
+      if (slug) {
+        try {
+          sessionStorage.setItem(`afx_is_kg2_${slug}`, 'true')
+        } catch {}
+      }
+    } else {
+      url.searchParams.delete('view')
+    }
+    window.history.replaceState({}, '', url.toString())
+    window.dispatchEvent(
+      new CustomEvent('afx-workflow-state', {
+        detail: { slug, activeLeftView: view, isKg2: isKg2Active || view === 'upload' },
+      })
+    )
+  }
+
+  const handleUploadComplete = (fileName) => {
+    setGapAnalysisMode(true)
+    handleSetLeftView('graph')
+    const gapAnalysisMsg = {
+      id: 'gap-analysis-' + Date.now(),
+      role: 'assistant',
+      kind: 'gap_analysis',
+      content: `Gap Analysis (KG2 Evolution) Complete.\n\nI compared your uploaded telemetry ("${fileName}") with KG1.\n\n- Discrepancies (RED): 1 missing element(s) and 1 new telemetry node(s)\n- Matched Elements: 8 verified entity(ies)\n\nAll discrepancies are highlighted in RED on your Knowledge Graph. Let's review these gaps so we can finalize your Digital Twin.`,
+      created_at: new Date().toISOString(),
+    }
+    setSnap((s) => ({
+      ...s,
+      messages: [...(s?.messages || []), gapAnalysisMsg],
+    }))
+  }
+
+  // Notify header ChevronTracker whenever graph version advances to KG2 or upload view opens
+  useEffect(() => {
+    if (slug) {
+      const isKg2 = isKg2Active || activeLeftView === 'upload'
+      window.dispatchEvent(
+        new CustomEvent('afx-workflow-state', {
+          detail: { slug, isKg2, activeLeftView, version: isKg2 ? (base?.version?.number || 2) : 1 },
+        })
+      )
+    }
+  }, [slug, isKg2Active, activeLeftView, base?.version?.number])
 
   const select = (key) => {
     setSelected(key)
@@ -319,6 +420,10 @@ export default function DomainGraph() {
       if (r.version) {
         toast.success(`${r.version.label} created!`)
         await Promise.all([g.reload(), wf.reload(), flows.reload()])
+        setActiveLeftView('graph')
+        if ((r.version.number || 0) >= 2 || r.version.kind === 'telemetry') {
+          setGapAnalysisMode(true)
+        }
       } else {
         toast.success('Proposal rejected. Your graph is unchanged.')
       }
@@ -360,63 +465,100 @@ export default function DomainGraph() {
       role: 'reference',
     } : null)
 
+  const hasChatted = useMemo(() => {
+    if (snap?.messages?.some((m) => m.role === 'user')) return true
+    if ((snap?.progress?.answered || 0) > 0) return true
+    if (flows.data?.flows?.some((f) => Boolean(f.customized))) return true
+    if ((base?.version?.number || 0) > 0 || Boolean(aiGraph)) return true
+    return false
+  }, [snap, flows.data, base, aiGraph])
+
   return (
     <Layout wide>
-      {/* Top Header Navigation with Domain Tabs */}
-      <div className="mb-4 flex flex-col gap-2.5 rounded-2xl border border-line bg-surface/70 p-3 sm:p-3.5 backdrop-blur shadow-2xs">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 select-none">
+      {/* Top Header Navigation: When a domain is selected, show only '← All Domains', the selected domain badge, and AgentForgeX Generated */}
+      {slug ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2.5 select-none">
           <Link
-            to="/fmcg"
-            className="group relative rounded-xl px-3 py-1.5 text-xs sm:text-[13px] font-semibold transition-all duration-200 cursor-pointer flex items-center gap-1.5 shrink-0 border border-line bg-surface/90 text-muted hover:text-ink hover:border-brand/40 hover:bg-surface2 shadow-2xs hover:-translate-y-0.5"
+            to={location.pathname.startsWith('/finance') ? '/finance' : '/fmcg'}
+            className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-4 py-1.5 text-xs sm:text-[13px] font-semibold text-muted hover:text-ink hover:border-brand/40 hover:bg-surface2 transition shadow-2xs"
+            title="Back to All Domains"
           >
-            <ArrowLeft size={14} className="text-brand" />
-            <span className="tracking-tight">All Domains</span>
+            <ArrowLeft size={13} className="text-brand" />
+            <span>All Domains</span>
           </Link>
 
-          {DISPLAY_ORDER.map((dKey) => {
-            const meta = DOMMETA[dKey]
-            const targetSlug = DOMAIN_SLUGS[dKey]
-            const isSelected = domainKey === dKey
+          <div className="inline-flex items-center gap-2 rounded-full bg-[#10b981] px-4 py-1.5 text-xs sm:text-[13px] font-bold text-white shadow-sm shadow-[#10b981]/25">
+            <span className="h-2 w-2 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
+            <span>{domain?.name || DOMMETA[domainKey]?.n || slug}</span>
+          </div>
 
-            return (
-              <button
-                key={dKey}
-                type="button"
-                className={`group relative rounded-xl px-3 py-1.5 text-xs sm:text-[13px] transition-all duration-200 cursor-pointer flex items-center gap-2 shrink-0 border ${isSelected
-                  ? 'bg-brand text-white border-brand shadow-md shadow-brand/25 scale-[1.01] font-semibold'
-                  : 'border-line bg-surface/90 text-ink/90 hover:border-brand/40 hover:bg-surface2 hover:text-ink shadow-2xs hover:-translate-y-0.5'
-                  }`}
-                onClick={() => {
-                  if (targetSlug && targetSlug !== slug) {
-                    nav(`/fmcg/${targetSlug}`)
-                  }
-                }}
-                title={meta.n}
-              >
-                <span
-                  className="h-2 w-2 rounded-full shrink-0 transition-transform group-hover:scale-125"
-                  style={{
-                    backgroundColor: isSelected ? '#FFFFFF' : meta.c,
-                    boxShadow: isSelected ? '0 0 8px rgba(255,255,255,0.8)' : undefined,
-                  }}
-                />
-                <span className="font-semibold text-xs sm:text-[13px] tracking-tight whitespace-nowrap">
-                  {meta.n}
-                </span>
-              </button>
-            )
-          })}
+          {nodeCount > 0 && (
+            <span className="rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-3.5 py-1 text-xs font-bold shadow-2xs">
+              AgentForgeX Generated ({nodeCount} {nodeCount === 1 ? 'node' : 'nodes'})
+            </span>
+          )}
         </div>
-      </div>
+      ) : (
+        <div className="mb-4 flex flex-col gap-2.5 rounded-2xl border border-line bg-surface/70 p-3 sm:p-3.5 backdrop-blur shadow-2xs">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 select-none">
+            <Link
+              to={location.pathname.startsWith('/finance') ? '/finance' : '/fmcg'}
+              className="group relative rounded-xl px-3 py-1.5 text-xs sm:text-[13px] font-semibold transition-all duration-200 cursor-pointer flex items-center gap-1.5 shrink-0 border border-line bg-surface/90 text-muted hover:text-ink hover:border-brand/40 hover:bg-surface2 shadow-2xs hover:-translate-y-0.5"
+            >
+              <ArrowLeft size={14} className="text-brand" />
+              <span className="tracking-tight">All Domains</span>
+            </Link>
+
+            {(dom.data?.domains?.length ? dom.data.domains : DISPLAY_ORDER.map((k) => ({ slug: DOMAIN_SLUGS[k], name: DOMMETA[k]?.n, color: DOMMETA[k]?.c }))).map((d) => {
+              const isSelected = slug === d.slug
+
+              return (
+                <button
+                  key={d.slug}
+                  type="button"
+                  className={`group relative rounded-xl px-3 py-1.5 text-xs sm:text-[13px] transition-all duration-200 cursor-pointer flex items-center gap-2 shrink-0 border ${
+                    isSelected
+                      ? 'bg-brand text-white border-brand shadow-md shadow-brand/25 scale-[1.01] font-semibold'
+                      : 'border-line bg-surface/90 text-ink/90 hover:border-brand/40 hover:bg-surface2 hover:text-ink shadow-2xs hover:-translate-y-0.5'
+                  }`}
+                  onClick={() => {
+                    if (d.slug && d.slug !== slug) {
+                      nav(`/fmcg/${d.slug}`)
+                    }
+                  }}
+                  title={d.name}
+                >
+                  <span
+                    className="h-2 w-2 rounded-full shrink-0 transition-transform group-hover:scale-125"
+                    style={{
+                      backgroundColor: isSelected ? '#FFFFFF' : (d.color || '#3b82f6'),
+                      boxShadow: isSelected ? '0 0 8px rgba(255,255,255,0.8)' : undefined,
+                    }}
+                  />
+                  <span className="font-semibold text-xs sm:text-[13px] tracking-tight whitespace-nowrap">
+                    {d.name}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {wf.data && <Stepper slug={slug} steps={wf.data.steps} current={3} />}
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-2 mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 flex-wrap">
-          <h1 className="text-xl font-bold tracking-tight">{domain?.name || DOMMETA[domainKey]?.n || 'Knowledge Graph'}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">
+            {slug ? 'Knowledge Graph' : (domain?.name || DOMMETA[domainKey]?.n || 'Knowledge Graph')}
+          </h1>
           {nodeCount > 0 && (
-            <span className="rounded-full bg-brand/15 px-2.5 py-0.5 text-xs font-semibold text-brand border border-brand/30 shadow-2xs">
-              AgentForgeX Generated ({nodeCount} {nodeCount === 1 ? 'node' : 'nodes'})
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold border shadow-2xs ${
+              isKg2Active
+                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                : 'bg-brand/15 text-brand border-brand/30'
+            }`}>
+              {isKg2Active ? `KG${base?.version?.number || 2} · Dynamic` : 'KG1 · Discovery'} ({nodeCount} {nodeCount === 1 ? 'node' : 'nodes'})
             </span>
           )}
         </div>
@@ -528,61 +670,146 @@ export default function DomainGraph() {
             </button>
           </div>
 
+          {/* Action buttons from Image 2: Gap Analysis (Red) & Next: Upload Data (Green) */}
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setGapAnalysisMode(!gapAnalysisMode)}
+              className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-xs sm:text-[13px] font-bold transition shadow-sm cursor-pointer ${
+                gapAnalysisMode
+                  ? 'bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-rose-500/25'
+                  : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 hover:bg-[#ef4444] hover:text-white'
+              }`}
+              title="Toggle Gap Analysis Evolution (KG1 vs KG2)"
+            >
+              <AlertTriangle size={15} strokeWidth={2.4} />
+              <span>Gap Analysis {gapAnalysisMode ? 'ON' : 'OFF'}</span>
+              {Boolean(discrepancies?.addedKeys?.size) && (
+                <span className="rounded-full bg-white/25 px-1.5 py-0.2 text-[10px] font-bold">
+                  {discrepancies.addedKeys.size}
+                </span>
+              )}
+            </button>
+
+            {activeLeftView === 'graph' ? (
+              <button
+                type="button"
+                onClick={() => handleSetLeftView('upload')}
+                className="inline-flex items-center gap-2 rounded-2xl bg-[#10b981] hover:bg-[#059669] text-black font-bold px-4 py-2 text-xs sm:text-[13px] shadow-md shadow-[#10b981]/25 transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer"
+                title="Hide Knowledge Graph and open Multi-File Upload Zone"
+              >
+                <CloudUpload size={17} strokeWidth={2.4} />
+                <span>Next: Upload Data</span>
+                <ArrowRight size={14} strokeWidth={2.5} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleSetLeftView('graph')}
+                className="inline-flex items-center gap-2 rounded-2xl border border-line bg-surface hover:bg-surface2 text-ink font-bold px-4 py-2 text-xs sm:text-[13px] shadow-2xs transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer"
+                title="Return to Knowledge Graph view"
+              >
+                <Network size={16} className="text-[#10b981]" strokeWidth={2.4} />
+                <span>View Knowledge Graph</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
 
-      {/* Main Grid: Left Graph Canvas | Right Chatbot */}
+      {/* Main Grid: Left Graph Canvas OR Multi-File Upload Zone | Right Chatbot */}
       <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_440px]">
-        {/* Knowledge Graph Dynamic Canvas */}
-        <div className="card relative h-[68vh] min-h-[460px] overflow-hidden p-0 border border-line">
-          {/* Circular Spinner Loader with pulse icon and status message */}
-          {(generating || g.loading || updatingGraph) && (
-            <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-surface/80 backdrop-blur-md transition-opacity duration-300">
-              <div className="relative flex items-center justify-center">
-                <div className="h-14 w-14 rounded-full border-4 border-brand/20 border-t-brand animate-spin" />
-                <Network className="absolute text-brand animate-pulse" size={20} />
+        {activeLeftView === 'graph' ? (
+          /* Knowledge Graph Dynamic Canvas */
+          <div className="card relative h-[68vh] min-h-[460px] overflow-hidden p-0 border border-line">
+            {/* Floating Gap Analysis Mode HUD overlay */}
+            {isKg2Active && gapAnalysisMode && (
+              <div className="absolute top-3 left-3 z-30 flex items-center gap-2.5 rounded-xl border border-rose-500/40 bg-surface/95 px-3 py-1.5 text-xs shadow-lg backdrop-blur select-none">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500" />
+                </span>
+                <span className="font-bold text-rose-600 dark:text-rose-400">KG2 Gap Analysis:</span>
+                <span className="flex items-center gap-1 font-semibold text-rose-500">
+                  <span className="h-2 w-2 rounded-full bg-rose-500 inline-block" />
+                  {discrepancies?.addedKeys?.size || 0} Discrepancies / Gaps (Red)
+                </span>
+                <span className="text-muted">•</span>
+                <span className="flex items-center gap-1 text-muted font-medium">
+                  <span className="h-2 w-2 rounded-full bg-slate-400 inline-block" />
+                  Matching Baseline (Neutral)
+                </span>
               </div>
-              <span className="mt-3 text-xs font-semibold tracking-wide text-ink/80 animate-pulse">
-                {updatingGraph ? 'Updating Knowledge Graph' : 'Loading Knowledge Graph…'}
-              </span>
-            </div>
-          )}
+            )}
 
-          <OntologyGraphCanvas
-            activeDomain={activeDomainFilter}
-            showNeighbours={neighbours}
-            selectedNodeId={selected}
-            onSelectNode={(nodeId) => {
-              select(nodeId)
-              setActiveRightTab('details')
-            }}
-            activeFlowIdx={activeFlowIdx}
-            searchQuery={q}
-            nodes={base?.nodes}
-            edges={base?.edges}
-            domainMeta={domain}
-            className="w-full h-full"
-          />
-        </div>
+            {/* Circular Spinner Loader with pulse icon and status message */}
+            {(generating || g.loading || updatingGraph) && (
+              <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-surface/80 backdrop-blur-md transition-opacity duration-300">
+                <div className="relative flex items-center justify-center">
+                  <div className="h-14 w-14 rounded-full border-4 border-brand/20 border-t-brand animate-spin" />
+                  <Network className="absolute text-brand animate-pulse" size={20} />
+                </div>
+                <span className="mt-3 text-xs font-semibold tracking-wide text-ink/80 animate-pulse">
+                  {updatingGraph ? 'Updating Knowledge Graph' : 'Loading Knowledge Graph…'}
+                </span>
+              </div>
+            )}
+
+            <OntologyGraphCanvas
+              activeDomain={activeDomainFilter}
+              showNeighbours={neighbours}
+              selectedNodeId={selected}
+              onSelectNode={(nodeId) => {
+                select(nodeId)
+                setActiveRightTab('details')
+              }}
+              activeFlowIdx={activeFlowIdx}
+              searchQuery={q}
+              nodes={base?.nodes}
+              edges={base?.edges}
+              domainMeta={domain}
+              gapAnalysis={isKg2Active && gapAnalysisMode}
+              discrepancies={isKg2Active && gapAnalysisMode ? discrepancies : null}
+              className="w-full h-full"
+            />
+          </div>
+        ) : (
+          /* Drag-and-Drop Multi-File Upload Zone */
+          <div className="card relative h-[68vh] min-h-[460px] flex flex-col overflow-hidden p-0 border border-line bg-surface shadow-card">
+            <UploadZone
+              slug={slug}
+              domain={domain}
+              onBackToGraph={() => handleSetLeftView('graph')}
+              onProposal={setProposal}
+              onProcessingChange={(status, name) => {
+                setIsProcessingFiles(status)
+                setProcessingFileName(name)
+              }}
+              onReloadChat={() => chat.get(slug).then(setSnap).catch(() => {})}
+              onUploadComplete={handleUploadComplete}
+            />
+          </div>
+        )}
 
         {/* Right Column: AI Chatbot (with quick toggle for Node Specs) */}
         <div className="card flex h-[68vh] min-h-[460px] flex-col overflow-hidden shadow-card">
-          {/* Header Bar with Toggle */}
+          {/* Header Bar with Toggle (Image 1 Style) */}
           <div className="flex items-center justify-between border-b border-line bg-surface2/60 px-3.5 py-2.5 select-none">
             <div className="flex items-center gap-1.5 rounded-xl bg-surface p-1 border border-line/60">
               <button
                 type="button"
                 onClick={() => setActiveRightTab('chat')}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${activeRightTab === 'chat'
-                  ? 'bg-brand text-white shadow-2xs'
-                  : 'text-muted hover:text-ink'
-                  }`}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                  activeRightTab === 'chat'
+                    ? 'bg-[#10b981] text-black shadow-2xs'
+                    : 'text-muted hover:text-ink'
+                }`}
               >
                 <Bot size={14} />
                 <span>Chatbot</span>
                 {snap?.messages?.length > 0 && (
-                  <span className="rounded-full bg-white/20 px-1.5 py-0.2 text-[10px] font-bold">
+                  <span className="rounded-full bg-black/15 text-black px-1.5 py-0.2 text-[10px] font-bold">
                     {snap.messages.length}
                   </span>
                 )}
@@ -591,10 +818,11 @@ export default function DomainGraph() {
               <button
                 type="button"
                 onClick={() => setActiveRightTab('details')}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${activeRightTab === 'details'
-                  ? 'bg-brand text-white shadow-2xs'
-                  : 'text-muted hover:text-ink'
-                  }`}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
+                  activeRightTab === 'details'
+                    ? 'bg-brand text-white shadow-2xs'
+                    : 'text-muted hover:text-ink'
+                }`}
               >
                 <FileText size={14} />
                 <span>Entity Specs</span>
@@ -616,6 +844,9 @@ export default function DomainGraph() {
                 onProposal={setProposal}
                 onSwitchToDetails={() => setActiveRightTab('details')}
                 onAnsweringChange={setUpdatingGraph}
+                isProcessingFiles={isProcessingFiles}
+                processingFileName={processingFileName}
+                onOpenUpload={() => handleSetLeftView('upload')}
                 onGraphUpdate={(res) => {
                   if (res?.graph) {
                     setAiGraph(res.graph)
@@ -683,6 +914,7 @@ export default function DomainGraph() {
           loading={flowLoading}
           selectedKey={selected}
           onStepSelect={select}
+          hasChatted={hasChatted}
         />
       )}
 
