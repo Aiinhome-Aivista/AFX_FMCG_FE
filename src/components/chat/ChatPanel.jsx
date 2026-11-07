@@ -118,20 +118,6 @@ export default function ChatPanel({
   }
 
 
-  const propose = () =>
-    run(
-      () => chat.propose(slug),
-      (r) => {
-        merge(r)
-        if (r.proposal) {
-          onProposal?.(r.proposal)
-          toast.success('Generated proposed changes. Ready for review!')
-        } else {
-          toast.success('Your answers align with the reference graph — no structural changes needed.')
-        }
-      }
-    )
-
   const activeSnap = snap || {
     conversation_id: null,
     messages: [],
@@ -443,21 +429,6 @@ export default function ChatPanel({
               </button>
             </form>
 
-            {/* Propose changes button */}
-            <button
-              type="button"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface2/60 px-3 py-2 text-xs font-semibold text-ink transition hover:border-brand/40 hover:bg-surface2 hover:text-brand cursor-pointer disabled:opacity-40"
-              onClick={propose}
-              disabled={busy || (activeSnap.pending_change_count === 0 && activeSnap.progress.answered === 0)}
-            >
-              <Sparkles size={14} className="text-brand" />
-              <span>Review proposed graph changes</span>
-              {activeSnap.pending_change_count > 0 && (
-                <span className="rounded-full bg-brand px-1.5 py-0.2 text-[10px] text-white">
-                  {activeSnap.pending_change_count}
-                </span>
-              )}
-            </button>
           </div>
         )}
       </div>

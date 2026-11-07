@@ -1,11 +1,14 @@
 import { Route, X } from 'lucide-react'
 import { Loading } from '../common/States'
 import { useTheme } from '../../context/ThemeContext'
+import { useAuth } from '../../context/AuthContext'
 
 /** Source-defined end-to-end flows. Selecting one highlights its nodes/edges on the graph and lists the ordered steps. */
 export default function FlowCards({ flows, activeKey, onToggle, detail, loading, selectedKey, onStepSelect }) {
   const { theme } = useTheme()
+  const { user } = useAuth()
   const isDark = theme === 'dark'
+  const username = user?.display_name || user?.email?.split('@')[0] || 'User'
 
   return (
     <section className="mt-6" aria-label="End-to-end FMCG flows">
@@ -22,7 +25,7 @@ export default function FlowCards({ flows, activeKey, onToggle, detail, loading,
 
           // Serpentine snake placement on desktop XL:
           // Row 1 (left to right): Col 1, Col 2, Col 3, Col 4
-          // Row 2 (right to left): Col 4, Col 3, Col 2
+          // Row 2 (right to left): Col 4, Col 3, Col 2, Col 1
           const SNAKE_GRID_XL = [
             'xl:col-start-1 xl:row-start-1',
             'xl:col-start-2 xl:row-start-1',
@@ -31,9 +34,14 @@ export default function FlowCards({ flows, activeKey, onToggle, detail, loading,
             'xl:col-start-4 xl:row-start-2',
             'xl:col-start-3 xl:row-start-2',
             'xl:col-start-2 xl:row-start-2',
+            'xl:col-start-1 xl:row-start-2',
           ]
 
           // Serpentine snake placement on tablet MD:
+          // Row 1 (L->R): Col 1, Col 2
+          // Row 2 (R->L): Col 2, Col 1
+          // Row 3 (L->R): Col 1, Col 2
+          // Row 4 (R->L): Col 2, Col 1
           const SNAKE_GRID_MD = [
             'md:col-start-1 md:row-start-1',
             'md:col-start-2 md:row-start-1',
@@ -42,6 +50,7 @@ export default function FlowCards({ flows, activeKey, onToggle, detail, loading,
             'md:col-start-1 md:row-start-3',
             'md:col-start-2 md:row-start-3',
             'md:col-start-2 md:row-start-4',
+            'md:col-start-1 md:row-start-4',
           ]
 
           return (
@@ -60,7 +69,7 @@ export default function FlowCards({ flows, activeKey, onToggle, detail, loading,
                       {Boolean(f.customized) && (
                         <span className="inline-flex items-center gap-1 rounded-md bg-purple-600/15 dark:bg-purple-500/25 px-2 py-0.5 text-[11px] font-bold text-purple-700 dark:text-purple-300 border border-purple-500/40 shadow-2xs">
                           <span className="h-1.5 w-1.5 rounded-full bg-purple-600 dark:bg-purple-400 animate-pulse" />
-                          AI Tailored
+                          Tailored by {username}
                         </span>
                       )}
                       {f.relevant ? (
@@ -89,7 +98,7 @@ export default function FlowCards({ flows, activeKey, onToggle, detail, loading,
               {/* Arrow connecting to the next card in serpentine flow */}
               {!isLast && (
                 <>
-                  {/* Desktop XL: 0->1->2->3 (right), 3->4 (down), 4->5->6 (left) */}
+                  {/* Desktop XL: 0->1->2->3 (right), 3->4 (down), 4->5->6->7 (left) */}
                   <div className="hidden xl:flex">
                     {(i === 0 || i === 1 || i === 2) && (
                       <div className="absolute left-full top-1/2 -translate-y-1/2 w-5 z-10 flex items-center justify-center pointer-events-none">
@@ -105,7 +114,7 @@ export default function FlowCards({ flows, activeKey, onToggle, detail, loading,
                         </svg>
                       </div>
                     )}
-                    {(i === 4 || i === 5) && (
+                    {(i === 4 || i === 5 || i === 6) && (
                       <div className="absolute -left-5 top-1/2 -translate-y-1/2 w-5 z-10 flex items-center justify-center pointer-events-none">
                         <svg width="18" height="12" viewBox="0 0 18 12" fill="none" className={`transition-colors duration-200 ${isActive ? 'text-brand' : 'text-black dark:text-white'}`}>
                           <path d="M17 6H3M7.5 1.5L3 6L7.5 10.5" stroke={arrowColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -114,7 +123,7 @@ export default function FlowCards({ flows, activeKey, onToggle, detail, loading,
                     )}
                   </div>
 
-                  {/* Tablet MD: 0->1 (right), 1->2 (down), 2->3 (left), 3->4 (down), 4->5 (right), 5->6 (down) */}
+                  {/* Tablet MD: 0->1 (right), 1->2 (down), 2->3 (left), 3->4 (down), 4->5 (right), 5->6 (down), 6->7 (left) */}
                   <div className="hidden md:flex xl:hidden">
                     {(i === 0 || i === 4) && (
                       <div className="absolute left-full top-1/2 -translate-y-1/2 w-5 z-10 flex items-center justify-center pointer-events-none">
@@ -130,7 +139,7 @@ export default function FlowCards({ flows, activeKey, onToggle, detail, loading,
                         </svg>
                       </div>
                     )}
-                    {i === 2 && (
+                    {(i === 2 || i === 6) && (
                       <div className="absolute -left-5 top-1/2 -translate-y-1/2 w-5 z-10 flex items-center justify-center pointer-events-none">
                         <svg width="18" height="12" viewBox="0 0 18 12" fill="none" className={`transition-colors duration-200 ${isActive ? 'text-brand' : 'text-black dark:text-white'}`}>
                           <path d="M17 6H3M7.5 1.5L3 6L7.5 10.5" stroke={arrowColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />

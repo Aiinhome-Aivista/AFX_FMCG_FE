@@ -318,7 +318,7 @@ export default function DomainGraph() {
       setProposal(null)
       if (r.version) {
         toast.success(`${r.version.label} created!`)
-        await Promise.all([g.reload(), wf.reload()])
+        await Promise.all([g.reload(), wf.reload(), flows.reload()])
       } else {
         toast.success('Proposal rejected. Your graph is unchanged.')
       }
@@ -335,7 +335,11 @@ export default function DomainGraph() {
     }
   }
 
-  const domain = dom.data?.domains.find((d) => d.slug === slug)
+  const domain = dom.data?.domains?.find((d) => d.slug === slug)
+  const nodeCount =
+    base?.nodes?.length ||
+    (domain?.counts ? ((domain.counts.core || 0) + (domain.counts.shared || 0)) : 0) ||
+    0
   const ontologyNode = useMemo(() => {
     if (!selected) return null
     return NODES.find((n) => n.id === selected) || null
@@ -408,11 +412,11 @@ export default function DomainGraph() {
       {wf.data && <Stepper slug={slug} steps={wf.data.steps} current={3} />}
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <h1 className="text-xl font-bold tracking-tight">{domain?.name || 'Knowledge Graph'}</h1>
-          {aiGraph && (
-            <span className="rounded-full bg-brand/15 px-2.5 py-0.5 text-xs font-semibold text-brand border border-brand/30">
-              LLM Generated ({aiGraph.nodes?.length || 0} nodes)
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <h1 className="text-xl font-bold tracking-tight">{domain?.name || DOMMETA[domainKey]?.n || 'Knowledge Graph'}</h1>
+          {nodeCount > 0 && (
+            <span className="rounded-full bg-brand/15 px-2.5 py-0.5 text-xs font-semibold text-brand border border-brand/30 shadow-2xs">
+              AgentForgeX Generated ({nodeCount} {nodeCount === 1 ? 'node' : 'nodes'})
             </span>
           )}
         </div>
@@ -524,30 +528,6 @@ export default function DomainGraph() {
             </button>
           </div>
 
-          {/* Prominent Active Version Badge */}
-          <div className="flex items-center gap-2">
-            <div
-              className={`flex items-center gap-1.5 rounded-xl border px-3 py-1 text-xs font-semibold shadow-2xs ${
-                (base?.version?.number || 0) > 0
-                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                  : 'border-line bg-surface2 text-muted'
-              }`}
-            >
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  (base?.version?.number || 0) > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-muted/60'
-                }`}
-              />
-              <span className="font-bold">
-                {base?.version?.label || (base?.version?.number ? `KG${base.version.number}` : 'KG0 (Baseline)')}
-              </span>
-              {(base?.version?.number || 0) > 0 && (
-                <span className="text-[10.5px] font-medium opacity-80">
-                  • Customized
-                </span>
-              )}
-            </div>
-          </div>
         </div>
       </div>
 
@@ -644,7 +624,11 @@ export default function DomainGraph() {
                   } else {
                     setAiGraph(null)
                   }
-                  Promise.allSettled([g.reload(), wf.reload(), flows.reload(), blocks.reload()]).finally(() => {
+                  const promises = [g.reload(), wf.reload(), flows.reload(), blocks.reload()]
+                  if (flowKey) {
+                    promises.push(ontology.flow(flowKey, slug).then(setFlowDetail).catch(() => {}))
+                  }
+                  Promise.allSettled(promises).finally(() => {
                     setUpdatingGraph(false)
                   })
                 }}
