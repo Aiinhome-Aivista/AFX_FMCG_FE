@@ -800,16 +800,16 @@ export default function DomainGraph() {
               <button
                 type="button"
                 onClick={() => setActiveRightTab('chat')}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
                   activeRightTab === 'chat'
-                    ? 'bg-[#10b981] text-black shadow-2xs'
+                    ? 'bg-brand text-brand-ink shadow-2xs font-bold'
                     : 'text-muted hover:text-ink'
                 }`}
               >
                 <Bot size={14} />
                 <span>Chatbot</span>
                 {snap?.messages?.length > 0 && (
-                  <span className="rounded-full bg-black/15 text-black px-1.5 py-0.2 text-[10px] font-bold">
+                  <span className="rounded-full bg-black/20 px-1.5 py-0.2 text-[10px] font-bold text-black">
                     {snap.messages.length}
                   </span>
                 )}
@@ -820,7 +820,7 @@ export default function DomainGraph() {
                 onClick={() => setActiveRightTab('details')}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
                   activeRightTab === 'details'
-                    ? 'bg-brand text-white shadow-2xs'
+                    ? 'bg-brand text-brand-ink shadow-2xs'
                     : 'text-muted hover:text-ink'
                 }`}
               >

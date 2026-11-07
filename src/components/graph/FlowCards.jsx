@@ -158,7 +158,7 @@ export default function FlowCards({
 
           // Arrow color: Black in light theme, White in dark theme, Brand color when active
           const arrowColor = isActive
-            ? (isDark ? '#818CF8' : '#4F46E5')
+            ? (isDark ? '#34d399' : '#10b981')
             : (isDark ? '#FFFFFF' : '#000000')
 
           // Serpentine snake placement on desktop XL:
@@ -206,8 +206,8 @@ export default function FlowCards({
                     <b className="text-sm">{f.title}</b>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {Boolean(f.customized) && (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-purple-600/15 dark:bg-purple-500/25 px-2 py-0.5 text-[11px] font-bold text-purple-700 dark:text-purple-300 border border-purple-500/40 shadow-2xs">
-                          <span className="h-1.5 w-1.5 rounded-full bg-purple-600 dark:bg-purple-400 animate-pulse" />
+                        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 dark:bg-emerald-500/25 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 shadow-2xs">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
                           Tailored by {username}
                         </span>
                       )}

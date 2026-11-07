@@ -156,10 +156,10 @@ export default function ChatPanel({
       <div className="relative flex h-full flex-col items-center justify-center overflow-hidden p-6 sm:p-8 text-center bg-gradient-to-b from-surface via-surface to-surface2">
         {/* Ambient glow */}
         <div className="pointer-events-none absolute -top-12 -right-12 h-44 w-44 rounded-full bg-brand/15 blur-2xl" />
-        <div className="pointer-events-none absolute -bottom-12 -left-12 h-44 w-44 rounded-full bg-indigo-500/10 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-12 -left-12 h-44 w-44 rounded-full bg-cyan-400/10 blur-2xl" />
 
         <div className="relative z-10 max-w-sm flex flex-col items-center">
-          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-tr from-brand via-indigo-600 to-purple-600 text-white shadow-lg shadow-brand/30">
+          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-tr from-brand via-emerald-400 to-cyan-400 text-black shadow-lg shadow-brand/30">
             <Bot size={28} />
           </div>
 
@@ -256,7 +256,7 @@ export default function ChatPanel({
             className={`h-full transition-all duration-500 ${
               isComplete
                 ? 'w-full bg-emerald-500'
-                : 'bg-gradient-to-r from-brand to-indigo-500'
+                : 'bg-gradient-to-r from-brand to-cyan-400'
             }`}
             style={{ width: isComplete ? '100%' : `${Math.min(95, Math.max(20, (answeredCount + 1) * 20))}%` }}
           />
@@ -315,7 +315,7 @@ export default function ChatPanel({
             <div key={m.id} className={`flex gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`}>
               <span
                 className={`grid h-7 w-7 shrink-0 place-items-center rounded-xl text-xs font-semibold shadow-2xs ${isUser
-                  ? 'bg-brand text-white shadow-brand/20'
+                  ? 'bg-brand text-brand-ink shadow-brand/20 font-bold'
                   : 'bg-surface2 text-brand border border-line'
                   }`}
               >
@@ -324,7 +324,7 @@ export default function ChatPanel({
 
               <div
                 className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed shadow-2xs ${isUser
-                  ? 'bg-brand text-white rounded-tr-sm'
+                  ? 'bg-brand text-brand-ink font-medium rounded-tr-sm'
                   : isDecisionMsg
                     ? 'border-2 border-brand/50 bg-brand/10 text-ink rounded-tl-sm'
                     : m.kind === 'gap_analysis'
@@ -400,7 +400,7 @@ export default function ChatPanel({
                     type="button"
                     disabled={busy}
                     onClick={() => handleDecision('proceed')}
-                    className="rounded-lg bg-brand px-2.5 py-1 text-xs font-semibold text-white hover:bg-brand/90 transition cursor-pointer shadow-2xs disabled:opacity-50"
+                    className="rounded-lg bg-brand px-2.5 py-1 text-xs font-semibold text-brand-ink hover:bg-[#6ee7b7] transition cursor-pointer shadow-2xs disabled:opacity-50"
                   >
                     Proceed
                   </button>
@@ -487,7 +487,7 @@ export default function ChatPanel({
 
               <button
                 type="submit"
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand text-white shadow-sm transition hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100 cursor-pointer"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand text-brand-ink font-semibold shadow-sm transition hover:scale-105 hover:bg-[#6ee7b7] active:scale-95 disabled:opacity-40 disabled:hover:scale-100 cursor-pointer"
                 disabled={busy || !text.trim()}
                 aria-label="Send message"
               >
