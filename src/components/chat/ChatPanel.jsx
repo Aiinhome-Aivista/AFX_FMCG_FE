@@ -460,44 +460,6 @@ export default function ChatPanel({
           )
         })}
 
-        {/* Core Nuances Captured - In-Chat Callout Card (shown after 2-3 chats if files not yet uploaded) */}
-        {canUpload && !hasUploadedFiles && (
-          <div className="rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-r from-emerald-500/10 via-brand/10 to-transparent p-3.5 shadow-sm my-3 animate-in fade-in slide-in-from-bottom-2 select-none">
-            <div className="flex items-start gap-2.5">
-              <div className="grid h-8 w-8 place-items-center rounded-xl bg-[#10b981] text-black shrink-0 shadow-2xs font-bold">
-                <Sparkles size={16} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                    Core Nuances Captured · Ready for Data Upload
-                  </span>
-                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.2 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-                    KG1 Ready
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-ink/80 leading-relaxed">
-                  You have captured initial operational nuances for this domain through chat! You can now <strong>upload business data or telemetry files</strong> to perform <strong>KG2 Gap Analysis</strong>, or continue answering questions below.
-                </p>
-                <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                  {onOpenUpload && (
-                    <button
-                      type="button"
-                      onClick={onOpenUpload}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-black font-bold px-3.5 py-1.5 text-xs shadow-sm transition active:scale-95 cursor-pointer"
-                    >
-                      <CloudUpload size={14} strokeWidth={2.4} />
-                      <span>Next: Upload Data for KG2 Gap Analysis</span>
-                      <ArrowRight size={13} strokeWidth={2.5} />
-                    </button>
-                  )}
-                  <span className="text-[11px] text-muted">or continue chatting below ↓</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {busy && (
           <div className="flex items-center gap-2 text-xs text-muted pl-9">
             <Spinner size={14} />
