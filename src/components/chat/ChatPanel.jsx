@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, Bot, CheckCircle2, ChevronRight, HelpCircle, MessageSquare, Send, SkipForward, Sparkles, User, Zap } from 'lucide-react'
+import { ArrowRight, Bot, CheckCircle2, ChevronRight, CloudUpload, HelpCircle, MessageSquare, Send, SkipForward, Sparkles, User, Zap } from 'lucide-react'
 import { Spinner } from '../common/States'
 import { chat } from '../../api'
 import { useToast } from '../../context/ToastContext'
@@ -65,6 +65,38 @@ export default function ChatPanel({
       setMode('ask')
     }
   }, [askNode])
+
+  const activeSnap = snap || {
+    conversation_id: null,
+    messages: [],
+    open_question: null,
+    progress: { answered: 0, planned: 0, plan_complete: false },
+    pending_change_count: 0,
+    engine: 'Assistant',
+    llm_enabled: false,
+  }
+
+  const userMessages = (activeSnap.messages || []).filter((m) => m.role === 'user')
+  const answeredCount = activeSnap.progress?.answered || 0
+  const userChatCount = Math.max(userMessages.length, answeredCount)
+
+  const hasUploadedFiles = Boolean(
+    (slug && sessionStorage.getItem(`afx_is_kg2_${slug}`) === 'true') ||
+    activeSnap.messages?.some((m) => m.kind === 'gap_analysis')
+  )
+
+  const canUpload =
+    userChatCount >= 2 ||
+    hasUploadedFiles ||
+    (slug && sessionStorage.getItem(`afx_can_upload_${slug}`) === 'true')
+
+  useEffect(() => {
+    if (userChatCount >= 2 && slug) {
+      try {
+        sessionStorage.setItem(`afx_can_upload_${slug}`, 'true')
+      } catch {}
+    }
+  }, [userChatCount, slug])
 
   const merge = (r) => {
     if (!r) return
@@ -140,16 +172,6 @@ export default function ChatPanel({
   }
 
 
-  const activeSnap = snap || {
-    conversation_id: null,
-    messages: [],
-    open_question: null,
-    progress: { answered: 0, planned: 0, plan_complete: false },
-    pending_change_count: 0,
-    engine: 'Assistant',
-    llm_enabled: false,
-  }
-
   // Welcome state when conversation hasn't started yet
   if (!activeSnap.conversation_id) {
     return (
@@ -208,7 +230,6 @@ export default function ChatPanel({
 
   const q = activeSnap.open_question
   const isComplete = Boolean(activeSnap.progress?.plan_complete && !q)
-  const answeredCount = activeSnap.progress?.answered || 0
 
   return (
     <div className="flex h-full flex-col bg-surface/90 text-ink">
@@ -263,25 +284,51 @@ export default function ChatPanel({
         </div>
       </div>
 
-      {/* Nuances Captured · KG1 Ready Banner (Image 1) */}
-      <div className="mx-3.5 my-2 flex items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-50/60 dark:bg-emerald-950/30 px-3.5 py-2 shadow-2xs">
-        <div className="flex items-center gap-2">
-          <CheckCircle2 size={16} className="text-[#10b981] shrink-0" />
-          <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-            Nuances Captured · KG1 Ready
-          </span>
+      {/* Nuances Captured · KG1 Ready Banner (Image 1) or In-Progress Counter */}
+      {canUpload ? (
+        <div className="mx-3.5 my-2 flex items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-50/60 dark:bg-emerald-950/30 px-3.5 py-2 shadow-2xs animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-[#10b981] shrink-0" />
+            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+              Nuances Captured · KG1 Ready
+            </span>
+          </div>
+          {onOpenUpload && (
+            <button
+              type="button"
+              onClick={onOpenUpload}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-black font-bold px-3 py-1.5 text-xs shadow-sm transition active:scale-95 cursor-pointer"
+            >
+              <span>Next: Upload Data</span>
+              <ArrowRight size={13} strokeWidth={2.5} />
+            </button>
+          )}
         </div>
-        {onOpenUpload && (
-          <button
-            type="button"
-            onClick={onOpenUpload}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-black font-bold px-3 py-1.5 text-xs shadow-sm transition active:scale-95 cursor-pointer"
-          >
-            <span>Next: Upload Data</span>
-            <ArrowRight size={13} strokeWidth={2.5} />
-          </button>
-        )}
-      </div>
+      ) : (
+        <div className="mx-3.5 my-2 flex items-center justify-between rounded-xl border border-line/60 bg-surface2/50 px-3.5 py-2 text-xs text-muted select-none">
+          <div className="flex items-center gap-2">
+            <Sparkles size={14} className="text-brand shrink-0" />
+            <span className="font-semibold text-ink/80">
+              Capturing Core Nuances
+            </span>
+            <span className="text-[11px] text-muted font-normal">
+              ({userChatCount}/2 chats to unlock file upload)
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`h-1.5 w-5 rounded-full transition-colors ${
+                userChatCount >= 1 ? 'bg-brand' : 'bg-line dark:bg-surface'
+              }`}
+            />
+            <span
+              className={`h-1.5 w-5 rounded-full transition-colors ${
+                userChatCount >= 2 ? 'bg-brand' : 'bg-line dark:bg-surface'
+              }`}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Interactive Bot Processing Banner for File Parsing */}
       {isProcessingFiles && (
@@ -345,6 +392,44 @@ export default function ChatPanel({
             </div>
           )
         })}
+
+        {/* Core Nuances Captured - In-Chat Callout Card (shown after 2-3 chats if files not yet uploaded) */}
+        {canUpload && !hasUploadedFiles && (
+          <div className="rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-r from-emerald-500/10 via-brand/10 to-transparent p-3.5 shadow-sm my-3 animate-in fade-in slide-in-from-bottom-2 select-none">
+            <div className="flex items-start gap-2.5">
+              <div className="grid h-8 w-8 place-items-center rounded-xl bg-[#10b981] text-black shrink-0 shadow-2xs font-bold">
+                <Sparkles size={16} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                    Core Nuances Captured · Ready for Data Upload
+                  </span>
+                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.2 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                    KG1 Ready
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-ink/80 leading-relaxed">
+                  You have captured initial operational nuances for this domain through chat! You can now <strong>upload business data or telemetry files</strong> to perform <strong>KG2 Gap Analysis</strong>, or continue answering questions below.
+                </p>
+                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                  {onOpenUpload && (
+                    <button
+                      type="button"
+                      onClick={onOpenUpload}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-black font-bold px-3.5 py-1.5 text-xs shadow-sm transition active:scale-95 cursor-pointer"
+                    >
+                      <CloudUpload size={14} strokeWidth={2.4} />
+                      <span>Next: Upload Data for KG2 Gap Analysis</span>
+                      <ArrowRight size={13} strokeWidth={2.5} />
+                    </button>
+                  )}
+                  <span className="text-[11px] text-muted">or continue chatting below ↓</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {busy && (
           <div className="flex items-center gap-2 text-xs text-muted pl-9">

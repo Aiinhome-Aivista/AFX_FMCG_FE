@@ -82,12 +82,9 @@ export default function ChevronTracker() {
   const isDomainSelected = Boolean(slug)
   const isFinalize = path.includes('/finalize') || path.includes('/telemetry')
 
-  // Check if user has uploaded files or is currently in Upload Zone / KG2 mode
+  // Check if user has transitioned to KG2 (via View Gap Analysis button click)
   const isUploadOrKg2 = Boolean(
     workflowDetail?.isKg2 ||
-    workflowDetail?.activeLeftView === 'upload' ||
-    location.search.includes('view=upload') ||
-    location.search.includes('upload') ||
     (slug && sessionStorage.getItem(`afx_is_kg2_${slug}`) === 'true')
   )
 

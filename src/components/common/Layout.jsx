@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { LogOut, Moon, Network, Sun } from 'lucide-react'
+import { LogOut, Moon, Network, Sun, User } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import ChevronTracker from './ChevronTracker'
@@ -20,14 +20,6 @@ export default function Layout({ children, wide }) {
       setTheme?.('dark')
     }
   }, [isFinance, setTheme])
-
-  const initials = (user?.display_name || user?.email || 'User')
-    .split(' ')
-    .filter(Boolean)
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
 
   return (
     <div className="flex min-h-full flex-col bg-bg text-ink">
@@ -55,35 +47,39 @@ export default function Layout({ children, wide }) {
           </div>
 
           {/* User Controls & Theme */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0 select-none">
+            {/* Theme Toggle Button */}
             <button
-              className="btn-ghost btn-sm rounded-xl p-2 cursor-pointer"
+              className="grid h-9 w-9 place-items-center rounded-2xl border border-line/60 bg-surface2/80 text-ink hover:bg-surface2 hover:border-brand/40 transition-all cursor-pointer shadow-2xs"
               onClick={toggle}
               aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
               title="Toggle theme"
             >
-              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+              {theme === 'dark' ? <Sun size={16} strokeWidth={2.2} /> : <Moon size={16} strokeWidth={2.2} />}
             </button>
+
+            {/* Profile Pill (Green User Icon + Name) */}
             <div
-              className="flex items-center gap-1.5 rounded-xl border border-line bg-surface2/60 px-2.5 py-1 text-xs font-semibold text-ink select-none"
+              className="flex items-center gap-2 rounded-2xl border border-line/60 bg-surface2/80 px-3.5 py-1.5 text-xs sm:text-[13px] font-bold text-ink shadow-2xs"
               title={user?.email}
             >
-              <span className="grid h-5 w-5 place-items-center rounded-full bg-[#10b981]/20 text-[10px] font-bold text-[#10b981]">
-                {initials}
-              </span>
-              <span className="hidden max-w-[110px] truncate sm:inline">
-                {user?.display_name || user?.email?.split('@')[0]}
+              <User size={15} className="text-[#10b981]" strokeWidth={2.5} />
+              <span className="max-w-[130px] truncate text-ink font-bold">
+                {user?.display_name || user?.email?.split('@')[0] || 'User'}
               </span>
             </div>
+
+            {/* Sign Out (Icon Only) */}
             <button
-              className="btn-ghost btn-sm rounded-xl px-2.5 py-1.5 text-xs flex items-center gap-1.5 cursor-pointer"
+              className="grid h-9 w-9 place-items-center rounded-2xl border border-line/60 bg-surface2/80 text-ink hover:text-rose-500 hover:border-rose-500/40 hover:bg-rose-500/10 transition-all cursor-pointer shadow-2xs"
               onClick={async () => {
                 await logout()
                 nav('/login')
               }}
+              title="Sign out"
+              aria-label="Sign out"
             >
-              <LogOut size={14} />
-              <span className="hidden sm:inline">Sign out</span>
+              <LogOut size={16} strokeWidth={2.2} />
             </button>
           </div>
         </div>

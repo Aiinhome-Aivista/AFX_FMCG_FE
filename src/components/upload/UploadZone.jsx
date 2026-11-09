@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   AlertCircle,
   ArrowLeft,
+  ArrowRight,
   CheckCircle2,
   Clock,
   Database,
@@ -188,13 +189,23 @@ function FilePreviewModal({ id, onClose }) {
   )
 }
 
-export default function UploadZone({ slug, domain, onBackToGraph, onProposal, onProcessingChange, onReloadChat, onUploadComplete }) {
+export default function UploadZone({
+  slug,
+  domain,
+  onBackToGraph,
+  onProposal,
+  onProcessingChange,
+  onReloadChat,
+  onUploadComplete,
+  onViewGapAnalysis,
+}) {
   const toast = useToast()
   const inputRef = useRef(null)
   const [drag, setDrag] = useState(false)
   const [queue, setQueue] = useState([]) // in-flight: { id, name, pct, error }
   const [viewId, setViewId] = useState(null)
   const [generating, setGenerating] = useState(false)
+  const [lastUploadedName, setLastUploadedName] = useState('')
 
   // Fetch list of uploaded files for current domain
   const { data, loading, error, reload } = useAsync(() => filesApi.list(slug), [slug])
@@ -202,20 +213,6 @@ export default function UploadZone({ slug, domain, onBackToGraph, onProposal, on
   const files = data?.files || []
   const isProcessing = queue.length > 0 || files.some((f) => f.status === 'uploaded' || f.status === 'processing')
   const processingFileName = queue[0]?.name || files.find((f) => f.status === 'processing')?.name || ''
-
-  // Sync KG2 status to header ChevronTracker whenever files exist or are being uploaded
-  useEffect(() => {
-    if (slug && (files.length > 0 || queue.length > 0)) {
-      try {
-        sessionStorage.setItem(`afx_is_kg2_${slug}`, 'true')
-      } catch {}
-      window.dispatchEvent(
-        new CustomEvent('afx-workflow-state', {
-          detail: { slug, isKg2: true, activeLeftView: 'upload', version: 2 },
-        })
-      )
-    }
-  }, [files.length, queue.length, slug])
 
   useEffect(() => {
     onProcessingChange?.(isProcessing, processingFileName)
@@ -230,6 +227,17 @@ export default function UploadZone({ slug, domain, onBackToGraph, onProposal, on
     }, 1500)
     return () => clearInterval(t)
   }, [isProcessing, reload, onReloadChat])
+
+  const hasFilesToAnalyze = files.length > 0 || Boolean(lastUploadedName)
+
+  const handleTriggerGapAnalysis = () => {
+    const targetFile = lastUploadedName || files[0]?.name || 'business_telemetry.pdf'
+    if (onViewGapAnalysis) {
+      onViewGapAnalysis(targetFile)
+    } else if (onUploadComplete) {
+      onUploadComplete(targetFile)
+    }
+  }
 
   const handleUpload = (fileList) => {
     const arr = Array.from(fileList || [])
@@ -259,18 +267,8 @@ export default function UploadZone({ slug, domain, onBackToGraph, onProposal, on
           setQueue((q) => q.map((item) => (item.id === id ? { ...item, pct } : item)))
         })
         setQueue((q) => q.filter((item) => item.id !== id))
-        toast.success(`${file.name} uploaded successfully!`)
-        if (slug) {
-          try {
-            sessionStorage.setItem(`afx_is_kg2_${slug}`, 'true')
-          } catch {}
-          window.dispatchEvent(
-            new CustomEvent('afx-workflow-state', {
-              detail: { slug, isKg2: true, activeLeftView: 'graph', version: 2 },
-            })
-          )
-        }
-        onUploadComplete?.(file.name)
+        setLastUploadedName(file.name)
+        toast.success(`${file.name} uploaded! Click 'View Gap Analysis (KG2)' below to proceed.`)
         reload()
         onReloadChat?.()
       } catch (e) {
@@ -395,6 +393,29 @@ export default function UploadZone({ slug, domain, onBackToGraph, onProposal, on
               e.target.value = ''
             }}
           />
+        </div>
+
+        {/* View Gap Analysis (KG2) Button - Placed under the Upload Area (Image & User Request) */}
+        <div className="flex flex-col items-center justify-center pt-2 pb-2 gap-1.5 select-none">
+          <button
+            type="button"
+            disabled={!hasFilesToAnalyze}
+            onClick={handleTriggerGapAnalysis}
+            className={`inline-flex items-center gap-2.5 rounded-full px-7 py-3 text-xs sm:text-sm font-extrabold shadow-lg transition-all duration-200 cursor-pointer ${
+              hasFilesToAnalyze
+                ? 'bg-[#10b981] hover:bg-[#059669] text-black shadow-[#10b981]/30 hover:scale-[1.02] active:scale-95'
+                : 'bg-surface2 text-muted border border-line cursor-not-allowed opacity-50'
+            }`}
+            title={hasFilesToAnalyze ? 'View Gap Analysis and transition to KG2' : 'Upload telemetry files first to view Gap Analysis'}
+          >
+            <span>View Gap Analysis (KG2)</span>
+            <ArrowRight size={16} strokeWidth={2.6} />
+          </button>
+          <span className="text-[11px] text-muted">
+            {hasFilesToAnalyze
+              ? 'Click to merge uploaded data and view KG2 Gap Analysis'
+              : 'Upload telemetry files above to view Gap Analysis'}
+          </span>
         </div>
 
         {/* Upload Queue Progress */}

@@ -339,11 +339,6 @@ export default function DomainGraph() {
     const url = new URL(window.location.href)
     if (view === 'upload') {
       url.searchParams.set('view', 'upload')
-      if (slug) {
-        try {
-          sessionStorage.setItem(`afx_is_kg2_${slug}`, 'true')
-        } catch {}
-      }
     } else {
       url.searchParams.delete('view')
     }
@@ -356,6 +351,12 @@ export default function DomainGraph() {
   }
 
   const handleUploadComplete = (fileName) => {
+    if (slug) {
+      try {
+        sessionStorage.setItem(`afx_is_kg2_${slug}`, 'true')
+        sessionStorage.setItem(`afx_can_upload_${slug}`, 'true')
+      } catch {}
+    }
     setGapAnalysisMode(true)
     handleSetLeftView('graph')
     const gapAnalysisMsg = {
@@ -371,13 +372,12 @@ export default function DomainGraph() {
     }))
   }
 
-  // Notify header ChevronTracker whenever graph version advances to KG2 or upload view opens
+  // Notify header ChevronTracker whenever graph version advances to KG2
   useEffect(() => {
     if (slug) {
-      const isKg2 = isKg2Active || activeLeftView === 'upload'
       window.dispatchEvent(
         new CustomEvent('afx-workflow-state', {
-          detail: { slug, isKg2, activeLeftView, version: isKg2 ? (base?.version?.number || 2) : 1 },
+          detail: { slug, isKg2: isKg2Active, activeLeftView, version: isKg2Active ? (base?.version?.number || 2) : 1 },
         })
       )
     }
@@ -472,6 +472,27 @@ export default function DomainGraph() {
     if ((base?.version?.number || 0) > 0 || Boolean(aiGraph)) return true
     return false
   }, [snap, flows.data, base, aiGraph])
+
+  const userChatCount = useMemo(() => {
+    if (!snap?.messages) return 0
+    return snap.messages.filter((m) => m.role === 'user').length
+  }, [snap?.messages])
+  const answeredCount = snap?.progress?.answered || 0
+  const totalNuanceChats = Math.max(userChatCount, answeredCount)
+
+  const canUpload = useMemo(() => {
+    if (Boolean(hasUploadedFiles) || isKg2Active) return true
+    if (slug && sessionStorage.getItem(`afx_can_upload_${slug}`) === 'true') return true
+    return totalNuanceChats >= 2
+  }, [hasUploadedFiles, isKg2Active, slug, totalNuanceChats])
+
+  useEffect(() => {
+    if (totalNuanceChats >= 2 && slug) {
+      try {
+        sessionStorage.setItem(`afx_can_upload_${slug}`, 'true')
+      } catch {}
+    }
+  }, [totalNuanceChats, slug])
 
   return (
     <Layout wide>
@@ -692,16 +713,18 @@ export default function DomainGraph() {
             </button>
 
             {activeLeftView === 'graph' ? (
-              <button
-                type="button"
-                onClick={() => handleSetLeftView('upload')}
-                className="inline-flex items-center gap-2 rounded-2xl bg-[#10b981] hover:bg-[#059669] text-black font-bold px-4 py-2 text-xs sm:text-[13px] shadow-md shadow-[#10b981]/25 transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer"
-                title="Hide Knowledge Graph and open Multi-File Upload Zone"
-              >
-                <CloudUpload size={17} strokeWidth={2.4} />
-                <span>Next: Upload Data</span>
-                <ArrowRight size={14} strokeWidth={2.5} />
-              </button>
+              canUpload && (
+                <button
+                  type="button"
+                  onClick={() => handleSetLeftView('upload')}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-[#10b981] hover:bg-[#059669] text-black font-bold px-4 py-2 text-xs sm:text-[13px] shadow-md shadow-[#10b981]/25 transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer animate-in fade-in"
+                  title="Hide Knowledge Graph and open Multi-File Upload Zone"
+                >
+                  <CloudUpload size={17} strokeWidth={2.4} />
+                  <span>Next: Upload Data</span>
+                  <ArrowRight size={14} strokeWidth={2.5} />
+                </button>
+              )
             ) : (
               <button
                 type="button"
@@ -787,6 +810,7 @@ export default function DomainGraph() {
                 setProcessingFileName(name)
               }}
               onReloadChat={() => chat.get(slug).then(setSnap).catch(() => {})}
+              onViewGapAnalysis={handleUploadComplete}
               onUploadComplete={handleUploadComplete}
             />
           </div>
