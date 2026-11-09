@@ -182,14 +182,10 @@ export default function Finalize() {
     }
   }, [range, slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (wf.error) return <Layout wide><ErrorState error={wf.error} onRetry={wf.reload} /></Layout>
-  if (wf.loading || !wf.data) return <Layout wide><Loading /></Layout>
-  if (!wf.data.started) return <Navigate to={`/fmcg/${slug}`} replace />
-  const hasKg1 = Boolean(wf.data?.steps?.[3]?.status === 'completed')
-  const finalized = Boolean(wf.data?.finalized_version_number)
   const d = fin.data
 
   const impactSummary = useMemo(() => {
+    if (!d && !cmp) return null
     try {
       return buildBusinessImpactSummary(
         d?.business_impact || cmp?.business_impact,
@@ -201,6 +197,12 @@ export default function Finalize() {
       return null
     }
   }, [d?.business_impact, cmp, d?.comparison, d?.validation])
+
+  if (wf.error) return <Layout wide><ErrorState error={wf.error} onRetry={wf.reload} /></Layout>
+  if (wf.loading || !wf.data) return <Layout wide><Loading /></Layout>
+  if (!wf.data.started) return <Navigate to={`/fmcg/${slug}`} replace />
+  const hasKg1 = Boolean(wf.data?.steps?.[3]?.status === 'completed')
+  const finalized = Boolean(wf.data?.finalized_version_number)
 
   const doFinalize = async () => {
     setBusy(true)
