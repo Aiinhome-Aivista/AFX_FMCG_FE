@@ -860,7 +860,7 @@ export default function DomainGraph() {
                 <Bot size={14} />
                 <span>Chatbot</span>
                 {snap?.messages?.length > 0 && (
-                  <span className="rounded-full bg-black/20 px-1.5 py-0.2 text-[10px] font-bold text-black">
+                  <span className="rounded-full bg-white/25 dark:bg-black/20 px-1.5 py-0.2 text-[10px] font-bold text-white dark:text-black">
                     {snap.messages.length}
                   </span>
                 )}

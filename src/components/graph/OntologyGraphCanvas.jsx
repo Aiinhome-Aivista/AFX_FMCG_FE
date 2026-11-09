@@ -330,15 +330,15 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
     if (selId) onSelectNode?.(null)
   }
 
-  // Colors tuned exactly to AgentForgeX dark emerald theme
+  // Colors tuned exactly to AgentForgeX dark slate/emerald theme
   const themeColors = {
-    bg: isDark ? '#0a0a0a' : '#F4F7FC',
-    card: isDark ? '#171717' : '#FFFFFF',
+    bg: isDark ? '#192027' : '#F4F7FC',
+    card: isDark ? '#222a33' : '#FFFFFF',
     text: isDark ? '#F8FAFC' : '#0F172A',
-    muted: isDark ? '#A1A1AA' : '#4A5878',
-    border: isDark ? '#262626' : '#D8DFEA',
+    muted: isDark ? '#94A3B8' : '#4A5878',
+    border: isDark ? '#343f4c' : '#D8DFEA',
     accent: isDark ? '#34d399' : '#10b981',
-    edge: isDark ? '#404040' : '#8CA0C0',
+    edge: isDark ? '#475569' : '#8CA0C0',
   }
 
   // Selected node details for full-screen inspection overlay

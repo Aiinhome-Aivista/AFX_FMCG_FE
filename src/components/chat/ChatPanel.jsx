@@ -186,7 +186,7 @@ export default function ChatPanel({
         <div className="pointer-events-none absolute -bottom-12 -left-12 h-44 w-44 rounded-full bg-cyan-400/10 blur-2xl" />
 
         <div className="relative z-10 max-w-sm flex flex-col items-center">
-          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-tr from-brand via-emerald-400 to-cyan-400 text-black shadow-lg shadow-brand/30">
+          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-tr from-brand via-emerald-400 to-cyan-400 text-white dark:text-black shadow-lg shadow-brand/30">
             <Bot size={28} />
           </div>
 
@@ -302,7 +302,7 @@ export default function ChatPanel({
             <button
               type="button"
               onClick={onOpenUpload}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-black font-bold px-3 py-1.5 text-xs shadow-sm transition active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white dark:text-black font-bold px-3 py-1.5 text-xs shadow-sm transition active:scale-95 cursor-pointer"
             >
               <span>Next: Upload Data</span>
               <ArrowRight size={13} strokeWidth={2.5} />
@@ -338,7 +338,7 @@ export default function ChatPanel({
       {/* Interactive Bot Processing Banner for File Parsing */}
       {isProcessingFiles && (
         <div className="mx-3.5 my-2 flex items-start gap-2.5 rounded-xl border border-[#10b981]/40 bg-[#10b981]/10 p-2.5 shadow-sm backdrop-blur-xs animate-in fade-in duration-300">
-          <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#10b981] text-black shadow-2xs">
+          <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#10b981] text-white dark:text-black shadow-2xs">
             <Sparkles size={14} className="animate-spin" />
           </div>
           <div className="flex-1 min-w-0">

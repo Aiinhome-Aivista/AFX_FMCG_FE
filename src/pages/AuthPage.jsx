@@ -51,9 +51,9 @@ export default function AuthPage({ mode }) {
               aria-hidden="true"
             />
             <div
-              className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-[#10b981] text-black shadow-lg shadow-emerald-500/25"
+              className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-[#10b981] text-white dark:text-black shadow-lg shadow-emerald-500/25"
             >
-              <Brain className="h-7 w-7 text-black" strokeWidth={2.4} />
+              <Brain className="h-7 w-7 text-white dark:text-black" strokeWidth={2.4} />
             </div>
           </div>
 
@@ -161,7 +161,7 @@ export default function AuthPage({ mode }) {
             <button
               type="submit"
               disabled={busy}
-              className="auth-btn-gradient w-full flex items-center justify-center gap-2 rounded-xl py-2.5 px-4 text-sm font-semibold text-black cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              className="auth-btn-gradient w-full flex items-center justify-center gap-2 rounded-xl py-2.5 px-4 text-sm font-semibold text-white dark:text-black cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {busy ? (
                 <Spinner />

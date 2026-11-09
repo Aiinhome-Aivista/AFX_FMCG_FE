@@ -315,23 +315,23 @@ export default function ChevronTracker({ showNextButton = false }) {
         // 🟢 Completed: Solid Emerald Green (#10b981), dark checkmark circle, bold dark text
         // 🔵 Active: Highlighted glowing border (Emerald-Cyan gradient), dark surface in dark mode, stark white/emerald text
         // ⚪ Inactive / Upcoming: Subtle border outline, dark surface in dark mode, clean typography
-        let outerBg = 'bg-slate-200/90 dark:bg-slate-800/80 group-hover:bg-slate-300 dark:group-hover:bg-slate-700'
-        let innerBg = 'bg-white dark:bg-[#0c1322] group-hover:bg-slate-50 dark:group-hover:bg-[#141f35]'
-        let textColor = 'text-slate-600 dark:text-slate-400 font-semibold group-hover:dark:text-white'
-        let subColor = 'text-slate-400 dark:text-slate-500'
-        let iconColor = 'text-slate-400 dark:text-slate-500'
+        let outerBg = 'bg-slate-200/90 dark:bg-slate-700/60 group-hover:bg-slate-300 dark:group-hover:bg-slate-600/70'
+        let innerBg = 'bg-white dark:bg-[#192027] group-hover:bg-slate-50 dark:group-hover:bg-[#222a33]'
+        let textColor = 'text-slate-600 dark:text-slate-300 font-semibold group-hover:dark:text-white'
+        let subColor = 'text-slate-400 dark:text-slate-400'
+        let iconColor = 'text-slate-400 dark:text-slate-400'
 
         if (isCompleted) {
           outerBg = 'bg-[#10b981]'
           innerBg = 'bg-[#10b981]' // Solid Primary Green
-          textColor = 'text-slate-950 font-extrabold'
-          subColor = 'text-slate-900/90 font-semibold'
-          iconColor = 'text-slate-950'
+          textColor = 'text-white font-extrabold'
+          subColor = 'text-white/90 font-medium'
+          iconColor = 'text-white'
         } else if (isActive) {
           outerBg =
             'bg-gradient-to-r from-[#10b981] via-[#06b6d4] to-[#10b981] dark:from-[#10b981] dark:via-[#22d3ee] dark:to-[#10b981]'
           innerBg =
-            'bg-gradient-to-r from-emerald-50/90 via-cyan-50/70 to-emerald-50/90 dark:!bg-none dark:bg-[#0c1322]'
+            'bg-gradient-to-r from-emerald-50/90 via-cyan-50/70 to-emerald-50/90 dark:!bg-none dark:bg-[#192027]'
           textColor = 'text-emerald-950 dark:text-white font-extrabold'
           subColor = 'text-emerald-700 dark:text-[#34d399] font-bold'
           iconColor = 'text-[#10b981]'
@@ -366,7 +366,7 @@ export default function ChevronTracker({ showNextButton = false }) {
                 {/* Step Circle: Checkmark if completed, number if upcoming/active */}
                 <span className="flex h-4 sm:h-5 w-4 sm:w-5 items-center justify-center rounded-full shrink-0">
                   {isCompleted ? (
-                    <span className="flex h-3.5 sm:h-4 w-3.5 sm:w-4 items-center justify-center rounded-full bg-slate-950 text-white">
+                    <span className="flex h-3.5 sm:h-4 w-3.5 sm:w-4 items-center justify-center rounded-full bg-white dark:bg-slate-950 text-[#10b981] dark:text-white">
                       <Check size={10} strokeWidth={3.5} />
                     </span>
                   ) : (

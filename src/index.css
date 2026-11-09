@@ -22,7 +22,7 @@
   --ink: 15 23 42;
   --muted: 100 116 139;
   --brand: 16 185 129;
-  --brand-ink: 0 0 0;
+  --brand-ink: 255 255 255;
   --ok: 16 185 129;
   --warn: 217 119 6;
   --bad: 239 68 68;
@@ -42,32 +42,32 @@
   --color-brand-accent: #34d399;
   --color-brand-hover: #6ee7b7;
   --color-brand-glow: rgba(16, 185, 129, 0.1);
-  --color-brand-dark: #0a0a0a;
-  --color-brand-surface: #171717;
+  --color-brand-dark: #192027;
+  --color-brand-surface: #222a33;
   --color-brand-pure-black: #000000;
   --color-brand-glass: rgba(255, 255, 255, 0.05);
   --color-brand-cyan: #22d3ee;
 
-  --bg: 10 10 10;
-  --surface: 23 23 23;
-  --surface2: 32 32 32;
-  --line: 38 38 38;
+  --bg: 25 32 39;
+  --surface: 34 42 51;
+  --surface2: 41 50 60;
+  --line: 52 63 76;
   --ink: 248 250 252;
-  --muted: 161 161 170;
+  --muted: 148 163 184;
   --brand: 16 185 129;
-  --brand-ink: 0 0 0;
+  --brand-ink: 255 255 255;
   --ok: 52 211 153;
   --warn: 245 158 11;
   --bad: 248 113 113;
-  --ont-bg: #0a0a0a;
-  --ont-card: #171717;
+  --ont-bg: #192027;
+  --ont-card: #222a33;
   --ont-text: #F8FAFC;
-  --ont-muted: #A1A1AA;
-  --ont-border: #262626;
+  --ont-muted: #94A3B8;
+  --ont-border: #343f4c;
   --ont-accent: #10b981;
-  --ont-edge: #404040;
-  --ont-chip-bg: #171717;
-  --ont-code-bg: #121212;
+  --ont-edge: #475569;
+  --ont-chip-bg: #222a33;
+  --ont-code-bg: #1c242c;
 }
 
 html,
@@ -98,7 +98,7 @@ body {
   }
 
   .btn-primary {
-    @apply btn bg-brand text-brand-ink font-semibold hover:bg-[#6ee7b7] hover:text-black;
+    @apply btn bg-brand text-brand-ink font-semibold hover:bg-[#059669] hover:text-white dark:hover:bg-[#6ee7b7] dark:hover:text-black;
   }
 
   .btn-ghost {

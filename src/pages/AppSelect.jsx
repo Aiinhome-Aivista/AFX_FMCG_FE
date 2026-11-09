@@ -82,7 +82,7 @@ export default function AppSelect() {
       {error && <ErrorState error={error} onRetry={reload} />}
 
       {/* Main AgentForge Platform Card */}
-      <div className="rounded-3xl border border-[#10b981]/50 dark:border-[#10b981]/60 bg-white dark:bg-[#0c1322] p-6 sm:p-8 shadow-sm dark:shadow-[0_0_25px_rgba(16,185,129,0.12)] transition-all">
+      <div className="rounded-3xl border border-[#10b981]/50 dark:border-[#10b981]/60 bg-white dark:bg-surface p-6 sm:p-8 shadow-sm dark:shadow-[0_0_25px_rgba(16,185,129,0.12)] transition-all">
         {/* Card Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
           <div className="flex items-center gap-3.5">
@@ -130,7 +130,7 @@ export default function AppSelect() {
               {/* Domain 1: Finance & EPM */}
               <div
                 onClick={handleSelectFinance}
-                className="group relative rounded-2xl border border-line bg-surface/90 dark:bg-[#0f172a] p-5 transition-all duration-200 hover:border-emerald-500/70 hover:shadow-md hover:dark:shadow-[0_0_20px_rgba(16,185,129,0.2)] cursor-pointer flex flex-col justify-between"
+                className="group relative rounded-2xl border border-line bg-surface/90 dark:bg-surface p-5 transition-all duration-200 hover:border-emerald-500/70 hover:shadow-md hover:dark:shadow-[0_0_20px_rgba(16,185,129,0.2)] cursor-pointer flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between">
@@ -188,7 +188,7 @@ export default function AppSelect() {
               {/* Domain 3: Others (Extensible) */}
               <div
                 onClick={handleExploreExtensions}
-                className="group relative rounded-2xl border border-line bg-surface/90 dark:bg-[#0f172a] p-5 transition-all duration-200 hover:border-purple-500/70 hover:shadow-md hover:dark:shadow-[0_0_20px_rgba(168,85,247,0.2)] cursor-pointer flex flex-col justify-between"
+                className="group relative rounded-2xl border border-line bg-surface/90 dark:bg-surface p-5 transition-all duration-200 hover:border-purple-500/70 hover:shadow-md hover:dark:shadow-[0_0_20px_rgba(168,85,247,0.2)] cursor-pointer flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between">
