@@ -162,11 +162,16 @@ export default function Finalize() {
     }
   }, [range, slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (wf.data && !wf.data.started) return <Navigate to={`/fmcg/${slug}`} replace />
-  if (wf.loading && !wf.data) return <Layout wide><Loading /></Layout>
+  if (wf.loading || (!wf.data && !wf.error)) return <Layout wide><Loading /></Layout>
   if (wf.error) return <Layout wide><ErrorState error={wf.error} onRetry={wf.reload} /></Layout>
-  const hasKg1 = wf.data.steps[3].status === 'completed'
-  const finalized = !!wf.data.finalized_version_number
+  if (wf.data && !wf.data.started) return <Navigate to={`/fmcg/${slug}`} replace />
+
+  const hasKg1 = Boolean(
+    wf.data?.steps?.[3]?.status === 'completed' ||
+    wf.data?.steps?.some((s) => (s.no === 4 || s.step_no === 4) && s.status === 'completed') ||
+    fin.data
+  )
+  const finalized = Boolean(wf.data?.finalized_version_number)
   const d = fin.data
 
   const impactSummary = useMemo(() => {
@@ -280,10 +285,10 @@ export default function Finalize() {
                 <div className="flex flex-col">
                   <h2 className="flex items-center gap-1.5 text-sm sm:text-base font-semibold text-ink">
                     <Sparkles size={16} className="text-emerald-500 fill-emerald-500/20" />
-                    <span>Digital Twin Graph Preview · {d.version.label}</span>
+                    <span>Digital Twin Graph Preview · {d.version?.label || 'KG1'}</span>
                   </h2>
                   <span className="text-xs text-muted">
-                    {d.graph.nodes.length} entities · {d.graph.edges.length} relationships
+                    {d.graph?.nodes?.length || 0} entities · {d.graph?.edges?.length || 0} relationships
                   </span>
                 </div>
                 <div className="flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs font-medium text-ink shadow-sm">
@@ -293,8 +298,8 @@ export default function Finalize() {
               </div>
               <div className="h-[520px] min-h-[420px] w-full relative bg-surface">
                 <OntologyGraphCanvas
-                  nodes={d.graph.nodes}
-                  edges={d.graph.edges}
+                  nodes={d.graph?.nodes || []}
+                  edges={d.graph?.edges || []}
                   domainMeta={domain}
                   className="w-full h-full"
                 />
@@ -307,7 +312,7 @@ export default function Finalize() {
                 {/* Governance Header */}
                 <div className="flex items-center justify-between">
                   <h2 className="text-base font-bold text-ink">Digital Twin Governance</h2>
-                  {d.validation.errors.length === 0 ? (
+                  {(d.validation?.errors?.length || 0) === 0 ? (
                     <span className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-3 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                       Ready to Finalize
                     </span>
@@ -322,29 +327,29 @@ export default function Finalize() {
                 <div className="rounded-xl border border-line bg-surface2/30 p-3.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-ink">Validation Check</span>
-                    {d.validation.errors.length === 0 ? (
+                    {(d.validation?.errors?.length || 0) === 0 ? (
                       <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                         <CheckCircle2 size={14} /> Zero Errors
                       </span>
                     ) : (
                       <span className="flex items-center gap-1 text-xs font-semibold text-rose-500">
-                        <XCircle size={14} /> {d.validation.errors.length} Errors
+                        <XCircle size={14} /> {d.validation?.errors?.length || 0} Errors
                       </span>
                     )}
                   </div>
-                  {d.validation.errors.length === 0 && d.validation.warnings.length === 0 ? (
+                  {(d.validation?.errors?.length || 0) === 0 && (d.validation?.warnings?.length || 0) === 0 ? (
                     <p className="mt-1.5 text-xs text-muted leading-relaxed">
                       Ontology verified against {resolvedDomainName} domain schema and business rules. Ready for enterprise governance.
                     </p>
                   ) : (
                     <ul className="mt-2 space-y-1.5 text-xs">
-                      {d.validation.errors.map((e, i) => (
+                      {(d.validation?.errors || []).map((e, i) => (
                         <li key={`err-${i}`} className="flex items-start gap-1.5 text-rose-500">
                           <XCircle size={13} className="mt-0.5 shrink-0" />
                           <span>{e.message}</span>
                         </li>
                       ))}
-                      {d.validation.warnings.map((w, i) => (
+                      {(d.validation?.warnings || []).map((w, i) => (
                         <li key={`warn-${i}`} className="flex items-start gap-1.5 text-amber-500">
                           <AlertTriangle size={13} className="mt-0.5 shrink-0" />
                           <span>{w.message}</span>
@@ -357,11 +362,11 @@ export default function Finalize() {
                 {/* Entities and Relationships Stats Grid */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-line bg-surface2/40 p-3.5 text-center">
-                    <div className="text-2xl font-bold text-ink">{d.graph.nodes.length}</div>
+                    <div className="text-2xl font-bold text-ink">{d.graph?.nodes?.length || 0}</div>
                     <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">ENTITIES</div>
                   </div>
                   <div className="rounded-xl border border-line bg-surface2/40 p-3.5 text-center">
-                    <div className="text-2xl font-bold text-ink">{d.graph.edges.length}</div>
+                    <div className="text-2xl font-bold text-ink">{d.graph?.edges?.length || 0}</div>
                     <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">RELATIONSHIPS</div>
                   </div>
                 </div>
@@ -370,7 +375,7 @@ export default function Finalize() {
                 <div className="rounded-xl border border-line bg-surface2/25 p-3.5 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-muted">Ontology Version:</span>
-                    <span className="font-bold text-ink">{d.version.label}</span>
+                    <span className="font-bold text-ink">{d.version?.label || 'KG1'}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted">Domain:</span>
@@ -412,7 +417,7 @@ export default function Finalize() {
                 ) : (
                   <button
                     className="w-full rounded-xl bg-[#10b981] hover:bg-[#059669] text-white py-3.5 px-4 font-semibold text-sm sm:text-base flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                    disabled={d.validation.errors.length > 0}
+                    disabled={(d.validation?.errors?.length || 0) > 0}
                     onClick={() => {
                       setAck(false)
                       setDlg('finalize')
@@ -449,7 +454,7 @@ export default function Finalize() {
                     aria-label="From version"
                   >
                     <option value={0}>Model &ldquo;{displayTemplateName}&rdquo; Template</option>
-                    {d.versions.map((v) => (
+                    {(d.versions || []).map((v) => (
                       <option key={v.number} value={v.number}>
                         {v.label} &mdash; Model &ldquo;{displayTemplateName}&rdquo;
                       </option>
@@ -466,9 +471,9 @@ export default function Finalize() {
                     onChange={(e) => setRange({ ...range, to: Number(e.target.value) })}
                     aria-label="To version"
                   >
-                    {d.versions.map((v) => (
+                    {(d.versions || []).map((v) => (
                       <option key={v.number} value={v.number}>
-                        {v.number === d.version.number
+                        {v.number === d.version?.number
                           ? `Current "${displayTemplateName}" Template`
                           : `${v.label} - "${displayTemplateName}" Template`}
                       </option>
@@ -525,15 +530,15 @@ export default function Finalize() {
               <History size={16} />
               <span>Change History</span>
             </h2>
-            {d.history.length === 0 && <p className="mt-3 text-sm text-muted">No change proposals recorded yet.</p>}
+            {(d.history || []).length === 0 && <p className="mt-3 text-sm text-muted">No change proposals recorded yet.</p>}
             <ul className="mt-3.5 space-y-3">
-              {d.history.map((p) => (
+              {(d.history || []).map((p) => (
                 <li key={p.id} className="rounded-xl border border-line bg-surface2/20 p-3.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <b className="text-sm text-ink font-semibold">{p.title}</b>
                     <div className="flex items-center gap-2">
                       <span className="rounded-md border border-line bg-surface2 px-2 py-0.5 text-[11px] font-semibold text-muted">
-                        active — {p.result_version ? `KG${p.result_version}` : d.version.label}
+                        active — {p.result_version ? `KG${p.result_version}` : (d.version?.label || 'KG1')}
                       </span>
                       <span className="text-xs text-muted">
                         {p.source} · {timeAgo(p.created_at)}
@@ -564,8 +569,8 @@ export default function Finalize() {
         onCancel={() => setDlg(null)}
         onConfirm={doFinalize}
       >
-        <p>This locks {d?.version.label} as your ontology and unlocks telemetry upload. The chatbot session will be locked until you re-open it.</p>
-        {d?.validation.warnings.length > 0 && (
+        <p>This locks {d?.version?.label || 'your ontology'} as your ontology and unlocks telemetry upload. The chatbot session will be locked until you re-open it.</p>
+        {(d?.validation?.warnings?.length || 0) > 0 && (
           <label className="mt-3 flex items-start gap-2 text-ink">
             <input
               type="checkbox"
@@ -573,7 +578,7 @@ export default function Finalize() {
               checked={ack}
               onChange={(e) => setAck(e.target.checked)}
             />
-            <span>I have reviewed the {d.validation.warnings.length} warning(s) and want to finalise anyway.</span>
+            <span>I have reviewed the {d?.validation?.warnings?.length || 0} warning(s) and want to finalise anyway.</span>
           </label>
         )}
       </ConfirmDialog>

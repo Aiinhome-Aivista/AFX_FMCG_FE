@@ -278,14 +278,14 @@ export default function ChevronTracker() {
           iconColor = 'text-[#10b981]'
         }
 
-        const targetRoute = stage.route(slug, prefix, effectiveSlug)
+        const targetRoute = stage.route ? stage.route(slug, prefix, effectiveSlug) : '#'
         const isFirst = stage.id === 1
         const arrowClass = isFirst ? 'chevron-arrow-start' : 'chevron-arrow'
 
         return (
           <Link
             key={stage.id}
-            to={targetRoute}
+            to={targetRoute || '#'}
             className={`group chevron-tracker-step ${arrowClass} inline-block cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 border-0 border-none transition-transform duration-200 hover:scale-[1.02] active:scale-95`}
             title={`${stage.title} - ${stage.subtitle} (Click to navigate)`}
           >
@@ -335,7 +335,7 @@ export default function ChevronTracker() {
       {/* Next Step Action Button Right of Review Step */}
       {nextStepInfo && (
         <Link
-          to={nextStepInfo.route}
+          to={nextStepInfo.route || '#'}
           className="ml-1.5 sm:ml-2.5 inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white font-bold px-3 sm:px-3.5 py-1.5 text-xs shadow-sm hover:shadow transition-all duration-200 active:scale-95 shrink-0 select-none cursor-pointer border border-emerald-400/40"
           title={nextStepInfo.label}
         >
