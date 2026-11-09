@@ -29,8 +29,14 @@ export default function ExecutiveImpactGuide({
   const [acknowledgedItems, setAcknowledgedItems] = useState({})
   const [expandedTech, setExpandedTech] = useState({})
 
-  const items = impactData?.items || []
-  const counts = impactData?.counts || { critical: 0, high: 0, medium: 0, low: 0, total: 0 }
+  const items = Array.isArray(impactData?.items) ? impactData.items.filter(Boolean) : []
+  const counts = {
+    critical: impactData?.counts?.critical || 0,
+    high: impactData?.counts?.high || 0,
+    medium: impactData?.counts?.medium || 0,
+    low: impactData?.counts?.low || 0,
+    total: impactData?.counts?.total ?? items.length,
+  }
 
   const filteredItems = useMemo(() => {
     if (filterSeverity === 'all') return items
@@ -180,7 +186,7 @@ export default function ExecutiveImpactGuide({
                 : 'bg-surface/80 border-line text-muted hover:text-ink'
             }`}
           >
-            {isBn ? 'সবগুলো' : 'All'} ({counts?.total || 0})
+            {isBn ? 'সবগুলো' : 'All'} ({counts.total})
           </button>
           <button
             type="button"
@@ -191,7 +197,7 @@ export default function ExecutiveImpactGuide({
                 : 'bg-surface/80 border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30'
             }`}
           >
-            {isBn ? 'উচ্চ ঝুঁকি' : 'High Risk'} ({(counts?.critical || 0) + (counts?.high || 0)})
+            {isBn ? 'উচ্চ ঝুঁকি' : 'High Risk'} ({counts.critical + counts.high})
           </button>
           <button
             type="button"
@@ -202,7 +208,7 @@ export default function ExecutiveImpactGuide({
                 : 'bg-surface/80 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30'
             }`}
           >
-            {isBn ? 'মাঝারি' : 'Medium'} ({counts?.medium || 0})
+            {isBn ? 'মাঝারি' : 'Medium'} ({counts.medium})
           </button>
         </div>
       </div>
@@ -292,7 +298,7 @@ export default function ExecutiveImpactGuide({
                     {/* Action Buttons */}
                     <div className="mt-3 pt-2.5 border-t border-emerald-500/20 flex flex-wrap items-center gap-2">
                       <Link
-                        to={backUrl || '#'}
+                        to={backUrl || '/fmcg'}
                         className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 text-xs shadow-sm transition active:scale-95"
                       >
                         <ArrowLeft size={13} />

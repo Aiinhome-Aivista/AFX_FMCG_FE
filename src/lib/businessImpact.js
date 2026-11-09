@@ -162,13 +162,14 @@ export function buildBusinessImpactSummary(backendImpact, comparison, validation
   const items = []
   const seenIds = new Set()
 
-  const nodesRemoved = comparison?.nodes_removed || []
-  const nodesModified = comparison?.nodes_modified || []
+  const nodesRemoved = Array.isArray(comparison?.nodes_removed) ? comparison.nodes_removed : []
+  const nodesModified = Array.isArray(comparison?.nodes_modified) ? comparison.nodes_modified : []
 
   // 1. Process Removed Reference Entities
   for (const node of nodesRemoved) {
-    const name = node.name || 'Unknown'
-    const key = node.key || name
+    if (!node) continue
+    const name = typeof node === 'string' ? node : node.name || 'Unknown'
+    const key = typeof node === 'string' ? node : node.key || name
     const itemId = `rem_${normalizeKey(key)}`
     if (seenIds.has(itemId)) continue
     seenIds.add(itemId)
@@ -203,10 +204,11 @@ export function buildBusinessImpactSummary(backendImpact, comparison, validation
 
   // 2. Process Modified Entities
   for (const node of nodesModified) {
-    const name = node.name || 'Unknown'
-    const key = node.key || name
+    if (!node) continue
+    const name = typeof node === 'string' ? node : node.name || 'Unknown'
+    const key = typeof node === 'string' ? node : node.key || name
     const changes = node.changes || {}
-    const attrRem = node.attributes_removed || []
+    const attrRem = Array.isArray(node.attributes_removed) ? node.attributes_removed : []
 
     for (const attr of attrRem) {
       const itemId = `attr_rem_${normalizeKey(attr)}`
@@ -262,10 +264,11 @@ export function buildBusinessImpactSummary(backendImpact, comparison, validation
   }
 
   // 3. Process Validation Warnings
-  const warnings = validation?.warnings || []
+  const warnings = Array.isArray(validation?.warnings) ? validation.warnings : []
   for (const w of warnings) {
-    const code = w.code
-    const msg = w.message || ''
+    if (!w) continue
+    const code = typeof w === 'string' ? w : w.code
+    const msg = typeof w === 'string' ? w : String(w?.message || '')
     const itemId = `warn_${code}_${normalizeKey(msg.slice(0, 20))}`
     if (seenIds.has(itemId)) continue
     seenIds.add(itemId)
@@ -287,10 +290,11 @@ export function buildBusinessImpactSummary(backendImpact, comparison, validation
   }
 
   // 4. Process Validation Errors
-  const errors = validation?.errors || []
+  const errors = Array.isArray(validation?.errors) ? validation.errors : []
   for (const e of errors) {
-    const code = e.code
-    const msg = e.message || ''
+    if (!e) continue
+    const code = typeof e === 'string' ? e : e.code
+    const msg = typeof e === 'string' ? e : String(e?.message || '')
     const itemId = `err_${code}_${normalizeKey(msg.slice(0, 20))}`
     if (seenIds.has(itemId)) continue
     seenIds.add(itemId)
