@@ -729,14 +729,26 @@ export default function DomainGraph() {
           </button>
         </div>
 
-        {/* Red KG2 Gap Analysis indicator button on top (Only shown in KG1 graph view, hidden in upload & KG2) */}
-        {!isKg2Active && activeLeftView !== 'upload' && (
+        {/* Red KG2 Gap Analysis indicator button on top (Only shown AFTER files are uploaded, never from the beginning) */}
+        {uploadedFiles.length > 0 && !isKg2Active && activeLeftView !== 'upload' && (
           <div className="flex items-center gap-2.5 ml-auto">
             <button
               type="button"
-              onClick={() => handleSetLeftView('upload')}
+              onClick={() => {
+                setIsKg2Active(true)
+                setGapAnalysisMode(true)
+                const url = new URL(window.location.href)
+                url.searchParams.set('stage', 'kg2')
+                url.searchParams.delete('view')
+                window.history.replaceState({}, '', url.toString())
+                window.dispatchEvent(
+                  new CustomEvent('afx-workflow-state', {
+                    detail: { slug, activeLeftView: 'graph', isKg2: true, version: 2 },
+                  })
+                )
+              }}
               className="inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-xs sm:text-[13px] font-bold transition shadow-sm cursor-pointer bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-rose-500/25 select-none"
-              title="KG2 Gap Analysis - Upload Data"
+              title="View KG2 Gap Analysis"
             >
               <AlertTriangle size={15} strokeWidth={2.4} />
               <span>KG2 Gap Analysis</span>
