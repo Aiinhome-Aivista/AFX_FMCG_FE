@@ -116,6 +116,30 @@ export default function DomainGraph() {
 
   const hasUploadedFiles = uploadedFiles.length > 0 || isKg2Active
 
+  const userChatCount = useMemo(() => {
+    if (!snap?.messages) return 0
+    return snap.messages.filter((m) => m.role === 'user').length
+  }, [snap?.messages])
+  const answeredCount = snap?.progress?.answered || 0
+  const totalNuanceChats = Math.max(userChatCount, answeredCount)
+
+  const canUpload = useMemo(() => {
+    if (Boolean(hasUploadedFiles) || isKg2Active) return true
+    return totalNuanceChats >= 3
+  }, [hasUploadedFiles, isKg2Active, totalNuanceChats])
+
+  useEffect(() => {
+    if (slug) {
+      try {
+        if (canUpload) {
+          sessionStorage.setItem(`afx_can_upload_${slug}`, 'true')
+        } else {
+          sessionStorage.removeItem(`afx_can_upload_${slug}`)
+        }
+      } catch {}
+    }
+  }, [canUpload, slug])
+
   // Auto-start workflow if not already started (no redirect to intermediate overview)
   useEffect(() => {
     if (wf.data && !wf.data.started) {
@@ -619,30 +643,6 @@ export default function DomainGraph() {
     if ((base?.version?.number || 0) > 0 || Boolean(aiGraph)) return true
     return false
   }, [snap, flows.data, base, aiGraph])
-
-  const userChatCount = useMemo(() => {
-    if (!snap?.messages) return 0
-    return snap.messages.filter((m) => m.role === 'user').length
-  }, [snap?.messages])
-  const answeredCount = snap?.progress?.answered || 0
-  const totalNuanceChats = Math.max(userChatCount, answeredCount)
-
-  const canUpload = useMemo(() => {
-    if (Boolean(hasUploadedFiles) || isKg2Active) return true
-    return totalNuanceChats >= 3
-  }, [hasUploadedFiles, isKg2Active, totalNuanceChats])
-
-  useEffect(() => {
-    if (slug) {
-      try {
-        if (canUpload) {
-          sessionStorage.setItem(`afx_can_upload_${slug}`, 'true')
-        } else {
-          sessionStorage.removeItem(`afx_can_upload_${slug}`)
-        }
-      } catch {}
-    }
-  }, [canUpload, slug])
 
   return (
     <Layout wide>
