@@ -88,11 +88,14 @@ export default function ChevronTracker() {
   const isExplicitKg1 = searchParams.get('stage') === 'kg1'
   const isExplicitKg2 = searchParams.get('stage') === 'kg2'
 
-  // Check if user has transitioned to KG2 (via View Gap Analysis button click)
+  const isUploadView = searchParams.get('view') === 'upload' || workflowDetail?.activeLeftView === 'upload'
+
+  // Check if user has transitioned to KG2 (via Proceed to Gap Analysis button click) or is in Upload view
   const isUploadOrKg2 = Boolean(
     !isExplicitKg1 && (
       isExplicitKg2 ||
-      workflowDetail?.isKg2 === true
+      workflowDetail?.isKg2 === true ||
+      isUploadView
     )
   )
 
