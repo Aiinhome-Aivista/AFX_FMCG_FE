@@ -83,6 +83,9 @@ export default function DomainGraph() {
       const searchParams = new URLSearchParams(window.location.search)
       if (searchParams.get('stage') === 'kg1') return false
       if (searchParams.get('stage') === 'kg2') return true
+      if (slug && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(`afx_is_kg2_${slug}`) === 'true') {
+        return true
+      }
       return false
     } catch {
       return false

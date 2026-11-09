@@ -421,78 +421,60 @@ export default function Finalize() {
             <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
               <h2 className="text-base font-bold text-ink shrink-0">Compare Versions</h2>
               <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm font-semibold text-ink">
-                <div className="relative inline-flex items-center">
-                  <select
-                    className="cursor-pointer rounded-lg border border-line/60 bg-surface2/50 hover:bg-surface2 px-2.5 py-1 text-xs sm:text-sm font-semibold text-ink focus:outline-none focus:border-brand transition shadow-2xs"
-                    value={range.from}
-                    onChange={(e) => setRange({ ...range, from: Number(e.target.value) })}
-                    aria-label="From version"
-                  >
-                    <option value={0}>Model &ldquo;{displayTemplateName}&rdquo; Template</option>
-                    {d.versions.map((v) => (
-                      <option key={v.number} value={v.number}>
-                         Model &ldquo;{displayTemplateName}&rdquo;
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <span className="inline-flex items-center rounded-lg border border-line/70 bg-surface2/60 px-3 py-1.5 text-xs sm:text-[13px] font-semibold text-ink shadow-2xs select-none">
+                  Model &ldquo;{displayTemplateName}&rdquo; Template
+                </span>
 
                 <ArrowRight size={14} className="text-muted shrink-0" />
 
-                <div className="relative inline-flex items-center">
-                  <select
-                    className="cursor-pointer rounded-lg border border-line/60 bg-surface2/50 hover:bg-surface2 px-2.5 py-1 text-xs sm:text-sm font-semibold text-ink focus:outline-none focus:border-brand transition shadow-2xs"
-                    value={range.to ?? ''}
-                    onChange={(e) => setRange({ ...range, to: Number(e.target.value) })}
-                    aria-label="To version"
-                  >
-                    {d.versions.map((v) => (
-                      <option key={v.number} value={v.number}>
-                        {v.number === d.version.number
-                          ? `Current "${displayTemplateName}" Template`
-                          : `"${displayTemplateName}" Template`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <span className="inline-flex items-center rounded-lg border border-emerald-500/40 bg-emerald-50/60 dark:bg-emerald-950/30 px-3 py-1.5 text-xs sm:text-[13px] font-bold text-emerald-700 dark:text-emerald-300 shadow-2xs select-none">
+                  Current &ldquo;{displayTemplateName}&rdquo; Template
+                </span>
               </div>
             </div>
 
-            {cmp ? (
+            {(cmp || d?.comparison) ? (
               <>
-                <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-                  <Stat
-                    label="entities added"
-                    v={cmp.counts?.nodes_added || 0}
-                    tone="text-emerald-600 dark:text-emerald-400 font-bold text-2xl"
-                  />
-                  <Stat
-                    label="entities modified"
-                    v={cmp.counts?.nodes_modified || 0}
-                    tone="text-amber-500 font-bold text-2xl"
-                  />
-                  <Stat
-                    label="entities removed"
-                    v={cmp.counts?.nodes_removed || 0}
-                    tone="text-rose-500 font-bold text-2xl"
-                  />
-                  <Stat
-                    label="links added"
-                    v={cmp.counts?.edges_added || 0}
-                    tone="text-emerald-600 dark:text-emerald-400 font-bold text-2xl"
-                  />
-                  <Stat
-                    label="links relabelled"
-                    v={cmp.counts?.edges_modified || 0}
-                    tone="text-slate-600 dark:text-slate-300 font-bold text-2xl"
-                  />
-                  <Stat
-                    label="links removed"
-                    v={cmp.counts?.edges_removed || 0}
-                    tone="text-rose-500 font-bold text-2xl"
-                  />
-                </div>
-                <DiffLists d={cmp} />
+                {(() => {
+                  const activeDiff = cmp || d?.comparison
+                  return (
+                    <>
+                      <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+                        <Stat
+                          label="entities added"
+                          v={activeDiff.counts?.nodes_added || 0}
+                          tone="text-emerald-600 dark:text-emerald-400 font-bold text-2xl"
+                        />
+                        <Stat
+                          label="entities modified"
+                          v={activeDiff.counts?.nodes_modified || 0}
+                          tone="text-amber-500 font-bold text-2xl"
+                        />
+                        <Stat
+                          label="entities removed"
+                          v={activeDiff.counts?.nodes_removed || 0}
+                          tone="text-rose-500 font-bold text-2xl"
+                        />
+                        <Stat
+                          label="links added"
+                          v={activeDiff.counts?.edges_added || 0}
+                          tone="text-emerald-600 dark:text-emerald-400 font-bold text-2xl"
+                        />
+                        <Stat
+                          label="links relabelled"
+                          v={activeDiff.counts?.edges_modified || 0}
+                          tone="text-slate-600 dark:text-slate-300 font-bold text-2xl"
+                        />
+                        <Stat
+                          label="links removed"
+                          v={activeDiff.counts?.edges_removed || 0}
+                          tone="text-rose-500 font-bold text-2xl"
+                        />
+                      </div>
+                      <DiffLists d={activeDiff} />
+                    </>
+                  )
+                })()}
               </>
             ) : (
               <Loading className="!p-4" />
