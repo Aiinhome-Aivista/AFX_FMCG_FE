@@ -210,6 +210,14 @@ export default function ChevronTracker() {
       return null // Already on final review step
     }
 
+    // If user has NOT selected a sub-domain yet (on domain overview/landing page)
+    if (!isDomainSelected) {
+      return {
+        label: 'Next: Select Sub-Domain',
+        route: `${prefix}/${effectiveSlug}?stage=kg1&view=graph`,
+      }
+    }
+
     const currentSlug = slug || effectiveSlug
     if (!currentSlug) return null
 
@@ -234,7 +242,7 @@ export default function ChevronTracker() {
       label: 'Next: Upload Data',
       route: `${prefix}/${currentSlug}?stage=kg1&view=upload`,
     }
-  }, [isIndustryStep, isFinalize, isExplicitKg2, workflowDetail, isUploadView, prefix, slug, effectiveSlug])
+  }, [isIndustryStep, isFinalize, isDomainSelected, isExplicitKg2, workflowDetail, isUploadView, prefix, slug, effectiveSlug])
 
   return (
     <nav
