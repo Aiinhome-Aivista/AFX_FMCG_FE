@@ -90,18 +90,19 @@ export default function ChatPanel({
     activeSnap.messages?.some((m) => m.kind === 'gap_analysis')
   )
 
-  const canUpload =
-    userChatCount >= 2 ||
-    hasUploadedFiles ||
-    (slug && sessionStorage.getItem(`afx_can_upload_${slug}`) === 'true')
+  const canUpload = userChatCount >= 3 || hasUploadedFiles || isKg2Active
 
   useEffect(() => {
-    if (userChatCount >= 2 && slug) {
+    if (slug) {
       try {
-        sessionStorage.setItem(`afx_can_upload_${slug}`, 'true')
+        if (canUpload) {
+          sessionStorage.setItem(`afx_can_upload_${slug}`, 'true')
+        } else {
+          sessionStorage.removeItem(`afx_can_upload_${slug}`)
+        }
       } catch {}
     }
-  }, [userChatCount, slug])
+  }, [canUpload, slug])
 
   const merge = (r) => {
     if (!r) return
@@ -344,18 +345,23 @@ export default function ChatPanel({
               Capturing Core Nuances
             </span>
             <span className="text-[11px] text-muted font-normal">
-              ({userChatCount}/2 chats to unlock file upload)
+              ({userChatCount}/3 chats to unlock file upload)
             </span>
           </div>
           <div className="flex items-center gap-1.5">
             <span
-              className={`h-1.5 w-5 rounded-full transition-colors ${
+              className={`h-1.5 w-4 rounded-full transition-colors ${
                 userChatCount >= 1 ? 'bg-brand' : 'bg-line dark:bg-surface'
               }`}
             />
             <span
-              className={`h-1.5 w-5 rounded-full transition-colors ${
+              className={`h-1.5 w-4 rounded-full transition-colors ${
                 userChatCount >= 2 ? 'bg-brand' : 'bg-line dark:bg-surface'
+              }`}
+            />
+            <span
+              className={`h-1.5 w-4 rounded-full transition-colors ${
+                userChatCount >= 3 ? 'bg-brand' : 'bg-line dark:bg-surface'
               }`}
             />
           </div>

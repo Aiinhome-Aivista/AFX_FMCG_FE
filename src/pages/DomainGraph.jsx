@@ -510,16 +510,24 @@ export default function DomainGraph() {
     }, 2000)
   }
 
-  // Notify header ChevronTracker whenever graph version advances to KG2
+  // Notify header ChevronTracker whenever graph version advances to KG2 or workflow state changes
   useEffect(() => {
     if (slug) {
       window.dispatchEvent(
         new CustomEvent('afx-workflow-state', {
-          detail: { slug, isKg2: isKg2Active, activeLeftView, version: isKg2Active ? (base?.version?.number || 2) : 1 },
+          detail: {
+            slug,
+            isKg2: isKg2Active,
+            activeLeftView,
+            version: isKg2Active ? (base?.version?.number || 2) : 1,
+            canUpload: Boolean(canUpload),
+            hasUploadedFiles: Boolean(hasUploadedFiles),
+            totalNuanceChats,
+          },
         })
       )
     }
-  }, [slug, isKg2Active, activeLeftView, base?.version?.number])
+  }, [slug, isKg2Active, activeLeftView, base?.version?.number, canUpload, hasUploadedFiles, totalNuanceChats])
 
   const select = (key) => {
     setSelected(key)
@@ -621,17 +629,20 @@ export default function DomainGraph() {
 
   const canUpload = useMemo(() => {
     if (Boolean(hasUploadedFiles) || isKg2Active) return true
-    if (slug && sessionStorage.getItem(`afx_can_upload_${slug}`) === 'true') return true
-    return totalNuanceChats >= 2
-  }, [hasUploadedFiles, isKg2Active, slug, totalNuanceChats])
+    return totalNuanceChats >= 3
+  }, [hasUploadedFiles, isKg2Active, totalNuanceChats])
 
   useEffect(() => {
-    if (totalNuanceChats >= 2 && slug) {
+    if (slug) {
       try {
-        sessionStorage.setItem(`afx_can_upload_${slug}`, 'true')
+        if (canUpload) {
+          sessionStorage.setItem(`afx_can_upload_${slug}`, 'true')
+        } else {
+          sessionStorage.removeItem(`afx_can_upload_${slug}`)
+        }
       } catch {}
     }
-  }, [totalNuanceChats, slug])
+  }, [canUpload, slug])
 
   return (
     <Layout wide>

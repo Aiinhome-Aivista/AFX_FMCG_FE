@@ -58,14 +58,15 @@ export default function ChevronTracker() {
 
   // Track live workflow state (e.g. when file upload starts, KG2 is active, etc.)
   const [workflowDetail, setWorkflowDetail] = useState(() => {
-    if (!slug) return { isKg2: false }
+    if (!slug) return { isKg2: false, canUpload: false }
     try {
       const searchParams = new URLSearchParams(window.location.search)
-      if (searchParams.get('stage') === 'kg1') return { isKg2: false }
-      if (searchParams.get('stage') === 'kg2') return { isKg2: true }
-      return { isKg2: false }
+      const isKg2 = searchParams.get('stage') === 'kg2'
+      const isUpload = searchParams.get('view') === 'upload'
+      const canUploadStored = sessionStorage.getItem(`afx_can_upload_${slug}`) === 'true'
+      return { isKg2, canUpload: isKg2 || isUpload || canUploadStored }
     } catch {
-      return { isKg2: false }
+      return { isKg2: false, canUpload: false }
     }
   })
 
@@ -151,8 +152,13 @@ export default function ChevronTracker() {
         id: 3,
         title: 'Business Telemetry',
         subtitle: 'KG2 Gap Analysis',
-        route: (s, p, eff) =>
-          `${p}/${s || eff}?${workflowDetail?.isKg2 ? 'stage=kg2&view=graph' : 'stage=kg1&view=upload'}`,
+        route: (s, p, eff) => {
+          if (workflowDetail?.isKg2) return `${p}/${s || eff}?stage=kg2&view=graph`
+          if (workflowDetail?.canUpload || workflowDetail?.hasUploadedFiles) {
+            return `${p}/${s || eff}?stage=kg1&view=upload`
+          }
+          return `${p}/${s || eff}?stage=kg1&view=graph`
+        },
       },
       {
         id: 4,
@@ -238,7 +244,17 @@ export default function ChevronTracker() {
       }
     }
 
-    // In KG1 (Core Nuances) stage: next step is Upload Data
+    // In KG1 (Core Nuances) stage: Only show "Next: Upload Data" after at least 3 chats or when upload is unlocked
+    const canUploadNow = Boolean(
+      workflowDetail?.canUpload ||
+      workflowDetail?.hasUploadedFiles ||
+      workflowDetail?.isKg2
+    )
+
+    if (!canUploadNow) {
+      return null
+    }
+
     return {
       label: 'Next: Upload Data',
       route: `${prefix}/${currentSlug}?stage=kg1&view=upload`,
