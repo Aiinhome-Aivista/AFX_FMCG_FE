@@ -216,12 +216,14 @@ export default function Finalize() {
   const displayTemplateName = DOMAIN_NAME_MAP[cleanSlug] || resolvedDomainName.replace(/^[F0-9]+\s+/, '')
   const domainType = isFinance ? 'Finance' : 'FMCG'
 
-  const hasKg2 = Boolean(
-    sessionStorage.getItem(`afx_is_kg2_${slug}`) === 'true' ||
-    d?.versions?.some((v) => v.label?.toUpperCase().includes('KG2') || v.kind === 'telemetry') ||
-    d?.version?.label?.toUpperCase().includes('KG2')
-  )
-  const backUrl = `${prefix}/${slug}?stage=${hasKg2 ? 'kg2' : 'kg1'}&view=graph`
+  const backUrl = `${prefix}/${slug}?stage=kg1&view=graph`
+  const handleBackToKg1 = () => {
+    if (slug) {
+      try {
+        sessionStorage.removeItem(`afx_is_kg2_${slug}`)
+      } catch {}
+    }
+  }
 
   return (
     <Layout wide>
@@ -229,7 +231,8 @@ export default function Finalize() {
       <div className="mb-4">
         <Link
           to={backUrl}
-          className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-muted hover:text-ink transition font-medium"
+          onClick={handleBackToKg1}
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-muted hover:text-ink transition font-medium cursor-pointer"
         >
           <ArrowLeft size={14} className="text-brand" />
           <span>Back to Knowledge Graph & Chatbot</span>
