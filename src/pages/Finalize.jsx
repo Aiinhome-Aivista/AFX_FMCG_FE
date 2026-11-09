@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, History, Lock, Sparkles, XCircle } from 'lucide-react'
 import Layout from '../components/common/Layout'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import { EmptyState, ErrorState, Loading } from '../components/common/States'
 import OntologyGraphCanvas from '../components/graph/OntologyGraphCanvas'
+import ExecutiveImpactGuide from '../components/review/ExecutiveImpactGuide'
 import useAsync from '../components/common/useAsync'
 import { domains, graphs } from '../api'
 import { cleanMojibake, timeAgo } from '../lib/format'
 import { DOMMETA, SLUG_TO_DOM } from '../lib/ontologyData'
+import { buildBusinessImpactSummary } from '../lib/businessImpact'
 import { useToast } from '../context/ToastContext'
 
 const DOMAIN_NAME_MAP = {
@@ -144,6 +146,7 @@ export default function Finalize() {
   const [dlg, setDlg] = useState(null)
   const [ack, setAck] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [viewMode, setViewMode] = useState('executive') // 'executive' | 'technical'
 
   useEffect(() => {
     if (wf.data?.steps?.[3]?.status === 'completed') fin.reload().catch(() => {})
@@ -165,6 +168,14 @@ export default function Finalize() {
   const hasKg1 = wf.data.steps[3].status === 'completed'
   const finalized = !!wf.data.finalized_version_number
   const d = fin.data
+
+  const impactSummary = useMemo(() => {
+    return buildBusinessImpactSummary(
+      d?.business_impact || cmp?.business_impact,
+      cmp || d?.comparison,
+      d?.validation
+    )
+  }, [d?.business_impact, cmp, d?.comparison, d?.validation])
 
   const doFinalize = async () => {
     setBusy(true)
@@ -416,7 +427,16 @@ export default function Finalize() {
             </section>
           </div>
 
-          {/* Bottom Card 1: Compare Versions */}
+          {/* Executive Business Impact & Decision Guide (Pati Bangla / Plain Terms) */}
+          <ExecutiveImpactGuide
+            impactData={impactSummary}
+            backUrl={backUrl}
+            domainName={resolvedDomainName}
+            viewMode={viewMode}
+            onToggleViewMode={() => setViewMode((prev) => (prev === 'executive' ? 'technical' : 'executive'))}
+          />
+
+          {/* Bottom Card 1: Compare Versions (Technical Schema & Diffs) */}
           <section className="card p-5 border border-line shadow-card">
             <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
               <h2 className="text-base font-bold text-ink shrink-0">Compare Versions</h2>
