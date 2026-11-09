@@ -720,12 +720,12 @@ export default function DomainGraph() {
           </button>
         </div>
 
-        {/* Red KG2 Gap Analysis indicator button on top (matching Image 1) */}
-        <div className="flex items-center gap-2.5 ml-auto">
-          <button
-            type="button"
-            onClick={() => {
-              if (!isKg2Active) {
+        {/* Red KG2 Gap Analysis indicator button on top (Only shown in KG1, hidden in KG2) */}
+        {!isKg2Active && (
+          <div className="flex items-center gap-2.5 ml-auto">
+            <button
+              type="button"
+              onClick={() => {
                 setIsKg2Active(true)
                 setGapAnalysisMode(true)
                 const url = new URL(window.location.href)
@@ -737,17 +737,15 @@ export default function DomainGraph() {
                     detail: { slug, activeLeftView: 'graph', isKg2: true, version: 2 },
                   })
                 )
-              } else {
-                setGapAnalysisMode(!gapAnalysisMode)
-              }
-            }}
-            className="inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-xs sm:text-[13px] font-bold transition shadow-sm cursor-pointer bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-rose-500/25 select-none"
-            title="KG2 Gap Analysis"
-          >
-            <AlertTriangle size={15} strokeWidth={2.4} />
-            <span>KG2 Gap Analysis</span>
-          </button>
-        </div>
+              }}
+              className="inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-xs sm:text-[13px] font-bold transition shadow-sm cursor-pointer bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-rose-500/25 select-none"
+              title="KG2 Gap Analysis"
+            >
+              <AlertTriangle size={15} strokeWidth={2.4} />
+              <span>KG2 Gap Analysis</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Dedicated KG2 Gap Analysis Evolution Banner (matching reference picture) */}
@@ -767,13 +765,6 @@ export default function DomainGraph() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => handleSetLeftView('upload')}
-              className="btn-ghost btn-sm font-semibold gap-1 text-xs cursor-pointer hover:border-brand/40"
-            >
-              <span>+ Upload More Data</span>
-            </button>
             <Link
               to={location.pathname.startsWith('/finance') ? `/finance/${slug}/finalize` : `/fmcg/${slug}/finalize`}
               className="btn-primary btn-sm font-bold gap-1 text-xs"
