@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, ArrowLeft, ArrowRight, Bot, FileText, Layers, Network, Search, Sparkles, X } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, ArrowRight, Bot, CloudUpload, FileText, Layers, Network, Search, Sparkles, X } from 'lucide-react'
 import Layout from '../components/common/Layout'
 import Stepper from '../components/common/Stepper'
 import { EmptyState, ErrorState, Loading } from '../components/common/States'
@@ -767,6 +767,13 @@ export default function DomainGraph() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleSetLeftView('upload')}
+              className="btn-ghost btn-sm font-semibold gap-1 text-xs cursor-pointer hover:border-brand/40"
+            >
+              <span>+ Upload More Data</span>
+            </button>
             <Link
               to={location.pathname.startsWith('/finance') ? `/finance/${slug}/finalize` : `/fmcg/${slug}/finalize`}
               className="btn-primary btn-sm font-bold gap-1 text-xs"

@@ -313,23 +313,30 @@ export default function UploadZone({
 
   return (
     <div className="flex h-full flex-col bg-surface overflow-hidden">
-      {/* Top Banner / Navigation */}
-      <div className="flex items-center justify-between border-b border-line bg-surface2/60 px-4 py-2.5 select-none shrink-0">
-        <div className="flex items-center gap-2">
+      {/* Top Banner / Navigation (Matching Image 2 Reference) */}
+      <div className="flex items-center justify-between border-b border-line bg-surface2/60 px-4 py-3 select-none shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="grid h-8 w-8 place-items-center rounded-xl bg-[#10b981]/15 text-[#10b981] border border-[#10b981]/25 shrink-0">
+            <FileText size={16} />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-ink leading-tight">Upload Business Data</h3>
+            <p className="text-[11px] text-muted leading-tight mt-0.5 truncate">
+              Map real-world enterprise telemetry onto your Knowledge Graph (KG1)
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={onBackToGraph}
-            className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-ink hover:text-brand hover:border-brand/40 transition cursor-pointer shadow-2xs"
+            className="flex items-center gap-1.5 rounded-xl border border-line bg-surface hover:bg-surface2 px-3 py-1.5 text-xs font-semibold text-ink hover:text-brand hover:border-brand/40 transition cursor-pointer shadow-2xs"
             title="Return to Knowledge Graph view"
           >
             <ArrowLeft size={13} />
-            <span>Knowledge Graph</span>
+            <span>View Graph</span>
           </button>
-          <span className="text-muted text-xs">/</span>
-          <span className="text-xs font-bold text-ink">Multi-File Upload Zone</span>
-        </div>
-
-        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => reload()}
@@ -343,7 +350,7 @@ export default function UploadZone({
 
       {/* Main Scrollable Body */}
       <div className="scroll-thin flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-        {/* Drag & Drop Zone */}
+        {/* Drag & Drop Zone (Matching Image 2 Reference) */}
         <div
           onDragOver={(e) => {
             e.preventDefault()
@@ -355,35 +362,31 @@ export default function UploadZone({
             setDrag(false)
             handleUpload(e.dataTransfer.files)
           }}
-          className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 sm:p-8 text-center transition-all duration-200 ${
+          className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 sm:p-7 text-center transition-all duration-200 ${
             drag
               ? 'border-[#10b981] bg-emerald-50/20 dark:bg-emerald-950/20 scale-[0.99]'
-              : 'border-line/80 hover:border-[#10b981]/60 bg-surface2/30 hover:bg-surface2/60'
+              : 'border-line/80 hover:border-[#10b981]/60 bg-surface2/20 hover:bg-surface2/40'
           }`}
         >
-          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#10b981]/15 text-[#10b981] shadow-2xs mb-2">
-            <UploadCloud size={24} strokeWidth={2.2} />
+          <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#10b981]/15 text-[#10b981] shadow-2xs mb-2">
+            <UploadCloud size={22} strokeWidth={2.2} />
           </div>
 
-          <h3 className="text-sm font-bold text-ink">Drag & drop files to enrich your Knowledge Graph</h3>
+          <h3 className="text-sm font-bold text-ink">Drag & drop your data files here</h3>
           <p className="mt-1 text-xs text-muted max-w-md">
-            Upload CSV/XLSX spreadsheets, policy PDFs, text docs, or SQL dumps to discover data nuances and map telemetry onto KG1.
+            Supported formats: CSV, XLSX, PDF, TXT, DOCX, SQL (up to 25 MB each)
           </p>
 
           <div className="mt-3 flex items-center gap-2">
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-black font-bold px-4 py-2 text-xs shadow-sm transition active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white font-bold px-4 py-2 text-xs shadow-sm transition active:scale-95 cursor-pointer"
             >
-              <FileUp size={15} />
+              <FileText size={14} />
               <span>Browse Files</span>
             </button>
           </div>
-
-          <p className="mt-2 text-[11px] text-muted font-mono">
-            Accepted: {ALLOWED.map((e) => `.${e}`).join(', ')} · Max {MAX_MB} MB each
-          </p>
 
           <input
             ref={inputRef}
@@ -398,27 +401,25 @@ export default function UploadZone({
           />
         </div>
 
-        {/* View Gap Analysis (KG2) Button - Placed under the Upload Area (Image & User Request) */}
-        <div className="flex flex-col items-center justify-center pt-2 pb-2 gap-1.5 select-none">
+        {/* Proceed to Gap Analysis (KG2) Button (Matching Image 2 Reference) */}
+        <div className="flex flex-col items-center justify-center pt-1 pb-1 gap-1 select-none">
           <button
             type="button"
             disabled={!hasFilesToAnalyze}
             onClick={handleTriggerGapAnalysis}
-            className={`inline-flex items-center gap-2.5 rounded-full px-7 py-3 text-xs sm:text-sm font-extrabold shadow-lg transition-all duration-200 cursor-pointer ${
+            className={`inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-xs sm:text-sm font-bold shadow-md transition-all duration-200 cursor-pointer ${
               hasFilesToAnalyze
-                ? 'bg-[#10b981] hover:bg-[#059669] text-black shadow-[#10b981]/30 hover:scale-[1.02] active:scale-95'
+                ? 'bg-[#10b981] hover:bg-[#059669] text-white shadow-[#10b981]/25 hover:scale-[1.01] active:scale-95'
                 : 'bg-surface2 text-muted border border-line cursor-not-allowed opacity-50'
             }`}
-            title={hasFilesToAnalyze ? 'View Gap Analysis and transition to KG2' : 'Upload telemetry files first to view Gap Analysis'}
+            title={hasFilesToAnalyze ? 'Proceed to Gap Analysis and transition to KG2' : 'Upload data files first to proceed to Gap Analysis'}
           >
-            <span>View Gap Analysis (KG2)</span>
-            <ArrowRight size={16} strokeWidth={2.6} />
+            <Sparkles size={15} />
+            <span>Proceed to Gap Analysis (KG2)</span>
           </button>
-          <span className="text-[11px] text-muted">
-            {hasFilesToAnalyze
-              ? 'Click to merge uploaded data and view KG2 Gap Analysis'
-              : 'Upload telemetry files above to view Gap Analysis'}
-          </span>
+          {!hasFilesToAnalyze && (
+            <span className="text-[11px] text-muted">Upload telemetry files above to view Gap Analysis</span>
+          )}
         </div>
 
         {/* Upload Queue Progress */}
@@ -458,19 +459,17 @@ export default function UploadZone({
           </div>
         )}
 
-        {/* Uploaded Files Section */}
-        <div className="space-y-3">
+        {/* Uploaded Files Section (Matching Image 2 Reference) */}
+        <div className="space-y-3 pt-1">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
-                Uploaded Files ({files.length})
-              </h4>
-              {processedCount > 0 && (
-                <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                  {processedCount} Processed
-                </span>
-              )}
-            </div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
+              UPLOADED DOCUMENTS &amp; SCHEMAS ({files.length})
+            </h4>
+            {processedCount > 0 && (
+              <span className="text-xs text-muted font-medium">
+                {processedCount} processed
+              </span>
+            )}
           </div>
 
           {loading && !files.length && <Loading />}
@@ -486,20 +485,11 @@ export default function UploadZone({
             <div className="divide-y divide-line rounded-2xl border border-line bg-surface overflow-hidden shadow-2xs">
               {files.map((f) => {
                 const statusMeta = STATUS[f.status] || STATUS.uploaded
-                const isSpreadsheet = ['csv', 'xlsx'].includes(f.ext)
-                const isSql = f.ext === 'sql'
-
                 return (
                   <div key={f.id} className="flex flex-wrap items-center justify-between gap-3 p-3 sm:px-4 hover:bg-surface2/40 transition">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-surface2 text-muted border border-line">
-                        {isSpreadsheet ? (
-                          <FileSpreadsheet size={18} className="text-emerald-600 dark:text-emerald-400" />
-                        ) : isSql ? (
-                          <Database size={18} className="text-indigo-500" />
-                        ) : (
-                          <FileText size={18} className="text-blue-500" />
-                        )}
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-line bg-surface2/60 text-[10px] font-bold uppercase tracking-wider text-muted select-none">
+                        {f.ext || 'FILE'}
                       </div>
 
                       <div className="min-w-0 flex-1 leading-tight">
@@ -507,8 +497,6 @@ export default function UploadZone({
                           {f.name}
                         </span>
                         <div className="flex items-center gap-2 text-[11px] text-muted mt-0.5">
-                          <span className="uppercase font-semibold text-ink/80">{f.ext}</span>
-                          <span>•</span>
                           <span>{bytes(f.size_bytes)}</span>
                           <span>•</span>
                           <span>{timeAgo(f.created_at)}</span>
@@ -525,9 +513,9 @@ export default function UploadZone({
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${statusMeta[1]}`}>
-                        {f.status === 'processing' && <Spinner size={10} />}
-                        {f.status === 'processed' && <CheckCircle2 size={10} />}
+                      <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusMeta[1]}`}>
+                        {f.status === 'processing' && <Spinner size={11} />}
+                        {f.status === 'processed' && <CheckCircle2 size={12} className="text-emerald-600 dark:text-emerald-400" />}
                         <span>{statusMeta[0]}</span>
                       </span>
 
