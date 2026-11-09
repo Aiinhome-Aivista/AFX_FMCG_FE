@@ -228,10 +228,10 @@ export default function UploadZone({
     return () => clearInterval(t)
   }, [isProcessing, reload, onReloadChat])
 
-  const hasFilesToAnalyze = files.length > 0 || Boolean(lastUploadedName)
+  const hasFilesToAnalyze = files.length > 0 || Boolean(lastUploadedName) || queue.length > 0
 
   const handleTriggerGapAnalysis = () => {
-    const targetFile = lastUploadedName || files[0]?.name || 'business_telemetry.pdf'
+    const targetFile = lastUploadedName || files[0]?.name || queue[0]?.name || 'rag_test_questions_60.pdf'
     if (onViewGapAnalysis) {
       onViewGapAnalysis(targetFile)
     } else if (onUploadComplete) {
@@ -242,6 +242,9 @@ export default function UploadZone({
   const handleUpload = (fileList) => {
     const arr = Array.from(fileList || [])
     if (!arr.length) return
+    if (arr[0]?.name) {
+      setLastUploadedName(arr[0].name)
+    }
 
     arr.forEach(async (file) => {
       const ext = file.name.split('.').pop()?.toLowerCase() || ''

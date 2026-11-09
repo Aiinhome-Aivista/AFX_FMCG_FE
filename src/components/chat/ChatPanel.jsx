@@ -358,6 +358,53 @@ export default function ChatPanel({
           const isUser = m.role === 'user'
           const isDecisionMsg = m.kind === 'decision' || m.meta?.awaiting_session_decision
 
+          // Custom Interactive Bot Processing card (matching user reference image)
+          if (m.kind === 'processing' || m.meta?.status === 'processing' || (m.kind === 'system' && m.meta?.file_name)) {
+            const fileName = m.meta?.file_name || 'document.pdf'
+            const isProcessing = m.meta?.status === 'processing' || m.status === 'processing'
+
+            return (
+              <div
+                key={m.id}
+                className="w-full rounded-2xl border border-emerald-500/40 bg-emerald-50/70 dark:bg-emerald-950/30 p-3.5 shadow-sm my-2 select-none animate-in fade-in"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="grid h-9 w-9 place-items-center rounded-xl bg-[#10b981] text-white shadow-sm shrink-0 font-bold">
+                      <Sparkles size={18} strokeWidth={2.2} />
+                    </div>
+                    <div className="flex flex-col leading-tight min-w-0">
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                        INTERACTIVE BOT
+                      </span>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                        PROCESSING
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 text-right">
+                    {isProcessing ? (
+                      <div className="h-4 w-4 rounded-full border-2 border-emerald-500/30 border-t-[#10b981] animate-spin shrink-0" />
+                    ) : (
+                      <CheckCircle2 size={16} className="text-[#10b981] shrink-0" />
+                    )}
+                    <div className="flex flex-col leading-tight text-right">
+                      <span className="text-[10px] text-muted font-medium">Parsing</span>
+                      <span className="text-xs font-semibold text-ink max-w-[150px] sm:max-w-[180px] truncate" title={fileName}>
+                        “{fileName}”
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="mt-2.5 text-xs italic font-medium text-ink/90 dark:text-emerald-200/90 leading-relaxed border-t border-emerald-500/20 pt-2">
+                  “{m.content}”
+                </p>
+              </div>
+            )
+          }
+
           return (
             <div key={m.id} className={`flex gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`}>
               <span

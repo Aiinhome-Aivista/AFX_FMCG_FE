@@ -60,8 +60,10 @@ export default function ChevronTracker() {
   const [workflowDetail, setWorkflowDetail] = useState(() => {
     if (!slug) return { isKg2: false }
     try {
-      const stored = sessionStorage.getItem(`afx_is_kg2_${slug}`) === 'true'
-      return { isKg2: stored }
+      const searchParams = new URLSearchParams(window.location.search)
+      if (searchParams.get('stage') === 'kg1') return { isKg2: false }
+      if (searchParams.get('stage') === 'kg2') return { isKg2: true }
+      return { isKg2: false }
     } catch {
       return { isKg2: false }
     }
@@ -82,17 +84,25 @@ export default function ChevronTracker() {
   const isDomainSelected = Boolean(slug)
   const isFinalize = path.includes('/finalize') || path.includes('/telemetry')
 
+  const searchParams = new URLSearchParams(location.search)
+  const isExplicitKg1 = searchParams.get('stage') === 'kg1'
+  const isExplicitKg2 = searchParams.get('stage') === 'kg2'
+
   // Check if user has transitioned to KG2 (via View Gap Analysis button click)
   const isUploadOrKg2 = Boolean(
-    workflowDetail?.isKg2 ||
-    (slug && sessionStorage.getItem(`afx_is_kg2_${slug}`) === 'true')
+    !isExplicitKg1 && (
+      isExplicitKg2 ||
+      workflowDetail?.isKg2 === true
+    )
   )
 
-  // Dynamically select 4 or 5 stages:
-  // When files are NOT uploaded: Stage 4 (KG2) is HIDDEN.
-  // When files ARE uploaded: Stage 4 (KG2 Gap Analysis) is REVEALED.
+  // Stages matching screenshot when navigating domain workflow:
+  // 1: Domain (Prompts & Overview)
+  // 2: Core Nuances (KG1 Discovery)
+  // 3: Business Telemetry (KG2 Gap Analysis)
+  // 4: Review (Digital Twin)
   const stages = useMemo(() => {
-    if (!isUploadOrKg2) {
+    if (isIndustryStep) {
       return [
         {
           id: 1,
@@ -103,14 +113,14 @@ export default function ChevronTracker() {
         {
           id: 2,
           title: 'Domain',
-          subtitle: 'Prompts',
+          subtitle: 'Prompts & Overview',
           route: () => prefix,
         },
         {
           id: 3,
           title: 'Core Nuances',
           subtitle: 'KG1 Discovery',
-          route: (s, p, eff) => `${p}/${s || eff}?view=graph`,
+          route: (s, p, eff) => `${p}/${s || eff}?stage=kg1&view=graph`,
         },
         {
           id: 4,
@@ -124,85 +134,61 @@ export default function ChevronTracker() {
     return [
       {
         id: 1,
-        title: 'Industry',
-        subtitle: 'Identification',
-        route: () => '/apps',
-      },
-      {
-        id: 2,
         title: 'Domain',
-        subtitle: 'Prompts',
+        subtitle: 'Prompts & Overview',
         route: () => prefix,
       },
       {
-        id: 3,
+        id: 2,
         title: 'Core Nuances',
         subtitle: 'KG1 Discovery',
-        route: (s, p, eff) => `${p}/${s || eff}?view=graph`,
+        route: (s, p, eff) => `${p}/${s || eff}?stage=kg1&view=graph`,
       },
       {
-        id: 4,
+        id: 3,
         title: 'Business Telemetry',
         subtitle: 'KG2 Gap Analysis',
         route: (s, p, eff) => `${p}/${s || eff}?view=upload`,
       },
       {
-        id: 5,
+        id: 4,
         title: 'Review',
         subtitle: 'Digital Twin',
         route: (s, p, eff) => `${p}/${s || eff}/finalize`,
       },
     ]
-  }, [isUploadOrKg2, prefix])
+  }, [isIndustryStep, prefix])
 
-  // Calculate status for each stage based on 4-stage or 5-stage mode
-  const getStageStatus = (stageId, totalStages) => {
-    if (totalStages === 4) {
-      // 4-Stage Mode
-      if (stageId === 1) {
-        if (isIndustryStep) return { isCompleted: false, isActive: true }
-        return { isCompleted: true, isActive: false }
-      }
-      if (stageId === 2) {
-        if (isIndustryStep) return { isCompleted: false, isActive: false }
-        if (!isDomainSelected) return { isCompleted: false, isActive: true }
-        return { isCompleted: true, isActive: false }
-      }
-      if (stageId === 3) {
-        if (isIndustryStep || !isDomainSelected) return { isCompleted: false, isActive: false }
-        if (isFinalize) return { isCompleted: true, isActive: false }
-        return { isCompleted: false, isActive: true }
-      }
-      if (stageId === 4) {
-        if (isFinalize) return { isCompleted: false, isActive: true }
-        return { isCompleted: false, isActive: false }
-      }
-    } else {
-      // 5-Stage Mode (with KG2 Gap Analysis)
-      if (stageId === 1) {
-        if (isIndustryStep) return { isCompleted: false, isActive: true }
-        return { isCompleted: true, isActive: false }
-      }
-      if (stageId === 2) {
-        if (isIndustryStep) return { isCompleted: false, isActive: false }
-        if (!isDomainSelected) return { isCompleted: false, isActive: true }
-        return { isCompleted: true, isActive: false }
-      }
-      if (stageId === 3) {
-        if (isIndustryStep || !isDomainSelected) return { isCompleted: false, isActive: false }
-        if (isFinalize || isUploadOrKg2) return { isCompleted: true, isActive: false }
-        return { isCompleted: false, isActive: true }
-      }
-      if (stageId === 4) {
-        if (isIndustryStep || !isDomainSelected) return { isCompleted: false, isActive: false }
-        if (isFinalize) return { isCompleted: true, isActive: false }
-        if (isUploadOrKg2) return { isCompleted: false, isActive: true }
-        return { isCompleted: false, isActive: false }
-      }
-      if (stageId === 5) {
-        if (isFinalize) return { isCompleted: false, isActive: true }
-        return { isCompleted: false, isActive: false }
-      }
+  // Calculate status for each stage
+  const getStageStatus = (stageId) => {
+    if (isIndustryStep) {
+      if (stageId === 1) return { isCompleted: false, isActive: true }
+      return { isCompleted: false, isActive: false }
+    }
+
+    // 4-Stage Domain Workflow (matching user screenshot)
+    if (stageId === 1) {
+      // Step 1: Domain
+      if (!isDomainSelected) return { isCompleted: false, isActive: true }
+      return { isCompleted: true, isActive: false }
+    }
+    if (stageId === 2) {
+      // Step 2: Core Nuances (KG1 Discovery)
+      if (!isDomainSelected) return { isCompleted: false, isActive: false }
+      if (isFinalize || isUploadOrKg2) return { isCompleted: true, isActive: false }
+      return { isCompleted: false, isActive: true }
+    }
+    if (stageId === 3) {
+      // Step 3: Business Telemetry (KG2 Gap Analysis)
+      if (!isDomainSelected) return { isCompleted: false, isActive: false }
+      if (isFinalize) return { isCompleted: true, isActive: false }
+      if (isUploadOrKg2) return { isCompleted: false, isActive: true }
+      return { isCompleted: false, isActive: false }
+    }
+    if (stageId === 4) {
+      // Step 4: Review
+      if (isFinalize) return { isCompleted: false, isActive: true }
+      return { isCompleted: false, isActive: false }
     }
 
     return { isCompleted: false, isActive: false }
@@ -214,7 +200,7 @@ export default function ChevronTracker() {
       className="flex items-center gap-1 sm:gap-2 overflow-x-auto py-1 no-scrollbar max-w-full"
     >
       {stages.map((stage) => {
-        const { isCompleted, isActive } = getStageStatus(stage.id, stages.length)
+        const { isCompleted, isActive } = getStageStatus(stage.id)
 
         // Colors tailored to match the design in both Light Mode and Dark Mode:
         // 🟢 Completed: Solid Emerald Green (#10b981), dark checkmark circle, bold dark text

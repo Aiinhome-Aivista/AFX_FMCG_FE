@@ -78,8 +78,40 @@ export default function DomainGraph() {
   const fileListAsync = useAsync(() => (slug ? filesApi.list(slug) : null), [slug])
 
   const uploadedFiles = fileListAsync.data?.files || []
-  const hasUploadedFiles = uploadedFiles.length > 0 || (slug && sessionStorage.getItem(`afx_is_kg2_${slug}`) === 'true')
-  const isKg2Active = Boolean(hasUploadedFiles)
+  const [isKg2Active, setIsKg2Active] = useState(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search)
+      if (searchParams.get('stage') === 'kg1') return false
+      if (searchParams.get('stage') === 'kg2') return true
+      return false
+    } catch {
+      return false
+    }
+  })
+
+  // Synchronize stage & view params from URL
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    const stage = searchParams.get('stage')
+    const view = searchParams.get('view')
+
+    if (stage === 'kg2') {
+      setIsKg2Active(true)
+      setGapAnalysisMode(true)
+    } else if (stage === 'kg1' || view === 'graph') {
+      if (stage === 'kg1') {
+        setIsKg2Active(false)
+        setGapAnalysisMode(false)
+        if (slug) {
+          try {
+            sessionStorage.removeItem(`afx_is_kg2_${slug}`)
+          } catch {}
+        }
+      }
+    }
+  }, [location.search, slug])
+
+  const hasUploadedFiles = uploadedFiles.length > 0 || isKg2Active
 
   // Auto-start workflow if not already started (no redirect to intermediate overview)
   useEffect(() => {
@@ -296,9 +328,9 @@ export default function DomainGraph() {
     return flows.data.flows.findIndex((f) => f.key === flowKey)
   }, [flowKey, flows.data])
 
-  // Gap analysis comparison between KG1 and KG2 (or current version)
+  // Gap analysis comparison between KG1 and KG2 (only when KG2 is active)
   useEffect(() => {
-    if ((base?.version?.number || 0) >= 2 && slug) {
+    if (isKg2Active && (base?.version?.number || 0) >= 2 && slug) {
       graphs
         .compare(slug, 1, base.version.number)
         .then((d) => {
@@ -308,8 +340,11 @@ export default function DomainGraph() {
         .catch(() => {})
     } else {
       setDiffData(null)
+      if (!isKg2Active) {
+        setGapAnalysisMode(false)
+      }
     }
-  }, [base?.version?.number, slug])
+  }, [isKg2Active, base?.version?.number, slug])
 
   const discrepancies = useMemo(() => {
     const addedKeys = new Set(diffData?.nodes_added?.map((n) => n.key) || [])
@@ -345,31 +380,79 @@ export default function DomainGraph() {
     window.history.replaceState({}, '', url.toString())
     window.dispatchEvent(
       new CustomEvent('afx-workflow-state', {
-        detail: { slug, activeLeftView: view, isKg2: isKg2Active || view === 'upload' },
+        detail: { slug, activeLeftView: view, isKg2: isKg2Active },
       })
     )
   }
 
   const handleUploadComplete = (fileName) => {
-    if (slug) {
-      try {
-        sessionStorage.setItem(`afx_is_kg2_${slug}`, 'true')
-        sessionStorage.setItem(`afx_can_upload_${slug}`, 'true')
-      } catch {}
-    }
-    setGapAnalysisMode(true)
-    handleSetLeftView('graph')
-    const gapAnalysisMsg = {
-      id: 'gap-analysis-' + Date.now(),
+    const targetFileName = fileName || 'rag_test_questions_60.pdf'
+    const procId = 'proc-' + Date.now()
+
+    // 1. Switch right tab to chat so user immediately sees the chat and processing card
+    setActiveRightTab('chat')
+
+    // 2. Add the Interactive Bot Processing message to chat (with spinner active)
+    const procMsg = {
+      id: procId,
       role: 'assistant',
-      kind: 'gap_analysis',
-      content: `Gap Analysis (KG2 Evolution) Complete.\n\nI compared your uploaded telemetry ("${fileName}") with KG1.\n\n- Discrepancies (RED): 1 missing element(s) and 1 new telemetry node(s)\n- Matched Elements: 8 verified entity(ies)\n\nAll discrepancies are highlighted in RED on your Knowledge Graph. Let's review these gaps so we can finalize your Digital Twin.`,
+      kind: 'processing',
+      content: 'Checking schemas and reconciling data with KG1 baseline...',
+      meta: {
+        file_name: targetFileName,
+        status: 'processing',
+      },
       created_at: new Date().toISOString(),
     }
+
     setSnap((s) => ({
       ...s,
-      messages: [...(s?.messages || []), gapAnalysisMsg],
+      messages: [...(s?.messages || []), procMsg],
     }))
+
+    // 3. Keep spinner rotating in chat for 2.2 seconds while reconciling, then finalize KG2
+    setTimeout(() => {
+      setIsKg2Active(true)
+      setGapAnalysisMode(true)
+      if (slug) {
+        try {
+          sessionStorage.setItem(`afx_is_kg2_${slug}`, 'true')
+          sessionStorage.setItem(`afx_can_upload_${slug}`, 'true')
+        } catch {}
+      }
+
+      const url = new URL(window.location.href)
+      url.searchParams.set('stage', 'kg2')
+      url.searchParams.delete('view')
+      window.history.replaceState({}, '', url.toString())
+      setActiveLeftView('graph')
+
+      window.dispatchEvent(
+        new CustomEvent('afx-workflow-state', {
+          detail: { slug, activeLeftView: 'graph', isKg2: true, version: 2 },
+        })
+      )
+
+      // Add Gap Analysis summary message and mark processing complete
+      const gapAnalysisMsg = {
+        id: 'gap-analysis-' + Date.now(),
+        role: 'assistant',
+        kind: 'gap_analysis',
+        content: `Gap Analysis (KG2 Evolution) Complete.\n\nI compared your uploaded telemetry (“${targetFileName}”) with KG1.\n\n- Discrepancies (RED): 1 missing element(s) and 1 new telemetry node(s)\n- Matched Elements: 8 verified entity(ies)\n\nAll discrepancies are highlighted in RED on your Knowledge Graph. Let's review these gaps so we can finalize your Digital Twin.`,
+        created_at: new Date().toISOString(),
+      }
+
+      setSnap((s) => ({
+        ...s,
+        messages: (s?.messages || [])
+          .map((msg) =>
+            msg.id === procId
+              ? { ...msg, meta: { ...msg.meta, status: 'completed' } }
+              : msg
+          )
+          .concat(gapAnalysisMsg),
+      }))
+    }, 2200)
   }
 
   // Notify header ChevronTracker whenever graph version advances to KG2
@@ -421,7 +504,8 @@ export default function DomainGraph() {
         toast.success(`${r.version.label} created!`)
         await Promise.all([g.reload(), wf.reload(), flows.reload()])
         setActiveLeftView('graph')
-        if ((r.version.number || 0) >= 2 || r.version.kind === 'telemetry') {
+        if (r.version?.kind === 'telemetry') {
+          setIsKg2Active(true)
           setGapAnalysisMode(true)
         }
       } else {
@@ -566,132 +650,32 @@ export default function DomainGraph() {
         </div>
       )}
 
-      {wf.data && <Stepper slug={slug} steps={wf.data.steps} current={3} />}
-
-      <div className="mt-2 mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">
-            {slug ? 'Knowledge Graph' : (domain?.name || DOMMETA[domainKey]?.n || 'Knowledge Graph')}
-          </h1>
-          {nodeCount > 0 && (
-            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold border shadow-2xs ${
-              isKg2Active
-                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                : 'bg-brand/15 text-brand border-brand/30'
-            }`}>
-              {isKg2Active ? `KG${base?.version?.number || 2} · Dynamic` : 'KG1 · Discovery'} ({nodeCount} {nodeCount === 1 ? 'node' : 'nodes'})
-            </span>
+      {/* Sub-bar 2: Domain filter chips container (matching screenshot) */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-surface/80 p-3 sm:p-3.5 backdrop-blur shadow-2xs">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 select-none">
+          <span className="text-xs font-semibold text-muted mr-1">All Domains</span>
+          {domainKey !== 'all' && DOMMETA[domainKey] && (
+            <button
+              type="button"
+              className={`chip cursor-pointer ${activeDomainFilter === domainKey ? 'chip-on' : 'opacity-80'}`}
+              onClick={() => setActiveDomainFilter(domainKey)}
+            >
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: DOMMETA[domainKey].c }} />
+              <span>{DOMMETA[domainKey].n}</span>
+            </button>
           )}
+          <button
+            type="button"
+            className={`chip cursor-pointer ${activeDomainFilter === 'spine' ? 'chip-on' : 'opacity-80'}`}
+            onClick={() => setActiveDomainFilter(activeDomainFilter === 'spine' ? domainKey : 'spine')}
+          >
+            <span className="h-2 w-2 rounded-full shrink-0" style={{ background: DOMMETA.spine.c }} />
+            <span>{location.pathname.startsWith('/finance') ? 'Finance master-data spine' : 'FMCG master-data spine'}</span>
+          </button>
         </div>
 
-        {/* <button
-          onClick={() => setShowAiModal(true)}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand to-indigo-600 px-3.5 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm hover:opacity-95 active:scale-95 transition cursor-pointer"
-        >
-          <Sparkles size={15} />
-          <span>Generate KG with AI</span>
-        </button> */}
-      </div>
-
-      {/* Search and Filters Bar */}
-      <div className="card mt-3 p-3">
-        {/* <div className="flex flex-wrap items-start gap-3">
-          <div className="relative min-w-[240px] flex-1">
-            <Search size={15} className="pointer-events-none absolute left-3 top-3 text-muted" />
-            <input
-              className="input pl-9 pr-8 text-xs sm:text-sm"
-              placeholder="Search entity, attribute or formula…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              aria-label="Search the graph"
-            />
-            {q && (
-              <button
-                className="absolute right-2 top-2.5 text-muted hover:text-ink cursor-pointer"
-                onClick={() => setQ('')}
-                aria-label="Clear search"
-              >
-                <X size={16} />
-              </button>
-            )}
-            {results && (
-              <ul className="scroll-thin absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-line bg-surface p-1 shadow-card">
-                {results.length === 0 && <li className="p-3 text-xs sm:text-sm text-muted">No matches in this sub-domain.</li>}
-                {results.map((r) => (
-                  <li key={r.key}>
-                    <button
-                      className="w-full rounded-lg p-2 text-left hover:bg-surface2 cursor-pointer"
-                      onClick={() => {
-                        select(r.key)
-                        setResults(null)
-                      }}
-                    >
-                      <span className="block text-xs sm:text-sm font-semibold">{r.name}</span>
-                      <span className="block truncate text-[11px] text-muted">
-                        {r.hits.map((h) => `${h.field}: ${h.text}`).join(' · ')}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <select
-            className="input !w-auto text-xs sm:text-sm"
-            value={scope}
-            onChange={(e) => setScope(e.target.value)}
-            aria-label="Search scope"
-          >
-            {SCOPES.map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-          </select>
-
-          <label className="flex cursor-pointer items-center gap-2 py-2 text-xs sm:text-sm select-none">
-            <input
-              type="checkbox"
-              className="h-4 w-4 accent-[rgb(var(--brand))]"
-              checked={neighbours}
-              onChange={(e) => setNeighbours(e.target.checked)}
-            />
-            <span className="font-medium text-ink/90">Cross-domain neighbours</span>
-          </label>
-        </div> */}
-
-        {/* Domain filter chips and Active Version Badge */}
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2" aria-label="Sub-domain filters">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              className={`chip cursor-pointer ${activeDomainFilter === 'all' ? 'chip-on' : 'opacity-70'}`}
-              onClick={() => setActiveDomainFilter('all')}
-            >
-              All Domains
-            </button>
-            {domainKey !== 'all' && DOMMETA[domainKey] && (
-              <button
-                type="button"
-                className={`chip cursor-pointer ${activeDomainFilter === domainKey ? 'chip-on' : 'opacity-70'}`}
-                onClick={() => setActiveDomainFilter(domainKey)}
-              >
-                <span className="h-2 w-2 rounded-full shrink-0" style={{ background: DOMMETA[domainKey].c }} />
-                {DOMMETA[domainKey].n}
-              </button>
-            )}
-            <button
-              type="button"
-              className={`chip cursor-pointer ${activeDomainFilter === 'spine' ? 'chip-on' : 'opacity-70'}`}
-              onClick={() => setActiveDomainFilter(activeDomainFilter === 'spine' ? domainKey : 'spine')}
-            >
-              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: DOMMETA.spine.c }} />
-              {DOMMETA.spine.n}
-            </button>
-          </div>
-
-          {/* Action buttons from Image 2: Gap Analysis (Red) & Next: Upload Data (Green) */}
+        {/* In KG2 mode: Show Gap Analysis toggle */}
+        {isKg2Active && (
           <div className="flex items-center gap-2.5">
             <button
               type="button"
@@ -711,38 +695,12 @@ export default function DomainGraph() {
                 </span>
               )}
             </button>
-
-            {activeLeftView === 'graph' ? (
-              canUpload && (
-                <button
-                  type="button"
-                  onClick={() => handleSetLeftView('upload')}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-[#10b981] hover:bg-[#059669] text-black font-bold px-4 py-2 text-xs sm:text-[13px] shadow-md shadow-[#10b981]/25 transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer animate-in fade-in"
-                  title="Hide Knowledge Graph and open Multi-File Upload Zone"
-                >
-                  <CloudUpload size={17} strokeWidth={2.4} />
-                  <span>Next: Upload Data</span>
-                  <ArrowRight size={14} strokeWidth={2.5} />
-                </button>
-              )
-            ) : (
-              <button
-                type="button"
-                onClick={() => handleSetLeftView('graph')}
-                className="inline-flex items-center gap-2 rounded-2xl border border-line bg-surface hover:bg-surface2 text-ink font-bold px-4 py-2 text-xs sm:text-[13px] shadow-2xs transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer"
-                title="Return to Knowledge Graph view"
-              >
-                <Network size={16} className="text-[#10b981]" strokeWidth={2.4} />
-                <span>View Knowledge Graph</span>
-              </button>
-            )}
           </div>
-        </div>
+        )}
       </div>
 
-
       {/* Main Grid: Left Graph Canvas OR Multi-File Upload Zone | Right Chatbot */}
-      <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_440px]">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_440px]">
         {activeLeftView === 'graph' ? (
           /* Knowledge Graph Dynamic Canvas */
           <div className="card relative h-[68vh] min-h-[460px] overflow-hidden p-0 border border-line">

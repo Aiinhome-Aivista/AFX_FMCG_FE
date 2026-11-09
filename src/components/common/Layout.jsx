@@ -33,9 +33,9 @@ export default function Layout({ children, wide }) {
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-[#10b981] text-white shadow-sm">
               <Network size={20} strokeWidth={2.3} />
             </div>
-            <div className="flex flex-col leading-tight">
+            <div className="flex items-center gap-1.5 leading-none">
               <span className="text-[15px] font-extrabold tracking-tight text-ink">AgentForgeX</span>
-              <span className="text-[10px] font-bold tracking-wider text-[#10b981] uppercase mt-0.5">
+              <span className="text-[13px] font-bold text-[#10b981]">
                 {subTitle}
               </span>
             </div>
