@@ -211,23 +211,6 @@ export default function UploadZone({
   const { data, loading, error, reload } = useAsync(() => filesApi.list(slug), [slug])
 
   const files = data?.files || []
-  const isProcessing = queue.length > 0 || files.some((f) => f.status === 'uploaded' || f.status === 'processing')
-  const processingFileName = queue[0]?.name || files.find((f) => f.status === 'processing')?.name || ''
-
-  useEffect(() => {
-    onProcessingChange?.(isProcessing, processingFileName)
-  }, [isProcessing, processingFileName, onProcessingChange])
-
-  // Polling while server is processing any file
-  useEffect(() => {
-    if (!isProcessing) return
-    const t = setInterval(() => {
-      reload().catch(() => {})
-      onReloadChat?.()
-    }, 1500)
-    return () => clearInterval(t)
-  }, [isProcessing, reload, onReloadChat])
-
   const hasFilesToAnalyze = files.length > 0 || Boolean(lastUploadedName) || queue.length > 0
 
   const handleTriggerGapAnalysis = () => {
@@ -271,9 +254,8 @@ export default function UploadZone({
         })
         setQueue((q) => q.filter((item) => item.id !== id))
         setLastUploadedName(file.name)
-        toast.success(`${file.name} uploaded! Click 'View Gap Analysis (KG2)' below to proceed.`)
+        toast.success(`${file.name} uploaded! Review your files below, then click 'Proceed to Gap Analysis (KG2)'.`)
         reload()
-        onReloadChat?.()
       } catch (e) {
         setQueue((q) => q.map((item) => (item.id === id ? { ...item, error: e.message } : item)))
         toast.error(`Upload failed: ${e.message}`)

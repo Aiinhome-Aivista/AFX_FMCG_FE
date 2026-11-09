@@ -422,15 +422,17 @@ export default function DomainGraph() {
     const targetFileName = fileName || 'telemetry_data.csv'
     const procId = 'proc-' + Date.now()
 
-    // 1. Switch right tab to chat so user immediately sees the chat
+    // 1. Switch right tab to chat so user immediately sees the chat and activate witty processing copilot
     setActiveRightTab('chat')
+    setIsProcessingFiles(true)
+    setProcessingFileName(targetFileName)
 
     // 2. Add System Processing message to chat (with loader spinning)
     const procMsg = {
       id: procId,
       role: 'assistant',
       kind: 'system',
-      content: `System Processing: Parsing “${targetFileName}”... Checking schemas and reconciling data with KG1 baseline.`,
+      content: `Let me read your data and do a deep dive into “${targetFileName}”... I don't even have a coffee break, but analyzing this data is pure dopamine! Checking schemas and reconciling data with KG1 baseline.`,
       meta: {
         file_name: targetFileName,
         status: 'processing',
@@ -445,6 +447,7 @@ export default function DomainGraph() {
 
     // 3. Reconcile telemetry data: Check for LLM doubts vs. Clean reconciliation
     setTimeout(async () => {
+      setIsProcessingFiles(false)
       try {
         const convRes = await chat.get(slug).catch(() => null)
         // If LLM has doubts regarding the CSV, present the question in chat for user answer

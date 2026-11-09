@@ -11,8 +11,15 @@ export function shortGroup(name = '') {
 }
 
 export function timeAgo(ts) {
-  if (!ts) return ''
-  const d = new Date(typeof ts === 'string' && !ts.endsWith('Z') ? ts.replace(' ', 'T') + 'Z' : ts)
+  if (!ts) return 'Just now'
+  let d = new Date(ts)
+  if (isNaN(d.getTime())) {
+    d = new Date(String(ts).replace(' ', 'T') + 'Z')
+  }
+  if (isNaN(d.getTime())) {
+    d = new Date(String(ts).replace(' ', 'T'))
+  }
+  if (isNaN(d.getTime())) return 'Just now'
   const s = Math.max(1, Math.round((Date.now() - d.getTime()) / 1000))
   if (s < 60) return `${s}s ago`
   if (s < 3600) return `${Math.round(s / 60)}m ago`
