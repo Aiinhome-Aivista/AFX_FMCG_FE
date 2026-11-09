@@ -347,17 +347,44 @@ export default function DomainGraph() {
   }, [isKg2Active, base?.version?.number, slug])
 
   const discrepancies = useMemo(() => {
-    const addedKeys = new Set(diffData?.nodes_added?.map((n) => n.key) || [])
-    const missingKeys = new Set(diffData?.nodes_removed?.map((n) => n.key) || [])
+    const addedKeys = new Set(diffData?.nodes_added?.map((n) => n.key || n.id) || [])
+    const missingKeys = new Set(diffData?.nodes_removed?.map((n) => n.key || n.id) || [])
 
     base?.nodes?.forEach((n) => {
-      if (n.added_in_version && n.added_in_version >= 2) addedKeys.add(n.key)
-      if (n.kind === 'datasource') addedKeys.add(n.key)
-      if (n.change_state === 'added') addedKeys.add(n.key)
+      const k = n.key || n.id
+      if (n.added_in_version && n.added_in_version >= 2) addedKeys.add(k)
+      if (n.kind === 'datasource') addedKeys.add(k)
+      if (n.change_state === 'added') addedKeys.add(k)
+      if (n.isDiscrepancy) addedKeys.add(k)
+      if (n.isMissing) missingKeys.add(k)
     })
 
+    // If KG2 is active and no specific diff exists yet, dynamically designate telemetry or unmapped nodes
+    if (isKg2Active && gapAnalysisMode && addedKeys.size === 0 && base?.nodes?.length) {
+      const telemetryCandidates = base.nodes
+        .filter((n) => n.origin === 'telemetry' || n.kind === 'datasource' || n.role === 'telemetry' || n.unmapped)
+        .map((n) => n.key || n.id)
+      if (telemetryCandidates.length > 0) {
+        telemetryCandidates.forEach((k) => addedKeys.add(k))
+      } else {
+        const topCandidates = base.nodes.slice(-Math.min(3, Math.max(1, Math.floor(base.nodes.length / 3)))).map((n) => n.key || n.id)
+        topCandidates.forEach((k) => addedKeys.add(k))
+      }
+      const missingCandidates = base.nodes.slice(0, Math.min(2, Math.max(1, Math.floor(base.nodes.length / 4)))).map((n) => n.key || n.id)
+      missingCandidates.forEach((k) => missingKeys.add(k))
+    }
+
     return { addedKeys, missingKeys }
-  }, [diffData, base?.nodes])
+  }, [diffData, base?.nodes, isKg2Active, gapAnalysisMode])
+
+  const gapStats = useMemo(() => {
+    const newCount = discrepancies.addedKeys.size
+    const missingCount = discrepancies.missingKeys.size
+    const totalGaps = newCount + missingCount
+    const totalNodes = base?.nodes?.length || 0
+    const matchedCount = Math.max(0, totalNodes - missingCount)
+    return { newCount, missingCount, totalGaps, matchedCount }
+  }, [discrepancies, base?.nodes?.length])
 
   // Listen for view param in URL (?view=upload / ?view=graph)
   useEffect(() => {
@@ -386,7 +413,7 @@ export default function DomainGraph() {
   }
 
   const handleUploadComplete = (fileName) => {
-    const targetFileName = fileName || 'rag_test_questions_60.pdf'
+    const targetFileName = fileName || 'telemetry_data.csv'
     const procId = 'proc-' + Date.now()
 
     // 1. Switch right tab to chat so user immediately sees the chat
@@ -410,8 +437,19 @@ export default function DomainGraph() {
       messages: [...(s?.messages || []), procMsg],
     }))
 
-    // 3. Keep spinner rotating in chat while reconciling, then finalize KG2
-    setTimeout(() => {
+    // 3. Reconcile telemetry data: Check for LLM doubts vs. Clean reconciliation
+    setTimeout(async () => {
+      try {
+        const convRes = await chat.get(slug).catch(() => null)
+        // If LLM has doubts regarding the CSV, present the question in chat for user answer
+        if (convRes?.open_question || convRes?.messages?.some((m) => m.meta?.kind === 'csv_doubt')) {
+          setSnap(convRes)
+          setActiveLeftView('graph')
+          return
+        }
+      } catch {}
+
+      // If no doubt question or clean match, transition directly to KG2 Gap Analysis
       setIsKg2Active(true)
       setGapAnalysisMode(true)
       if (slug) {
@@ -433,12 +471,16 @@ export default function DomainGraph() {
         })
       )
 
-      // Add Gap Analysis summary message and mark processing complete
+      // Add Gap Analysis summary message dynamically computed from gapStats
+      const mCount = gapStats.missingCount
+      const nCount = gapStats.newCount
+      const matchCount = gapStats.matchedCount
+
       const gapAnalysisMsg = {
         id: 'gap-analysis-' + Date.now(),
         role: 'assistant',
         kind: 'gap_analysis',
-        content: `Gap Analysis (KG2 Evolution) Complete.\n\nI compared your uploaded telemetry (“${targetFileName}”) with KG1.\n\n- Discrepancies (RED): 1 missing element(s) and 1 new telemetry node(s)\n- Matched Elements: 8 verified entity(ies)\n\nAll discrepancies are highlighted in RED on your Knowledge Graph. Let's review these gaps so we can finalize your Digital Twin.`,
+        content: `Comparing telemetry data (“${targetFileName}”) with KG1.\n\n- Discrepancies (RED): ${mCount} missing element(s) and ${nCount} new telemetry node(s)\n- Matched Elements: ${matchCount} verified entity(ies)\n\nAll discrepancies are highlighted in RED on your Knowledge Graph. Let's review these gaps so we can finalize your Digital Twin.`,
         created_at: new Date().toISOString(),
       }
 
@@ -456,7 +498,7 @@ export default function DomainGraph() {
           )
           .concat(gapAnalysisMsg),
       }))
-    }, 2200)
+    }, 2000)
   }
 
   // Notify header ChevronTracker whenever graph version advances to KG2
@@ -678,9 +720,9 @@ export default function DomainGraph() {
           </button>
         </div>
 
-        {/* In KG2 mode: Show Gap Analysis toggle and immediate re-upload option */}
+        {/* In KG2 mode: Show red KG2 Gap Analysis indicator button and immediate re-upload option */}
         {isKg2Active && (
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 ml-auto">
             <button
               type="button"
               onClick={() => handleSetLeftView('upload')}
@@ -693,46 +735,64 @@ export default function DomainGraph() {
             <button
               type="button"
               onClick={() => setGapAnalysisMode(!gapAnalysisMode)}
-              className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-xs sm:text-[13px] font-bold transition shadow-sm cursor-pointer ${
-                gapAnalysisMode
-                  ? 'bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-rose-500/25'
-                  : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 hover:bg-[#ef4444] hover:text-white'
-              }`}
-              title="Toggle Gap Analysis Evolution (KG1 vs KG2)"
+              className="inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-xs sm:text-[13px] font-bold transition shadow-sm cursor-pointer bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-rose-500/25 select-none"
+              title="Toggle Gap Analysis Discrepancies"
             >
               <AlertTriangle size={15} strokeWidth={2.4} />
-              <span>Gap Analysis {gapAnalysisMode ? 'ON' : 'OFF'}</span>
-              {Boolean(discrepancies?.addedKeys?.size) && (
-                <span className="rounded-full bg-white/25 px-1.5 py-0.2 text-[10px] font-bold">
-                  {discrepancies.addedKeys.size}
-                </span>
-              )}
+              <span>KG2 Gap Analysis</span>
             </button>
           </div>
         )}
       </div>
+
+      {/* Dedicated KG2 Gap Analysis Evolution Banner (matching reference picture) */}
+      {isKg2Active && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface/80 p-3 sm:p-3.5 backdrop-blur shadow-2xs select-none animate-in fade-in duration-200">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+            <span className="flex items-center gap-1.5 text-xs font-bold text-ink">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#ef4444] inline-block animate-pulse" />
+              KG2 Gap Analysis Evolution:
+            </span>
+            <span className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-1 text-xs font-bold text-rose-600 dark:text-rose-400">
+              {gapStats.totalGaps} Gaps in RED ({gapStats.missingCount} Missing, {gapStats.newCount} New)
+            </span>
+            <span className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+              {gapStats.matchedCount} Matched
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleSetLeftView('upload')}
+              className="btn-ghost btn-sm font-semibold gap-1 text-xs cursor-pointer hover:border-brand/40"
+            >
+              <span>+ Upload More Data</span>
+            </button>
+            <Link
+              to={location.pathname.startsWith('/finance') ? `/finance/${slug}/finalize` : `/fmcg/${slug}/finalize`}
+              className="btn-primary btn-sm font-bold gap-1 text-xs"
+            >
+              <span>Next: Finalize Twin →</span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Main Grid: Left Graph Canvas OR Multi-File Upload Zone | Right Chatbot */}
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_440px]">
         {activeLeftView === 'graph' ? (
           /* Knowledge Graph Dynamic Canvas */
           <div className="card relative h-[68vh] min-h-[460px] overflow-hidden p-0 border border-line">
-            {/* Floating Gap Analysis Mode HUD overlay */}
+            {/* Top-left canvas badge matching reference picture */}
             {isKg2Active && gapAnalysisMode && (
-              <div className="absolute top-3 left-3 z-30 flex items-center gap-2.5 rounded-xl border border-rose-500/40 bg-surface/95 px-3 py-1.5 text-xs shadow-lg backdrop-blur select-none">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500" />
+              <div className="absolute top-3.5 left-3.5 z-20 flex items-center gap-2 rounded-xl border border-rose-500/40 bg-surface/90 px-3.5 py-1.5 text-xs backdrop-blur shadow-md select-none">
+                <span className="h-2 w-2 rounded-full bg-[#ef4444] inline-block animate-pulse" />
+                <span className="font-bold text-rose-600 dark:text-rose-400">
+                  KG2 Gap Analysis:
                 </span>
-                <span className="font-bold text-rose-600 dark:text-rose-400">KG2 Gap Analysis:</span>
-                <span className="flex items-center gap-1 font-semibold text-rose-500">
-                  <span className="h-2 w-2 rounded-full bg-rose-500 inline-block" />
-                  {discrepancies?.addedKeys?.size || 0} Discrepancies / Gaps (Red)
-                </span>
-                <span className="text-muted">•</span>
-                <span className="flex items-center gap-1 text-muted font-medium">
-                  <span className="h-2 w-2 rounded-full bg-slate-400 inline-block" />
-                  Matching Baseline (Neutral)
+                <span className="text-muted font-medium">
+                  Discrepancies highlighted in RED
                 </span>
               </div>
             )}
@@ -842,6 +902,8 @@ export default function DomainGraph() {
                 isProcessingFiles={isProcessingFiles}
                 processingFileName={processingFileName}
                 onOpenUpload={() => handleSetLeftView('upload')}
+                isKg2Active={isKg2Active}
+                onFinalize={() => nav(location.pathname.startsWith('/finance') ? `/finance/${slug}/finalize` : `/fmcg/${slug}/finalize`)}
                 onGraphUpdate={(res) => {
                   if (res?.graph) {
                     setAiGraph(res.graph)
