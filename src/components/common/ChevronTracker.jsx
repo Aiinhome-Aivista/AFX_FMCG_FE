@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Check } from 'lucide-react'
+import { ArrowRight, Check } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 /**
@@ -197,6 +197,45 @@ export default function ChevronTracker() {
     return { isCompleted: false, isActive: false }
   }
 
+  // Calculate dynamic next step action button right to Review chevron for new users
+  const nextStepInfo = useMemo(() => {
+    if (isIndustryStep) {
+      return {
+        label: 'Next: Select Domain',
+        route: prefix || '/fmcg',
+      }
+    }
+
+    if (isFinalize) {
+      return null // Already on final review step
+    }
+
+    const currentSlug = slug || effectiveSlug
+    if (!currentSlug) return null
+
+    if (isExplicitKg2 || workflowDetail?.isKg2 === true) {
+      // In KG2 stage: next step is Review / Finalize Twin
+      return {
+        label: 'Next: Review Twin',
+        route: `${prefix}/${currentSlug}/finalize`,
+      }
+    }
+
+    if (isUploadView) {
+      // In Upload stage: next step is KG2 Gap Analysis
+      return {
+        label: 'Next: Gap Analysis',
+        route: `${prefix}/${currentSlug}?stage=kg2&view=graph`,
+      }
+    }
+
+    // In KG1 (Core Nuances) stage: next step is Upload Data
+    return {
+      label: 'Next: Upload Data',
+      route: `${prefix}/${currentSlug}?stage=kg1&view=upload`,
+    }
+  }, [isIndustryStep, isFinalize, isExplicitKg2, workflowDetail, isUploadView, prefix, slug, effectiveSlug])
+
   return (
     <nav
       aria-label="Workflow Stages"
@@ -284,6 +323,18 @@ export default function ChevronTracker() {
           </Link>
         )
       })}
+
+      {/* Next Step Action Button Right of Review Step */}
+      {nextStepInfo && (
+        <Link
+          to={nextStepInfo.route}
+          className="ml-1.5 sm:ml-2.5 inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white font-bold px-3 sm:px-3.5 py-1.5 text-xs shadow-sm hover:shadow transition-all duration-200 active:scale-95 shrink-0 select-none cursor-pointer border border-emerald-400/40"
+          title={nextStepInfo.label}
+        >
+          <span>{nextStepInfo.label}</span>
+          <ArrowRight size={13} strokeWidth={2.5} />
+        </Link>
+      )}
     </nav>
   )
 }
