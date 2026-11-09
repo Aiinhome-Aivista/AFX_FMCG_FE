@@ -116,7 +116,7 @@ export default function AppSelect() {
 
         {/* Platform Overview Description */}
         <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed border-t border-line/50 pt-4">
-          AgentForge orchestrates enterprise-scale knowledge graphs across value chains. Pick a target domain below to explore reference models (KG0), capture your core operational nuances (KG1), and ground data with gap analysis (KG2).
+          AgentForge orchestrates enterprise-scale digital twins across value chains. Pick a target domain below to explore industry reference models, capture your core operational nuances, and ground real-world data with gap analysis.
         </p>
 
         {/* Domain Choices Section */}
@@ -150,7 +150,7 @@ export default function AppSelect() {
                 </div>
                 <div className="mt-4 pt-3 border-t border-line/40 flex items-center justify-between">
                   <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform">
-                    {busy === 'finance' ? 'Loading…' : 'Open Finance KG'}
+                    {busy === 'finance' ? 'Loading…' : 'Open Finance Workspace'}
                     <ArrowRight size={13} />
                   </span>
                 </div>
@@ -179,7 +179,7 @@ export default function AppSelect() {
                 </div>
                 <div className="mt-4 pt-3 border-t border-emerald-500/20 flex items-center justify-between">
                   <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform">
-                    {busy === 'fmcg' ? 'Opening FMCG…' : 'Open FMCG KG'}
+                    {busy === 'fmcg' ? 'Opening FMCG…' : 'Open FMCG Workspace'}
                     <ArrowRight size={13} />
                   </span>
                 </div>

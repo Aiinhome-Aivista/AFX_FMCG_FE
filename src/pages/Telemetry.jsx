@@ -116,7 +116,7 @@ export default function Telemetry() {
       <Link to={`/fmcg/${slug}/finalize`} className="mb-3 inline-flex items-center gap-1 text-sm text-muted hover:text-ink"><ArrowLeft size={14} /> Finalisation</Link>
       <Stepper slug={slug} steps={wf.data.steps} current={6} />
       <h1 className="mt-4 text-xl font-semibold">Upload telemetry data</h1>
-      <p className="text-sm text-muted">Files are matched to your finalised ontology (KG{wf.data.finalized_version_number || '?'}). SQL files are only parsed as text — never executed.</p>
+      <p className="text-sm text-muted">Files are matched to your finalised baseline ontology (Version {wf.data.finalized_version_number || '1'}). SQL files are only parsed as text — never executed.</p>
 
       {!unlocked ? (
         <div className="card mt-4"><EmptyState icon={Lock} title="Uploads are locked" hint="Telemetry can only be added after you finalise the ontology (step 5)."><Link className="btn-primary mt-2" to={`/fmcg/${slug}/finalize`}>Go to finalisation</Link></EmptyState></div>

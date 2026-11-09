@@ -85,8 +85,8 @@ function FilePreviewModal({ id, onClose }) {
                   <span className="font-bold text-ink">{bytes(f.size_bytes)}</span>
                 </div>
                 <div className="rounded-xl border border-line bg-surface2/50 p-2.5">
-                  <span className="block text-[11px] text-muted">Graph Version</span>
-                  <span className="font-bold text-ink">{f.graph_version || 'KG1'}</span>
+                  <span className="block text-[11px] text-muted">Model Version</span>
+                  <span className="font-bold text-ink">{(f.graph_version || 'v1').replace(/KG/g, 'v')}</span>
                 </div>
                 <div className="rounded-xl border border-line bg-surface2/50 p-2.5">
                   <span className="block text-[11px] text-muted">Status</span>
@@ -254,7 +254,7 @@ export default function UploadZone({
         })
         setQueue((q) => q.filter((item) => item.id !== id))
         setLastUploadedName(file.name)
-        toast.success(`${file.name} uploaded! Review your files below, then click 'Proceed to Gap Analysis (KG2)'.`)
+        toast.success(`${file.name} uploaded! Review your files below, then click 'Proceed to Gap Analysis'.`)
         reload()
       } catch (e) {
         setQueue((q) => q.map((item) => (item.id === id ? { ...item, error: e.message } : item)))
@@ -304,7 +304,7 @@ export default function UploadZone({
           <div className="min-w-0">
             <h3 className="text-sm font-bold text-ink leading-tight">Upload Business Data</h3>
             <p className="text-[11px] text-muted leading-tight mt-0.5 truncate">
-              Map real-world enterprise telemetry onto your Knowledge Graph (KG1)
+              Map real-world enterprise telemetry onto your baseline domain model
             </p>
           </div>
         </div>
@@ -394,10 +394,10 @@ export default function UploadZone({
                 ? 'bg-[#10b981] hover:bg-[#059669] text-white shadow-[#10b981]/25 hover:scale-[1.01] active:scale-95'
                 : 'bg-surface2 text-muted border border-line cursor-not-allowed opacity-50'
             }`}
-            title={hasFilesToAnalyze ? 'Proceed to Gap Analysis and transition to KG2' : 'Upload data files first to proceed to Gap Analysis'}
+            title={hasFilesToAnalyze ? 'Proceed to Gap Analysis' : 'Upload data files first to proceed to Gap Analysis'}
           >
             <Sparkles size={15} />
-            <span>Proceed to Gap Analysis (KG2)</span>
+            <span>Proceed to Gap Analysis</span>
           </button>
           {!hasFilesToAnalyze && (
             <span className="text-[11px] text-muted">Upload telemetry files above to view Gap Analysis</span>

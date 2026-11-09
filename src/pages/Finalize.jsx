@@ -247,7 +247,7 @@ export default function Finalize() {
         <div className="card mt-3">
           <EmptyState
             title="Nothing to finalise yet"
-            hint="Answer the chatbot's questions and approve at least one set of changes to create KG1."
+            hint="Answer the chatbot's questions and approve at least one set of changes to create your baseline model."
           >
             <Link className="btn-primary mt-2" to={backUrl}>
               Go to Knowledge Graph
@@ -431,7 +431,7 @@ export default function Finalize() {
                     <option value={0}>Model &ldquo;{displayTemplateName}&rdquo; Template</option>
                     {d.versions.map((v) => (
                       <option key={v.number} value={v.number}>
-                        {v.label} &mdash; Model &ldquo;{displayTemplateName}&rdquo;
+                         Model &ldquo;{displayTemplateName}&rdquo;
                       </option>
                     ))}
                   </select>
@@ -450,7 +450,7 @@ export default function Finalize() {
                       <option key={v.number} value={v.number}>
                         {v.number === d.version.number
                           ? `Current "${displayTemplateName}" Template`
-                          : `${v.label} - "${displayTemplateName}" Template`}
+                          : `"${displayTemplateName}" Template`}
                       </option>
                     ))}
                   </select>
@@ -513,7 +513,7 @@ export default function Finalize() {
                     <b className="text-sm text-ink font-semibold">{p.title}</b>
                     <div className="flex items-center gap-2">
                       <span className="rounded-md border border-line bg-surface2 px-2 py-0.5 text-[11px] font-semibold text-muted">
-                        active — {p.result_version ? `KG${p.result_version}` : d.version.label}
+                        active — {p.result_version ? `v${p.result_version}` : (d.version.label || '').replace(/KG/g, 'v')}
                       </span>
                       <span className="text-xs text-muted">
                         {p.source} · {timeAgo(p.created_at)}

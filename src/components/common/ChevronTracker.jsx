@@ -122,7 +122,7 @@ export default function ChevronTracker() {
         {
           id: 3,
           title: 'Core Nuances',
-          subtitle: 'KG1 Discovery',
+          subtitle: 'Process Discovery',
           route: (s, p, eff) => `${p}/${s || eff}?stage=kg1&view=graph`,
         },
         {
@@ -144,13 +144,13 @@ export default function ChevronTracker() {
       {
         id: 2,
         title: 'Core Nuances',
-        subtitle: 'KG1 Discovery',
+        subtitle: 'Process Discovery',
         route: (s, p, eff) => `${p}/${s || eff}?stage=kg1&view=graph`,
       },
       {
         id: 3,
         title: 'Business Telemetry',
-        subtitle: 'KG2 Gap Analysis',
+        subtitle: 'Data Gap Analysis',
         route: (s, p, eff) => `${p}/${s || eff}?stage=kg2&view=graph`,
       },
       {

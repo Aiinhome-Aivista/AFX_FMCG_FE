@@ -13,7 +13,7 @@ const KIND_LABEL = {
   node_qa: 'Entity Analysis',
   intro: 'Welcome',
   system: 'System',
-  gap_analysis: 'KG2 Evolution',
+  gap_analysis: 'Reconciliation Evolution',
 }
 
 export default function ChatPanel({
@@ -48,7 +48,7 @@ export default function ChatPanel({
     "Let me read your data and do a deep dive...",
     "I don't even have a coffee break, but analyzing this data is pure dopamine!",
     "Scanning rows and columns... mapping your operational terms to the ontology!",
-    "Checking schemas and reconciling data with KG1 baseline...",
+    "Checking schemas and reconciling data with operational baseline...",
     "Connecting raw records to FMCG business semantics... hold tight!",
     "Untangling spreadsheets so you don't have to on a Friday afternoon...",
   ]
@@ -295,7 +295,7 @@ export default function ChatPanel({
           <div className="flex items-center gap-2">
             <CheckCircle2 size={16} className="text-[#10b981] shrink-0" />
             <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-              Telemetry Reconciled · KG2 Ready
+              Telemetry Reconciled · Digital Twin Ready
             </span>
           </div>
           {onFinalize ? (
@@ -322,7 +322,7 @@ export default function ChatPanel({
           <div className="flex items-center gap-2">
             <CheckCircle2 size={16} className="text-[#10b981] shrink-0" />
             <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-              Nuances Captured · KG1 Ready
+              Nuances Captured · Baseline Ready
             </span>
           </div>
           {onOpenUpload && (
