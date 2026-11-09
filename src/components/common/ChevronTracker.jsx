@@ -148,7 +148,7 @@ export default function ChevronTracker() {
         id: 3,
         title: 'Business Telemetry',
         subtitle: 'KG2 Gap Analysis',
-        route: (s, p, eff) => `${p}/${s || eff}?view=upload`,
+        route: (s, p, eff) => `${p}/${s || eff}?stage=kg2&view=graph`,
       },
       {
         id: 4,

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { ArrowRight, Bot, CheckCircle2, ChevronRight, CloudUpload, HelpCircle, MessageSquare, Send, SkipForward, Sparkles, User, Zap } from 'lucide-react'
 import { Spinner } from '../common/States'
 import { chat } from '../../api'
@@ -33,6 +34,8 @@ export default function ChatPanel({
   onOpenUpload,
 }) {
   const toast = useToast()
+  const location = useLocation()
+  const prefix = location.pathname.startsWith('/finance') ? '/finance' : '/fmcg'
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [mode, setMode] = useState('answer')
@@ -357,53 +360,11 @@ export default function ChatPanel({
         {activeSnap.messages.map((m, idx) => {
           const isUser = m.role === 'user'
           const isDecisionMsg = m.kind === 'decision' || m.meta?.awaiting_session_decision
-
-          // Custom Interactive Bot Processing card (matching user reference image)
-          if (m.kind === 'processing' || m.meta?.status === 'processing' || (m.kind === 'system' && m.meta?.file_name)) {
-            const fileName = m.meta?.file_name || 'document.pdf'
-            const isProcessing = m.meta?.status === 'processing' || m.status === 'processing'
-
-            return (
-              <div
-                key={m.id}
-                className="w-full rounded-2xl border border-emerald-500/40 bg-emerald-50/70 dark:bg-emerald-950/30 p-3.5 shadow-sm my-2 select-none animate-in fade-in"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="grid h-9 w-9 place-items-center rounded-xl bg-[#10b981] text-white shadow-sm shrink-0 font-bold">
-                      <Sparkles size={18} strokeWidth={2.2} />
-                    </div>
-                    <div className="flex flex-col leading-tight min-w-0">
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                        INTERACTIVE BOT
-                      </span>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                        PROCESSING
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0 text-right">
-                    {isProcessing ? (
-                      <div className="h-4 w-4 rounded-full border-2 border-emerald-500/30 border-t-[#10b981] animate-spin shrink-0" />
-                    ) : (
-                      <CheckCircle2 size={16} className="text-[#10b981] shrink-0" />
-                    )}
-                    <div className="flex flex-col leading-tight text-right">
-                      <span className="text-[10px] text-muted font-medium">Parsing</span>
-                      <span className="text-xs font-semibold text-ink max-w-[150px] sm:max-w-[180px] truncate" title={fileName}>
-                        “{fileName}”
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <p className="mt-2.5 text-xs italic font-medium text-ink/90 dark:text-emerald-200/90 leading-relaxed border-t border-emerald-500/20 pt-2">
-                  “{m.content}”
-                </p>
-              </div>
-            )
-          }
+          const isProcessing = Boolean(
+            (m.status === 'processing' || m.meta?.status === 'processing') &&
+            m.meta?.status !== 'completed' &&
+            (m.kind === 'processing' || isProcessingFiles)
+          )
 
           return (
             <div key={m.id} className={`flex gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`}>
@@ -429,12 +390,42 @@ export default function ChatPanel({
                   }`}
               >
                 {KIND_LABEL[m.kind] && !isUser && (
-                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-brand">
-                    {KIND_LABEL[m.kind]}
-                    {m.meta?.followup ? ' · Follow-up' : ''}
+                  <span className="mb-1 flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-brand">
+                    <span>
+                      {KIND_LABEL[m.kind]}
+                      {m.meta?.followup ? ' · Follow-up' : ''}
+                    </span>
+                    {isProcessing && (
+                      <span className="inline-flex items-center gap-1.5 text-brand font-semibold text-[11px] normal-case">
+                        <span className="h-3 w-3 rounded-full border-2 border-brand/30 border-t-brand animate-spin shrink-0" />
+                        <span>Processing…</span>
+                      </span>
+                    )}
                   </span>
                 )}
                 <span className="whitespace-pre-wrap">{m.content}</span>
+                {m.kind === 'gap_analysis' && (
+                  <div className="mt-3 pt-2.5 border-t border-emerald-500/20 flex flex-wrap items-center gap-2">
+                    {onOpenUpload && (
+                      <button
+                        type="button"
+                        onClick={onOpenUpload}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 transition cursor-pointer"
+                        title="Upload a new dataset to re-run Gap Analysis"
+                      >
+                        <CloudUpload size={13} />
+                        <span>Re-upload Data</span>
+                      </button>
+                    )}
+                    <Link
+                      to={`${prefix}/${slug}/finalize`}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white px-3 py-1 text-xs font-bold transition shadow-2xs"
+                    >
+                      <span>Proceed to Review</span>
+                      <ArrowRight size={13} />
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           )

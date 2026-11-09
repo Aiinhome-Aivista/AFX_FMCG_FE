@@ -389,15 +389,15 @@ export default function DomainGraph() {
     const targetFileName = fileName || 'rag_test_questions_60.pdf'
     const procId = 'proc-' + Date.now()
 
-    // 1. Switch right tab to chat so user immediately sees the chat and processing card
+    // 1. Switch right tab to chat so user immediately sees the chat
     setActiveRightTab('chat')
 
-    // 2. Add the Interactive Bot Processing message to chat (with spinner active)
+    // 2. Add System Processing message to chat (with loader spinning)
     const procMsg = {
       id: procId,
       role: 'assistant',
-      kind: 'processing',
-      content: 'Checking schemas and reconciling data with KG1 baseline...',
+      kind: 'system',
+      content: `System Processing: Parsing “${targetFileName}”... Checking schemas and reconciling data with KG1 baseline.`,
       meta: {
         file_name: targetFileName,
         status: 'processing',
@@ -410,7 +410,7 @@ export default function DomainGraph() {
       messages: [...(s?.messages || []), procMsg],
     }))
 
-    // 3. Keep spinner rotating in chat for 2.2 seconds while reconciling, then finalize KG2
+    // 3. Keep spinner rotating in chat while reconciling, then finalize KG2
     setTimeout(() => {
       setIsKg2Active(true)
       setGapAnalysisMode(true)
@@ -447,7 +447,11 @@ export default function DomainGraph() {
         messages: (s?.messages || [])
           .map((msg) =>
             msg.id === procId
-              ? { ...msg, meta: { ...msg.meta, status: 'completed' } }
+              ? {
+                  ...msg,
+                  content: `System Processing Complete: “${targetFileName}” parsed and reconciled with KG1 baseline.`,
+                  meta: { ...msg.meta, status: 'completed' },
+                }
               : msg
           )
           .concat(gapAnalysisMsg),
@@ -674,9 +678,18 @@ export default function DomainGraph() {
           </button>
         </div>
 
-        {/* In KG2 mode: Show Gap Analysis toggle */}
+        {/* In KG2 mode: Show Gap Analysis toggle and immediate re-upload option */}
         {isKg2Active && (
           <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => handleSetLeftView('upload')}
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-line bg-surface hover:bg-surface2 px-3.5 py-2 text-xs sm:text-[13px] font-semibold text-ink transition cursor-pointer shadow-2xs"
+              title="Upload a new dataset to re-run Gap Analysis"
+            >
+              <CloudUpload size={14} className="text-brand" />
+              <span>Re-upload Data</span>
+            </button>
             <button
               type="button"
               onClick={() => setGapAnalysisMode(!gapAnalysisMode)}

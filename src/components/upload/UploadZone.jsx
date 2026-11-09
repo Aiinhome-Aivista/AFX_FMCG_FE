@@ -471,19 +471,6 @@ export default function UploadZone({
                 </span>
               )}
             </div>
-
-            {processedCount > 0 && (
-              <button
-                type="button"
-                disabled={generating}
-                onClick={handleGenerateTelemetry}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#10b981] to-teal-600 text-black font-bold px-3 py-1.5 text-xs shadow-sm transition hover:opacity-95 active:scale-95 cursor-pointer disabled:opacity-50"
-                title="Synthesize telemetry mappings to create KG2"
-              >
-                {generating ? <Spinner size={13} /> : <Sparkles size={13} />}
-                <span>Generate Telemetry Graph (KG2)</span>
-              </button>
-            )}
           </div>
 
           {loading && !files.length && <Loading />}
