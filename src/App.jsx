@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/common/ProtectedRoute'
+import ErrorBoundary from './components/common/ErrorBoundary'
 import { useAuth } from './context/AuthContext'
 import AuthPage from './pages/AuthPage'
 import AppSelect from './pages/AppSelect'
@@ -10,7 +11,11 @@ import Customize from './pages/Customize'
 import Finalize from './pages/Finalize'
 import Telemetry from './pages/Telemetry'
 
-const P = ({ children, app }) => <ProtectedRoute requireApp={app}>{children}</ProtectedRoute>
+const P = ({ children, app }) => (
+  <ProtectedRoute requireApp={app}>
+    <ErrorBoundary>{children}</ErrorBoundary>
+  </ProtectedRoute>
+)
 
 export default function App() {
   const { user } = useAuth()

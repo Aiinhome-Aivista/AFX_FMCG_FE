@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, History, Lock, Spar
 import Layout from '../components/common/Layout'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import { EmptyState, ErrorState, Loading } from '../components/common/States'
+import ErrorBoundary from '../components/common/ErrorBoundary'
 import OntologyGraphCanvas from '../components/graph/OntologyGraphCanvas'
 import ExecutiveImpactGuide from '../components/review/ExecutiveImpactGuide'
 import useAsync from '../components/common/useAsync'
@@ -42,89 +43,106 @@ const Stat = ({ label, v, tone }) => (
 )
 
 function DiffLists({ d }) {
-  const none = !Object.entries(d.counts || {}).some(([k, v]) => /added|removed|modified/.test(k) && v)
+  const none = !Object.entries(d?.counts || {}).some(([k, v]) => /added|removed|modified/.test(k) && v)
   if (none) return <p className="mt-3 text-sm text-muted">No differences.</p>
   return (
     <div className="mt-4 space-y-4">
-      {d.nodes_added?.length > 0 && (
+      {(d?.nodes_added || []).length > 0 && (
         <div>
           <h4 className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">
             Entities Added
           </h4>
           <ul className="space-y-1.5 text-sm">
-            {d.nodes_added.map((n) => (
-              <li key={n.key} className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full" style={{ background: n.color || '#10b981' }} />
-                <b className="text-ink">{n.name}</b>
-                <span className="text-xs text-muted">({n.origin || 'Custom'})</span>
-              </li>
-            ))}
+            {(d.nodes_added || []).map((n, idx) => {
+              const name = typeof n === 'string' ? n : n?.name || n?.key || `Entity-${idx}`
+              const key = typeof n === 'string' ? n : n?.key || name
+              const color = typeof n === 'object' ? n?.color || '#10b981' : '#10b981'
+              const origin = typeof n === 'object' ? n?.origin || 'Custom' : 'Custom'
+              return (
+                <li key={key} className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full" style={{ background: color }} />
+                  <b className="text-ink">{name}</b>
+                  <span className="text-xs text-muted">({origin})</span>
+                </li>
+              )
+            })}
           </ul>
         </div>
       )}
 
-      {d.nodes_modified?.length > 0 && (
+      {(d?.nodes_modified || []).length > 0 && (
         <div>
           <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-500 mb-2">
             ENTITIES MODIFIED
           </h4>
           <ul className="space-y-3 text-sm">
-            {d.nodes_modified.map((n) => (
-              <li key={n.key} className="rounded-lg border border-line bg-surface2/20 p-3">
-                <b className="text-ink font-semibold">{n.name}</b>
-                {n.changes?.name && (
-                  <div className="text-xs text-muted italic">renamed from “{n.changes.name.from}”</div>
-                )}
-                {n.attributes_added?.length > 0 && (
-                  <div className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 leading-relaxed font-mono">
-                    + {n.attributes_added.join(', ')}
-                  </div>
-                )}
-                {n.attributes_removed?.length > 0 && (
-                  <div className="mt-1 text-xs text-rose-500 leading-relaxed font-mono">
-                    − {n.attributes_removed.join(', ')}
-                  </div>
-                )}
-                {n.changes?.notes && <div className="mt-1 text-xs text-muted">business-rule note added</div>}
-                {n.changes?.formulas && <div className="mt-1 text-xs text-muted">formulas changed</div>}
-              </li>
-            ))}
+            {(d.nodes_modified || []).map((n, idx) => {
+              const name = typeof n === 'string' ? n : n?.name || n?.key || `Modified-${idx}`
+              const key = typeof n === 'string' ? n : n?.key || name
+              const fromName = n?.changes?.name?.from || (typeof n?.changes?.name === 'string' ? n.changes.name : null)
+              const attrAdded = Array.isArray(n?.attributes_added) ? n.attributes_added : []
+              const attrRem = Array.isArray(n?.attributes_removed) ? n.attributes_removed : []
+              return (
+                <li key={key} className="rounded-lg border border-line bg-surface2/20 p-3">
+                  <b className="text-ink font-semibold">{name}</b>
+                  {fromName && (
+                    <div className="text-xs text-muted italic">renamed from “{fromName}”</div>
+                  )}
+                  {attrAdded.length > 0 && (
+                    <div className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 leading-relaxed font-mono">
+                      + {attrAdded.join(', ')}
+                    </div>
+                  )}
+                  {attrRem.length > 0 && (
+                    <div className="mt-1 text-xs text-rose-500 leading-relaxed font-mono">
+                      − {attrRem.join(', ')}
+                    </div>
+                  )}
+                  {n?.changes?.notes && <div className="mt-1 text-xs text-muted">business-rule note added</div>}
+                  {n?.changes?.formulas && <div className="mt-1 text-xs text-muted">formulas changed</div>}
+                </li>
+              )
+            })}
           </ul>
         </div>
       )}
 
-      {d.nodes_removed?.length > 0 && (
+      {(d?.nodes_removed || []).length > 0 && (
         <div>
           <h4 className="text-[11px] font-bold uppercase tracking-wider text-rose-500 mb-2">
             Entities Removed
           </h4>
           <ul className="space-y-1 text-sm">
-            {d.nodes_removed.map((n) => (
-              <li key={n.key} className="text-rose-500 font-semibold">{n.name}</li>
-            ))}
+            {(d.nodes_removed || []).map((n, idx) => {
+              const name = typeof n === 'string' ? n : n?.name || n?.key || `Removed-${idx}`
+              const key = typeof n === 'string' ? n : n?.key || name
+              return (
+                <li key={key} className="text-rose-500 font-semibold">{name}</li>
+              )
+            })}
           </ul>
         </div>
       )}
 
-      {(d.edges_added?.length > 0 || d.edges_removed?.length > 0 || d.edges_modified?.length > 0) && (
+      {((d?.edges_added || []).length > 0 || (d?.edges_removed || []).length > 0 || (d?.edges_modified || []).length > 0) && (
         <div className="pt-2 border-t border-line">
           <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted mb-2">
             Relationship Changes
           </h4>
           <ul className="space-y-1 text-xs text-muted">
-            {d.edges_added?.map((e, i) => (
+            {(d.edges_added || []).map((e, i) => (
               <li key={`ea-${i}`} className="text-emerald-600 dark:text-emerald-400">
-                + {e.source} —{e.label}→ {e.target}
+                + {e?.source} —{e?.label}→ {e?.target}
               </li>
             ))}
-            {d.edges_removed?.map((e, i) => (
+            {(d.edges_removed || []).map((e, i) => (
               <li key={`er-${i}`} className="text-rose-500">
-                − {e.source} —{e.label}→ {e.target}
+                − {e?.source} —{e?.label}→ {e?.target}
               </li>
             ))}
-            {d.edges_modified?.map((e, i) => (
+            {(d.edges_modified || []).map((e, i) => (
               <li key={`em-${i}`}>
-                {e.source} → {e.target}: {e.from} ⇒ {e.to}
+                {e?.source} → {e?.target}: {e?.from} ⇒ {e?.to}
               </li>
             ))}
           </ul>
@@ -153,11 +171,13 @@ export default function Finalize() {
   }, [wf.data]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (fin.data && range.to === null) setRange({ from: 0, to: fin.data.version.number })
+    if (fin.data && range.to === null && fin.data.version?.number != null) {
+      setRange({ from: 0, to: fin.data.version.number })
+    }
   }, [fin.data]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (range.to !== null) {
+    if (range.to !== null && range.to !== undefined) {
       graphs.compare(slug, range.from, range.to).then(setCmp, (e) => toast.error(e.message))
     }
   }, [range, slug]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -285,10 +305,10 @@ export default function Finalize() {
                 <div className="flex flex-col">
                   <h2 className="flex items-center gap-1.5 text-sm sm:text-base font-semibold text-ink">
                     <Sparkles size={16} className="text-emerald-500 fill-emerald-500/20" />
-                    <span>Digital Twin Graph Preview · {d.version.label}</span>
+                    <span>Digital Twin Graph Preview · {d?.version?.label || 'Draft'}</span>
                   </h2>
                   <span className="text-xs text-muted">
-                    {d.graph.nodes.length} entities · {d.graph.edges.length} relationships
+                    {d?.graph?.nodes?.length || 0} entities · {d?.graph?.edges?.length || 0} relationships
                   </span>
                 </div>
                 <div className="flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs font-medium text-ink shadow-sm">
@@ -297,12 +317,14 @@ export default function Finalize() {
                 </div>
               </div>
               <div className="h-[520px] min-h-[420px] w-full relative bg-surface">
-                <OntologyGraphCanvas
-                  nodes={d.graph.nodes}
-                  edges={d.graph.edges}
-                  domainMeta={domain}
-                  className="w-full h-full"
-                />
+                <ErrorBoundary title="Ontology Canvas Rendering Error">
+                  <OntologyGraphCanvas
+                    nodes={d?.graph?.nodes || []}
+                    edges={d?.graph?.edges || []}
+                    domainMeta={domain}
+                    className="w-full h-full"
+                  />
+                </ErrorBoundary>
               </div>
             </section>
 
@@ -312,7 +334,7 @@ export default function Finalize() {
                 {/* Governance Header */}
                 <div className="flex items-center justify-between">
                   <h2 className="text-base font-bold text-ink">Digital Twin Governance</h2>
-                  {d.validation.errors.length === 0 ? (
+                  {(d?.validation?.errors || []).length === 0 ? (
                     <span className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-3 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                       Ready to Finalize
                     </span>
@@ -327,32 +349,32 @@ export default function Finalize() {
                 <div className="rounded-xl border border-line bg-surface2/30 p-3.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-ink">Validation Check</span>
-                    {d.validation.errors.length === 0 ? (
+                    {(d?.validation?.errors || []).length === 0 ? (
                       <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                         <CheckCircle2 size={14} /> Zero Errors
                       </span>
                     ) : (
                       <span className="flex items-center gap-1 text-xs font-semibold text-rose-500">
-                        <XCircle size={14} /> {d.validation.errors.length} Errors
+                        <XCircle size={14} /> {(d?.validation?.errors || []).length} Errors
                       </span>
                     )}
                   </div>
-                  {d.validation.errors.length === 0 && d.validation.warnings.length === 0 ? (
+                  {(d?.validation?.errors || []).length === 0 && (d?.validation?.warnings || []).length === 0 ? (
                     <p className="mt-1.5 text-xs text-muted leading-relaxed">
                       Ontology verified against {resolvedDomainName} domain schema and business rules. Ready for enterprise governance.
                     </p>
                   ) : (
                     <ul className="mt-2 space-y-1.5 text-xs">
-                      {d.validation.errors.map((e, i) => (
+                      {(d?.validation?.errors || []).map((e, i) => (
                         <li key={`err-${i}`} className="flex items-start gap-1.5 text-rose-500">
                           <XCircle size={13} className="mt-0.5 shrink-0" />
-                          <span>{e.message}</span>
+                          <span>{e?.message || 'Error'}</span>
                         </li>
                       ))}
-                      {d.validation.warnings.map((w, i) => (
+                      {(d?.validation?.warnings || []).map((w, i) => (
                         <li key={`warn-${i}`} className="flex items-start gap-1.5 text-amber-500">
                           <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-                          <span>{w.message}</span>
+                          <span>{w?.message || 'Warning'}</span>
                         </li>
                       ))}
                     </ul>
@@ -362,11 +384,11 @@ export default function Finalize() {
                 {/* Entities and Relationships Stats Grid */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-line bg-surface2/40 p-3.5 text-center">
-                    <div className="text-2xl font-bold text-ink">{d.graph.nodes.length}</div>
+                    <div className="text-2xl font-bold text-ink">{d?.graph?.nodes?.length || 0}</div>
                     <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">ENTITIES</div>
                   </div>
                   <div className="rounded-xl border border-line bg-surface2/40 p-3.5 text-center">
-                    <div className="text-2xl font-bold text-ink">{d.graph.edges.length}</div>
+                    <div className="text-2xl font-bold text-ink">{d?.graph?.edges?.length || 0}</div>
                     <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">RELATIONSHIPS</div>
                   </div>
                 </div>
@@ -375,7 +397,7 @@ export default function Finalize() {
                 <div className="rounded-xl border border-line bg-surface2/25 p-3.5 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-muted">Ontology Version:</span>
-                    <span className="font-bold text-ink">{d.version.label}</span>
+                    <span className="font-bold text-ink">{d?.version?.label || 'Draft'}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted">Domain:</span>
@@ -396,7 +418,7 @@ export default function Finalize() {
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                       <Lock size={16} />
-                      <span>Finalised as Digital Twin ({d.version.label})</span>
+                      <span>Finalised as Digital Twin ({d?.version?.label || ''})</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Link
@@ -417,7 +439,7 @@ export default function Finalize() {
                 ) : (
                   <button
                     className="w-full rounded-xl bg-[#10b981] hover:bg-[#059669] text-white py-3.5 px-4 font-semibold text-sm sm:text-base flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                    disabled={d.validation.errors.length > 0}
+                    disabled={(d?.validation?.errors || []).length > 0}
                     onClick={() => {
                       setAck(false)
                       setDlg('finalize')
@@ -433,13 +455,17 @@ export default function Finalize() {
           </div>
 
           {/* Executive Business Impact & Decision Guide (Pati Bangla / Plain Terms) */}
-          <ExecutiveImpactGuide
-            impactData={impactSummary}
-            backUrl={backUrl}
-            domainName={resolvedDomainName}
-            viewMode={viewMode}
-            onToggleViewMode={() => setViewMode((prev) => (prev === 'executive' ? 'technical' : 'executive'))}
-          />
+          {impactSummary && (
+            <ErrorBoundary title="Executive Impact Guide Error">
+              <ExecutiveImpactGuide
+                impactData={impactSummary}
+                backUrl={backUrl}
+                domainName={resolvedDomainName}
+                viewMode={viewMode}
+                onToggleViewMode={() => setViewMode((prev) => (prev === 'executive' ? 'technical' : 'executive'))}
+              />
+            </ErrorBoundary>
+          )}
 
           {/* Bottom Card 1: Compare Versions (Technical Schema & Diffs) */}
           <section className="card p-5 border border-line shadow-card">
@@ -454,9 +480,9 @@ export default function Finalize() {
                     aria-label="From version"
                   >
                     <option value={0}>Model &ldquo;{displayTemplateName}&rdquo; Template</option>
-                    {(d.versions || []).map((v) => (
-                      <option key={v.number} value={v.number}>
-                        {v.label} &mdash; Model &ldquo;{displayTemplateName}&rdquo;
+                    {(d?.versions || []).map((v) => (
+                      <option key={v?.number ?? 0} value={v?.number ?? 0}>
+                        {v?.label || `v${v?.number}`} &mdash; Model &ldquo;{displayTemplateName}&rdquo;
                       </option>
                     ))}
                   </select>
@@ -471,11 +497,11 @@ export default function Finalize() {
                     onChange={(e) => setRange({ ...range, to: Number(e.target.value) })}
                     aria-label="To version"
                   >
-                    {(d.versions || []).map((v) => (
-                      <option key={v.number} value={v.number}>
-                        {v.number === d.version.number
+                    {(d?.versions || []).map((v) => (
+                      <option key={v?.number ?? 0} value={v?.number ?? 0}>
+                        {v?.number === d?.version?.number
                           ? `Current "${displayTemplateName}" Template`
-                          : `${v.label} - "${displayTemplateName}" Template`}
+                          : `${v?.label || `v${v?.number}`} - "${displayTemplateName}" Template`}
                       </option>
                     ))}
                   </select>
@@ -517,7 +543,9 @@ export default function Finalize() {
                     tone="text-rose-500 font-bold text-2xl"
                   />
                 </div>
-                <DiffLists d={cmp} />
+                <ErrorBoundary title="Diff Comparison Error">
+                  <DiffLists d={cmp} />
+                </ErrorBoundary>
               </>
             ) : (
               <Loading className="!p-4" />
@@ -530,26 +558,26 @@ export default function Finalize() {
               <History size={16} />
               <span>Change History</span>
             </h2>
-            {(d.history || []).length === 0 && <p className="mt-3 text-sm text-muted">No change proposals recorded yet.</p>}
+            {(d?.history || []).length === 0 && <p className="mt-3 text-sm text-muted">No change proposals recorded yet.</p>}
             <ul className="mt-3.5 space-y-3">
-              {(d.history || []).map((p) => (
-                <li key={p.id} className="rounded-xl border border-line bg-surface2/20 p-3.5">
+              {(d?.history || []).map((p, pIdx) => (
+                <li key={p?.id || pIdx} className="rounded-xl border border-line bg-surface2/20 p-3.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <b className="text-sm text-ink font-semibold">{p.title}</b>
+                    <b className="text-sm text-ink font-semibold">{p?.title || 'Proposed Change'}</b>
                     <div className="flex items-center gap-2">
                       <span className="rounded-md border border-line bg-surface2 px-2 py-0.5 text-[11px] font-semibold text-muted">
-                        active — {p.result_version ? `KG${p.result_version}` : d.version.label}
+                        active — {p?.result_version ? `KG${p.result_version}` : (d?.version?.label || 'Draft')}
                       </span>
                       <span className="text-xs text-muted">
-                        {p.source} · {timeAgo(p.created_at)}
+                        {p?.source || 'Assistant'} · {timeAgo(p?.created_at)}
                       </span>
                     </div>
                   </div>
-                  {p.items?.length > 0 && (
+                  {(p?.items || []).length > 0 && (
                     <ul className="mt-2 space-y-0.5 text-xs text-muted">
                       {p.items.map((i, k) => (
-                        <li key={k} className={i.status === 'rejected' ? 'line-through' : ''}>
-                          {i.status === 'approved' ? '✓' : i.status === 'rejected' ? '✗' : '•'} {i.description}
+                        <li key={k} className={i?.status === 'rejected' ? 'line-through' : ''}>
+                          {i?.status === 'approved' ? '✓' : i?.status === 'rejected' ? '✗' : '•'} {i?.description}
                         </li>
                       ))}
                     </ul>
@@ -569,8 +597,8 @@ export default function Finalize() {
         onCancel={() => setDlg(null)}
         onConfirm={doFinalize}
       >
-        <p>This locks {d?.version.label} as your ontology and unlocks telemetry upload. The chatbot session will be locked until you re-open it.</p>
-        {d?.validation.warnings.length > 0 && (
+        <p>This locks {d?.version?.label || 'your current version'} as your ontology and unlocks telemetry upload. The chatbot session will be locked until you re-open it.</p>
+        {(d?.validation?.warnings || []).length > 0 && (
           <label className="mt-3 flex items-start gap-2 text-ink">
             <input
               type="checkbox"
@@ -578,7 +606,7 @@ export default function Finalize() {
               checked={ack}
               onChange={(e) => setAck(e.target.checked)}
             />
-            <span>I have reviewed the {d.validation.warnings.length} warning(s) and want to finalise anyway.</span>
+            <span>I have reviewed the {(d?.validation?.warnings || []).length} warning(s) and want to finalise anyway.</span>
           </label>
         )}
       </ConfirmDialog>
