@@ -481,7 +481,7 @@ export default function UploadZone({
                 title="Synthesize telemetry mappings to create KG2"
               >
                 {generating ? <Spinner size={13} /> : <Sparkles size={13} />}
-                <span>Generate Telemetry Graph (KG2)</span>
+                {/* <span>Generate Telemetry Graph (KG2)</span> */}
               </button>
             )}
           </div>

@@ -31,6 +31,8 @@ export default function ChatPanel({
   isProcessingFiles = false,
   processingFileName = '',
   onOpenUpload,
+  isKg2Active = false,
+  onFinalize,
 }) {
   const toast = useToast()
   const [text, setText] = useState('')
@@ -284,8 +286,35 @@ export default function ChatPanel({
         </div>
       </div>
 
-      {/* Nuances Captured · KG1 Ready Banner (Image 1) or In-Progress Counter */}
-      {canUpload ? (
+      {/* Nuances Captured · KG1 Ready Banner OR Telemetry Ingested · KG2 Ready Banner */}
+      {isKg2Active ? (
+        <div className="mx-3.5 my-2 flex items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-50/60 dark:bg-emerald-950/30 px-3.5 py-2 shadow-2xs animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-[#10b981] shrink-0" />
+            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+              Telemetry Reconciled · KG2 Ready
+            </span>
+          </div>
+          {onFinalize ? (
+            <button
+              type="button"
+              onClick={onFinalize}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-black font-bold px-3 py-1.5 text-xs shadow-sm transition active:scale-95 cursor-pointer"
+            >
+              <span>Next: Finalize Twin</span>
+              <ArrowRight size={13} strokeWidth={2.5} />
+            </button>
+          ) : onOpenUpload ? (
+            <button
+              type="button"
+              onClick={onOpenUpload}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-black font-bold px-3 py-1.5 text-xs shadow-sm transition active:scale-95 cursor-pointer"
+            >
+              <span>+ Upload Data</span>
+            </button>
+          ) : null}
+        </div>
+      ) : canUpload ? (
         <div className="mx-3.5 my-2 flex items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-50/60 dark:bg-emerald-950/30 px-3.5 py-2 shadow-2xs animate-in fade-in">
           <div className="flex items-center gap-2">
             <CheckCircle2 size={16} className="text-[#10b981] shrink-0" />
