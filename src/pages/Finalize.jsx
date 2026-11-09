@@ -425,7 +425,8 @@ export default function Finalize() {
                   Model &ldquo;{displayTemplateName}&rdquo; Template
                 </span>
 
-                <ArrowRight size={14} className="text-muted shrink-0" />
+                {/* <ArrowRight size={14} className="text-muted shrink-0" /> */}
+                <span>vs</span>
 
                 <span className="inline-flex items-center rounded-lg border border-emerald-500/40 bg-emerald-50/60 dark:bg-emerald-950/30 px-3 py-1.5 text-xs sm:text-[13px] font-bold text-emerald-700 dark:text-emerald-300 shadow-2xs select-none">
                   Current &ldquo;{displayTemplateName}&rdquo; Template
