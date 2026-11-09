@@ -7,8 +7,30 @@ import { EmptyState, ErrorState, Loading } from '../components/common/States'
 import OntologyGraphCanvas from '../components/graph/OntologyGraphCanvas'
 import useAsync from '../components/common/useAsync'
 import { domains, graphs } from '../api'
-import { timeAgo } from '../lib/format'
+import { cleanMojibake, timeAgo } from '../lib/format'
+import { DOMMETA, SLUG_TO_DOM } from '../lib/ontologyData'
 import { useToast } from '../context/ToastContext'
+
+const DOMAIN_NAME_MAP = {
+  'management-reporting-gross-to-net': 'Management Reporting and Gross-to-Net',
+  'planning-budgeting-forecasting': 'Planning, Budgeting and Forecasting',
+  'cost-profitability-management': 'Cost and Profitability Management',
+  'working-capital-treasury': 'Working Capital and Treasury',
+  'consolidation-close-statutory': 'Consolidation, Close and Statutory Reporting',
+  'statement-analysis-valuation': 'Financial Statement Analysis and Valuation',
+  'risk-governance-controls': 'Financial Risk, Governance and Controls',
+  'epm-platforms-operating-model': 'EPM Platforms and Finance Operating Model',
+  'sales-distribution-rtm': '01 Sales & Distribution (RtM)',
+  '01-sales-distribution': '01 Sales & Distribution (RtM)',
+  'trade-promotions-rgm': '02 Trade, Promotions & RGM',
+  'marketing-consumer': '03 Marketing & Consumer',
+  'supply-chain-procurement': '04 Supply Chain & Procurement',
+  'manufacturing-quality': '05 Manufacturing & Quality',
+  'innovation-npd': '06 Innovation & NPD',
+  'finance-epm': '07 Finance & EPM',
+  'ecommerce-d2c-strategy': '08 E-commerce, D2C & Strategy',
+  'data-analytics-foundation': '09 Data & Analytics Foundation',
+}
 
 const Stat = ({ label, v, tone }) => (
   <div className="rounded-xl border border-line bg-surface2/30 p-3 text-center">
@@ -175,9 +197,24 @@ export default function Finalize() {
 
   const prefix = location.pathname.startsWith('/finance') ? '/finance' : '/fmcg'
   const isFinance = prefix === '/finance'
-  const domain = dom.data?.domains?.find((item) => item.slug === slug)
+  const cleanSlug = String(slug || '').toLowerCase().trim()
+  const domain = dom.data?.domains?.find((item) => item.slug === slug || item.slug === cleanSlug || item.id === slug)
+
+  const rawDomainName =
+    domain?.name ||
+    DOMAIN_NAME_MAP[cleanSlug] ||
+    DOMMETA[SLUG_TO_DOM[cleanSlug]]?.n ||
+    d?.domain?.name ||
+    wf.data?.domain?.name ||
+    cleanSlug
+      .replace(/[-_]+/g, ' ')
+      .split(' ')
+      .map((w) => (['and', 'to', 'of', 'in', 'for', '&'].includes(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+      .join(' ')
+
+  const resolvedDomainName = cleanMojibake(rawDomainName)
+  const displayTemplateName = DOMAIN_NAME_MAP[cleanSlug] || resolvedDomainName.replace(/^[F0-9]+\s+/, '')
   const domainType = isFinance ? 'Finance' : 'FMCG'
-  const domainName = isFinance ? 'Finance' : (domain?.name || 'FMCG')
 
   const hasKg2 = Boolean(
     sessionStorage.getItem(`afx_is_kg2_${slug}`) === 'true' ||
@@ -199,7 +236,7 @@ export default function Finalize() {
         </Link>
         <h1 className="mt-2 text-xl sm:text-2xl font-bold text-ink">Enterprise Digital Twin Finalization</h1>
         <p className="mt-1 text-xs sm:text-sm text-muted">
-          Step 4: Review, validate and finalize your customized {domainType} Digital Twin.
+          Step 4: Review, validate and finalize your customized {resolvedDomainName} Digital Twin.
         </p>
       </div>
 
@@ -237,7 +274,7 @@ export default function Finalize() {
                 </div>
                 <div className="flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs font-medium text-ink shadow-sm">
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>{domainType} Radial Spine Active</span>
+                  <span>{displayTemplateName} Radial Spine Active</span>
                 </div>
               </div>
               <div className="h-[520px] min-h-[420px] w-full relative bg-surface">
@@ -283,7 +320,7 @@ export default function Finalize() {
                   </div>
                   {d.validation.errors.length === 0 && d.validation.warnings.length === 0 ? (
                     <p className="mt-1.5 text-xs text-muted leading-relaxed">
-                      Ontology verified against {domainType} domain schema and business rules. Ready for enterprise governance.
+                      Ontology verified against {resolvedDomainName} domain schema and business rules. Ready for enterprise governance.
                     </p>
                   ) : (
                     <ul className="mt-2 space-y-1.5 text-xs">
@@ -323,7 +360,7 @@ export default function Finalize() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted">Domain:</span>
-                    <span className="font-bold text-ink">{domainName}</span>
+                    <span className="font-bold text-ink">{resolvedDomainName}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted">Status:</span>
@@ -378,34 +415,44 @@ export default function Finalize() {
 
           {/* Bottom Card 1: Compare Versions */}
           <section className="card p-5 border border-line shadow-card">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-base font-bold text-ink">Compare Versions</h2>
-              <select
-                className="input !w-auto text-xs font-medium py-1 px-2.5"
-                value={range.from}
-                onChange={(e) => setRange({ ...range, from: Number(e.target.value) })}
-                aria-label="From version"
-              >
-                <option value={0}>KG0 reference (selected blocks)</option>
-                {d.versions.map((v) => (
-                  <option key={v.number} value={v.number}>
-                    {v.label}
-                  </option>
-                ))}
-              </select>
-              <ArrowRight size={14} className="text-muted" />
-              <select
-                className="input !w-auto text-xs font-medium py-1 px-2.5"
-                value={range.to ?? ''}
-                onChange={(e) => setRange({ ...range, to: Number(e.target.value) })}
-                aria-label="To version"
-              >
-                {d.versions.map((v) => (
-                  <option key={v.number} value={v.number}>
-                    {v.label}
-                  </option>
-                ))}
-              </select>
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+              <h2 className="text-base font-bold text-ink shrink-0">Compare Versions</h2>
+              <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm font-semibold text-ink">
+                <div className="relative inline-flex items-center">
+                  <select
+                    className="cursor-pointer rounded-lg border border-line/60 bg-surface2/50 hover:bg-surface2 px-2.5 py-1 text-xs sm:text-sm font-semibold text-ink focus:outline-none focus:border-brand transition shadow-2xs"
+                    value={range.from}
+                    onChange={(e) => setRange({ ...range, from: Number(e.target.value) })}
+                    aria-label="From version"
+                  >
+                    <option value={0}>Model &ldquo;{displayTemplateName}&rdquo; Template</option>
+                    {d.versions.map((v) => (
+                      <option key={v.number} value={v.number}>
+                        {v.label} &mdash; Model &ldquo;{displayTemplateName}&rdquo;
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <ArrowRight size={14} className="text-muted shrink-0" />
+
+                <div className="relative inline-flex items-center">
+                  <select
+                    className="cursor-pointer rounded-lg border border-line/60 bg-surface2/50 hover:bg-surface2 px-2.5 py-1 text-xs sm:text-sm font-semibold text-ink focus:outline-none focus:border-brand transition shadow-2xs"
+                    value={range.to ?? ''}
+                    onChange={(e) => setRange({ ...range, to: Number(e.target.value) })}
+                    aria-label="To version"
+                  >
+                    {d.versions.map((v) => (
+                      <option key={v.number} value={v.number}>
+                        {v.number === d.version.number
+                          ? `Current "${displayTemplateName}" Template`
+                          : `${v.label} - "${displayTemplateName}" Template`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
 
             {cmp ? (
