@@ -649,7 +649,7 @@ export default function DomainGraph() {
 
   return (
     <Layout wide>
-      {/* Top Header Navigation: When a domain is selected, show only '← All Domains', the selected domain badge, and AgentForgeX Generated */}
+      {/* Top Header Navigation: When a domain is selected */}
       {slug ? (
         <div className="mb-3 flex flex-wrap items-center gap-2.5 select-none">
           <Link
@@ -661,15 +661,76 @@ export default function DomainGraph() {
             <span>All Domains</span>
           </Link>
 
-          <div className="inline-flex items-center gap-2 rounded-full bg-[#10b981] px-4 py-1.5 text-xs sm:text-[13px] font-bold text-white shadow-sm shadow-[#10b981]/25">
-            <span className="h-2 w-2 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
+          {/* Sub-Domain section */}
+          <button
+            type="button"
+            onClick={() => setActiveDomainFilter(domainKey)}
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs sm:text-[13px] font-bold transition shadow-sm cursor-pointer ${
+              activeDomainFilter === domainKey
+                ? 'bg-[#10b981] text-white shadow-[#10b981]/25 ring-2 ring-[#10b981]/40'
+                : 'border border-line bg-surface/90 text-ink/80 hover:bg-surface2 hover:border-brand/40'
+            }`}
+            title={`Focus on ${domain?.name || DOMMETA[domainKey]?.n || slug}`}
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                activeDomainFilter === domainKey ? 'bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)]' : 'bg-[#10b981]'
+              }`}
+            />
             <span>{domain?.name || DOMMETA[domainKey]?.n || slug}</span>
-          </div>
+          </button>
 
+          {/* FMCG Master-Data Spine: To the right of Sub-Domain section, left of AgentForgeX Generated */}
+          <button
+            type="button"
+            onClick={() => setActiveDomainFilter(activeDomainFilter === 'spine' ? domainKey : 'spine')}
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs sm:text-[13px] font-bold transition shadow-sm cursor-pointer ${
+              activeDomainFilter === 'spine'
+                ? 'bg-indigo-600 text-white shadow-indigo-600/25 ring-2 ring-indigo-600/40'
+                : 'border border-line bg-surface/90 text-ink/80 hover:bg-surface2 hover:border-brand/40'
+            }`}
+            title="Toggle focus on Master-Data Spine"
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                activeDomainFilter === 'spine' ? 'bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)]' : 'bg-indigo-500'
+              }`}
+            />
+            <span>{location.pathname.startsWith('/finance') ? 'Finance master-data spine' : 'FMCG master-data spine'}</span>
+          </button>
+
+          {/* AgentForgeX Generated badge */}
           {nodeCount > 0 && (
             <span className="rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-3.5 py-1 text-xs font-bold shadow-2xs">
               AgentForgeX Generated ({nodeCount} {nodeCount === 1 ? 'node' : 'nodes'})
             </span>
+          )}
+
+          {/* Red Gap Analysis indicator button on top (Only shown AFTER files are uploaded, never from the beginning) */}
+          {uploadedFiles.length > 0 && !isKg2Active && activeLeftView !== 'upload' && (
+            <div className="flex items-center gap-2.5 ml-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsKg2Active(true)
+                  setGapAnalysisMode(true)
+                  const url = new URL(window.location.href)
+                  url.searchParams.set('stage', 'kg2')
+                  url.searchParams.delete('view')
+                  window.history.replaceState({}, '', url.toString())
+                  window.dispatchEvent(
+                    new CustomEvent('afx-workflow-state', {
+                      detail: { slug, activeLeftView: 'graph', isKg2: true, version: 2 },
+                    })
+                  )
+                }}
+                className="inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-xs sm:text-[13px] font-bold transition shadow-sm cursor-pointer bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-rose-500/25 select-none"
+                title="View Gap Analysis"
+              >
+                <AlertTriangle size={15} strokeWidth={2.4} />
+                <span>Gap Analysis</span>
+              </button>
+            </div>
           )}
         </div>
       ) : (
@@ -718,58 +779,6 @@ export default function DomainGraph() {
           </div>
         </div>
       )}
-
-      {/* Sub-bar 2: Domain filter chips container (matching screenshot) */}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-surface/80 p-3 sm:p-3.5 backdrop-blur shadow-2xs">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 select-none">
-          <span className="text-xs font-semibold text-muted mr-1">All Domains</span>
-          {domainKey !== 'all' && DOMMETA[domainKey] && (
-            <button
-              type="button"
-              className={`chip cursor-pointer ${activeDomainFilter === domainKey ? 'chip-on' : 'opacity-80'}`}
-              onClick={() => setActiveDomainFilter(domainKey)}
-            >
-              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: DOMMETA[domainKey].c }} />
-              <span>{DOMMETA[domainKey].n}</span>
-            </button>
-          )}
-          <button
-            type="button"
-            className={`chip cursor-pointer ${activeDomainFilter === 'spine' ? 'chip-on' : 'opacity-80'}`}
-            onClick={() => setActiveDomainFilter(activeDomainFilter === 'spine' ? domainKey : 'spine')}
-          >
-            <span className="h-2 w-2 rounded-full shrink-0" style={{ background: DOMMETA.spine.c }} />
-            <span>{location.pathname.startsWith('/finance') ? 'Finance master-data spine' : 'FMCG master-data spine'}</span>
-          </button>
-        </div>
-
-        {/* Red Gap Analysis indicator button on top (Only shown AFTER files are uploaded, never from the beginning) */}
-        {uploadedFiles.length > 0 && !isKg2Active && activeLeftView !== 'upload' && (
-          <div className="flex items-center gap-2.5 ml-auto">
-            <button
-              type="button"
-              onClick={() => {
-                setIsKg2Active(true)
-                setGapAnalysisMode(true)
-                const url = new URL(window.location.href)
-                url.searchParams.set('stage', 'kg2')
-                url.searchParams.delete('view')
-                window.history.replaceState({}, '', url.toString())
-                window.dispatchEvent(
-                  new CustomEvent('afx-workflow-state', {
-                    detail: { slug, activeLeftView: 'graph', isKg2: true, version: 2 },
-                  })
-                )
-              }}
-              className="inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-xs sm:text-[13px] font-bold transition shadow-sm cursor-pointer bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-rose-500/25 select-none"
-              title="View Gap Analysis"
-            >
-              <AlertTriangle size={15} strokeWidth={2.4} />
-              <span>Gap Analysis</span>
-            </button>
-          </div>
-        )}
-      </div>
 
       {/* Dedicated Data Gap Analysis Evolution Banner (matching reference picture) */}
       {isKg2Active && (
