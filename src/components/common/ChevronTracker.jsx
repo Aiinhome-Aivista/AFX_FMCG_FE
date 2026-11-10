@@ -89,6 +89,14 @@ export function useChevronTrackerState() {
       ))
     : false
 
+  const isConversationStarted = Boolean(
+    workflowDetail?.conversationStarted ||
+    (currentSlug && typeof sessionStorage !== 'undefined' && (
+      sessionStorage.getItem(`afx_conv_started_${currentSlug}`) === 'true' ||
+      sessionStorage.getItem(`afx_conv_started_${slug}`) === 'true'
+    ))
+  )
+
   const isKg2Active = Boolean(
     !isExplicitKg1 && (
       isExplicitKg2 ||
@@ -147,11 +155,13 @@ export function useChevronTrackerState() {
       }
     }
 
-    // In Baseline (Core Nuances) stage: Only show "Next: Upload Data" after at least 3 chats or when upload is unlocked
+    // In Baseline (Core Nuances) stage: Only show "Next: Upload Data" after conversation has started AND upload is unlocked
     const canUploadNow = Boolean(
-      workflowDetail?.canUpload ||
-      workflowDetail?.hasUploadedFiles ||
-      isKg2Active
+      isConversationStarted && (
+        workflowDetail?.canUpload ||
+        workflowDetail?.hasUploadedFiles ||
+        isKg2Active
+      )
     )
 
     if (!canUploadNow) {
@@ -296,13 +306,13 @@ export default function ChevronTracker({ showNextButton = false }) {
 
     // 4-Stage Domain Workflow (matching user screenshot)
     if (stageId === 1) {
-      // Step 1: Domain
-      if (!isDomainSelected) return { isCompleted: false, isActive: true }
+      // Step 1: Domain (Prompts & Overview)
+      if (!isDomainSelected || !isConversationStarted) return { isCompleted: false, isActive: true }
       return { isCompleted: true, isActive: false }
     }
     if (stageId === 2) {
-      // Step 2: Core Nuances
-      if (!isDomainSelected) return { isCompleted: false, isActive: false }
+      // Step 2: Core Nuances (Process Discovery)
+      if (!isDomainSelected || !isConversationStarted) return { isCompleted: false, isActive: false }
       if (isFinalize || isUploadOrKg2) return { isCompleted: true, isActive: false }
       return { isCompleted: false, isActive: true }
     }

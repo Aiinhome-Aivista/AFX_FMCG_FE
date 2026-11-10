@@ -178,8 +178,39 @@ export default function ChatPanel({
   }
 
 
-  // Welcome state when conversation hasn't started yet
-  if (!activeSnap.conversation_id) {
+  const [hasStartedConversation, setHasStartedConversation] = useState(() => {
+    try {
+      return sessionStorage.getItem(`afx_conv_started_${slug}`) === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    try {
+      setHasStartedConversation(sessionStorage.getItem(`afx_conv_started_${slug}`) === 'true')
+    } catch {
+      setHasStartedConversation(false)
+    }
+  }, [slug])
+
+  const handleStart = () => {
+    try {
+      sessionStorage.setItem(`afx_conv_started_${slug}`, 'true')
+    } catch {}
+    setHasStartedConversation(true)
+    window.dispatchEvent(
+      new CustomEvent('afx-workflow-state', {
+        detail: { slug, conversationStarted: true },
+      })
+    )
+    if (!activeSnap.conversation_id) {
+      start()
+    }
+  }
+
+  // Welcome state on initial screen before user starts a conversation
+  if (!hasStartedConversation || !activeSnap.conversation_id) {
     return (
       <div className="relative flex h-full flex-col items-center justify-center overflow-hidden p-6 sm:p-8 text-center bg-gradient-to-b from-surface via-surface to-surface2">
         {/* Ambient glow */}
@@ -201,7 +232,7 @@ export default function ChatPanel({
 
           <div className="mt-6 flex flex-col gap-2 w-full text-left">
             <button
-              onClick={start}
+              onClick={handleStart}
               disabled={busy || locked}
               className="group flex items-center justify-between rounded-xl border border-brand/30 bg-brand/10 p-3 text-xs font-semibold text-brand transition hover:bg-brand hover:text-white shadow-2xs cursor-pointer"
             >
@@ -214,9 +245,7 @@ export default function ChatPanel({
 
             {askNode && (
               <button
-                onClick={() => {
-                  start()
-                }}
+                onClick={handleStart}
                 className="group flex items-center justify-between rounded-xl border border-line bg-surface p-3 text-xs text-ink transition hover:border-brand/40 hover:bg-surface2 cursor-pointer"
               >
                 <div className="flex items-center gap-2 truncate">
