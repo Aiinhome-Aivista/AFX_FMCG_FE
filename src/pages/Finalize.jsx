@@ -517,7 +517,7 @@ export default function Finalize() {
           <ArrowLeft size={14} className="text-brand" />
           <span>Back to Operational Model & Chatbot</span>
         </Link>
-        <h1 className="mt-2 text-xl sm:text-2xl font-bold text-ink">Enterprise Digital Twin Finalization</h1>
+        <h1 className="mt-2 text-xl sm:text-2xl font-bold text-ink">Enterprise Template Finalization</h1>
         <p className="mt-1 text-xs sm:text-sm text-muted">
           Step 4: Review, validate and finalize your customized {resolvedDomainName} Digital Twin.
         </p>
@@ -548,8 +548,8 @@ export default function Finalize() {
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3 bg-surface2/20">
                 <div className="flex flex-col">
                   <h2 className="flex items-center gap-1.5 text-sm sm:text-base font-semibold text-ink">
-                    <Sparkles size={16} className="text-emerald-500 fill-emerald-500/20" />
-                    <span>Digital Twin Graph Preview · {formatModelVersion(d?.version?.label)}</span>
+                    {/* <Sparkles size={16} className="text-emerald-500 fill-emerald-500/20" /> */}
+                    <span>Graph Preview · {formatModelVersion(d?.version?.label)}</span>
                   </h2>
                   <span className="text-xs text-muted">
                     {d?.graph?.nodes?.length || 0} entities · {d?.graph?.edges?.length || 0} relationships
@@ -577,7 +577,7 @@ export default function Finalize() {
               <div className="space-y-4">
                 {/* Governance Header */}
                 <div className="flex items-center justify-between">
-                  <h2 className="text-base font-bold text-ink">Digital Twin Governance</h2>
+                  <h2 className="text-base font-bold text-ink">Graph Governance</h2>
                   {(d?.validation?.errors || []).length === 0 ? (
                     <span className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-3 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                       Ready to Finalize
@@ -694,9 +694,9 @@ export default function Finalize() {
                       setDlg('finalize')
                     }}
                   >
-                    <Sparkles size={16} />
+                    {/* <Sparkles size={16} /> */}
                     <span>Finalise as Digital Twin</span>
-                    <span>🌟</span>
+                    {/* <span>🌟</span> */}
                   </button>
                 )}
               </div>
