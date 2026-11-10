@@ -804,17 +804,7 @@ export default function DomainGraph() {
           /* Knowledge Graph Dynamic Canvas */
           <div className="card relative h-[68vh] min-h-[460px] overflow-hidden p-0 border border-line">
             {/* Top-left canvas badge matching reference picture */}
-            {isKg2Active && gapAnalysisMode && (
-              <div className="absolute top-3.5 left-3.5 z-20 flex items-center gap-2 rounded-xl border border-rose-500/40 bg-surface/90 px-3.5 py-1.5 text-xs backdrop-blur shadow-md select-none">
-                <span className="h-2 w-2 rounded-full bg-[#ef4444] inline-block animate-pulse" />
-                <span className="font-bold text-rose-600 dark:text-rose-400">
-                  Gap Analysis:
-                </span>
-                <span className="text-muted font-medium">
-                  Discrepancies highlighted in RED
-                </span>
-              </div>
-            )}
+            
 
             {/* Circular Spinner Loader with pulse icon and status message */}
             {(generating || g.loading || updatingGraph) && (
