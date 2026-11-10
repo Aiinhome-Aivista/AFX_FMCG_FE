@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   AlertTriangle,
+  ArrowDown,
   ArrowRight,
   CheckCircle2,
   ChevronRight,
@@ -15,6 +16,7 @@ import {
   FileText,
   Sliders,
   Compass,
+  X,
 } from 'lucide-react'
 import Layout from '../components/common/Layout'
 import { ErrorState, Loading } from '../components/common/States'
@@ -22,6 +24,7 @@ import useAsync from '../components/common/useAsync'
 import { useTheme } from '../context/ThemeContext'
 import { domains, ontology } from '../api'
 import OntologyGraphCanvas from '../components/graph/OntologyGraphCanvas'
+import { NarrativeFlow } from '../components/graph/FlowCards'
 import {
   DOMMETA,
   ORDER,
@@ -551,9 +554,14 @@ export default function FmcgLanding() {
               <span className="grid h-6 w-6 place-items-center rounded-md bg-brand/10 text-brand text-xs font-bold transition-transform group-open:rotate-90">
                 ▸
               </span>
-              <span className="text-brand">End-to-End Operational Cycles (§3 of the FMCG Canon)</span>
-              <span className="text-xs text-muted font-normal hidden sm:inline">
-                — Click any cycle to trace and animate its path across the graph
+              <span className="text-brand flex items-center gap-2">
+                <span>End-to-End Operational Cycles (§3 of the FMCG Canon)</span>
+                <span className="hidden md:inline-flex items-center gap-1 rounded-full bg-brand/10 border border-brand/20 px-2 py-0.5 text-[10px] font-bold text-brand font-mono">
+                  8 Connected Cycles (01 → 08)
+                </span>
+              </span>
+              <span className="text-xs text-muted font-normal hidden lg:inline">
+                — Click any cycle to trace and animate its complete sequential workflow across the graph
               </span>
             </div>
             {activeFlowIdx >= 0 && (
@@ -561,6 +569,7 @@ export default function FmcgLanding() {
                 onClick={(e) => {
                   e.preventDefault()
                   setActiveFlowIdx(-1)
+                  setSelectedNodeId(null)
                 }}
                 className="text-xs font-semibold text-brand hover:underline px-2.5 py-1 rounded-md hover:bg-brand/10"
               >
@@ -569,43 +578,190 @@ export default function FmcgLanding() {
             )}
           </summary>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 sm:p-5 pt-0 bg-surface">
+          {/* Operational Cycle Cards Connected with Arrows (→) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 sm:p-5 pt-0 bg-surface relative">
             {activeFlows.map((flow, idx) => {
               const isSelected = activeFlowIdx === idx
+              const isRow1End = idx === 3
+              const isLast = idx === activeFlows.length - 1
 
               return (
-                <div
-                  key={idx}
-                  onClick={() => handleFlowToggle(idx)}
-                  className={`rounded-xl p-3.5 border transition cursor-pointer flex flex-col justify-between ${isSelected
-                      ? 'border-brand bg-brand/10 shadow-md ring-2 ring-brand/30'
-                      : 'border-line bg-surface2/40 hover:border-brand/40 hover:bg-surface2'
+                <div key={idx} className="contents">
+                  <div
+                    onClick={() => handleFlowToggle(idx)}
+                    className={`relative rounded-xl p-3.5 border transition cursor-pointer flex flex-col justify-between group/card ${
+                      isSelected
+                        ? 'border-brand bg-brand/10 shadow-md ring-2 ring-brand/30'
+                        : 'border-line bg-surface2/40 hover:border-brand/40 hover:bg-surface2'
                     }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <b className={`text-xs font-bold ${isSelected ? 'text-brand' : 'text-ink'}`}>
-                        {flow.t}
-                      </b>
-                      <span className="text-[10px] text-muted font-mono">
-                        {(flow.ids || []).length} steps
-                      </span>
+                  >
+                    <div>
+                      {/* Phase & Title Header */}
+                      <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold font-mono border ${
+                              isSelected
+                                ? 'bg-brand text-brand-ink border-brand'
+                                : 'bg-brand/10 text-brand border-brand/20'
+                            }`}
+                          >
+                            Phase {String(idx + 1).padStart(2, '0')}
+                          </span>
+                          <b className={`text-xs font-bold truncate max-w-[140px] sm:max-w-[170px] ${isSelected ? 'text-brand' : 'text-ink'}`}>
+                            {flow.t}
+                          </b>
+                        </div>
+                        <span className="text-[10px] text-muted font-mono shrink-0">
+                          {(flow.ids || []).length} steps
+                        </span>
+                      </div>
+
+                      {/* Operational Narrative with highlighted bold arrows (→) */}
+                      <NarrativeFlow text={flow.x || flow.narrative} />
                     </div>
-                    <p className="font-mono text-[11px] leading-relaxed text-muted line-clamp-3">
-                      {flow.x}
-                    </p>
+
+                    <div className="mt-3 pt-2.5 border-t border-line/50 flex items-center justify-between text-[11px]">
+                      <span className={isSelected ? 'text-brand font-semibold' : 'text-muted'}>
+                        {isSelected ? '● Highlighting path' : 'Click to trace on graph'}
+                      </span>
+                      <ArrowRight size={12} className={isSelected ? 'text-brand' : 'text-muted'} />
+                    </div>
+
+                    {/* Connecting Arrows between cards */}
+                    {(idx === 0 || idx === 1 || idx === 2 || idx === 4 || idx === 5 || idx === 6) && (
+                      <div className="hidden lg:flex absolute -right-3.5 top-1/2 -translate-y-1/2 z-20 h-7 w-7 items-center justify-center rounded-full bg-surface border border-line shadow-sm pointer-events-none group-hover/card:scale-110 transition-transform">
+                        <ArrowRight size={13} className="text-brand" strokeWidth={2.5} />
+                      </div>
+                    )}
+                    {idx === 3 && (
+                      <div className="hidden lg:flex absolute -bottom-3.5 right-6 z-20 h-7 w-7 items-center justify-center rounded-full bg-surface border border-line shadow-sm pointer-events-none group-hover/card:scale-110 transition-transform">
+                        <ArrowDown size={13} className="text-brand" strokeWidth={2.5} />
+                      </div>
+                    )}
+
+                    {/* Tablet Connecting Arrows */}
+                    {(idx === 0 || idx === 2 || idx === 4 || idx === 6) && (
+                      <div className="hidden sm:flex lg:hidden absolute -right-3.5 top-1/2 -translate-y-1/2 z-20 h-7 w-7 items-center justify-center rounded-full bg-surface border border-line shadow-sm pointer-events-none">
+                        <ArrowRight size={13} className="text-brand" strokeWidth={2.5} />
+                      </div>
+                    )}
+                    {(idx === 1 || idx === 3 || idx === 5) && (
+                      <div className="hidden sm:flex lg:hidden absolute -bottom-3.5 right-6 z-20 h-7 w-7 items-center justify-center rounded-full bg-surface border border-line shadow-sm pointer-events-none">
+                        <ArrowDown size={13} className="text-brand" strokeWidth={2.5} />
+                      </div>
+                    )}
+
+                    {/* Mobile Connecting Arrows */}
+                    {!isLast && (
+                      <div className="flex sm:hidden absolute -bottom-3.5 left-1/2 -translate-x-1/2 z-20 h-7 w-7 items-center justify-center rounded-full bg-surface border border-line shadow-sm pointer-events-none">
+                        <ArrowDown size={13} className="text-brand" strokeWidth={2.5} />
+                      </div>
+                    )}
                   </div>
 
-                  <div className="mt-3 pt-2.5 border-t border-line/50 flex items-center justify-between text-[11px]">
-                    <span className="text-muted">
-                      {isSelected ? '● Highlighting path' : 'Click to trace on graph'}
-                    </span>
-                    <ArrowRight size={12} className={isSelected ? 'text-brand' : 'text-muted'} />
-                  </div>
+                  {/* Row 1 to Row 2 Transition Bridge */}
+                  {isRow1End && (
+                    <div className="hidden lg:flex col-span-4 items-center justify-center py-2 px-4 gap-3 my-0.5 select-none">
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-brand/30 to-brand/40" />
+                      <div className="flex items-center gap-2 rounded-full border border-brand/30 bg-brand/5 px-4 py-1 text-[11px] font-semibold text-brand shadow-xs">
+                        <span>Demand & Commercial Execution Loops (01–04)</span>
+                        <span className="font-bold text-brand">──▶</span>
+                        <span>Supply Chain & Financial Value Realization (05–08)</span>
+                      </div>
+                      <div className="h-px flex-1 bg-gradient-to-r from-brand/40 via-brand/30 to-transparent" />
+                    </div>
+                  )}
                 </div>
               )
             })}
           </div>
+
+          {/* Active Flow Connected Step Pipeline */}
+          {activeFlowIdx >= 0 && activeFlows[activeFlowIdx] && (
+            <div className="card m-4 sm:m-5 mt-0 p-4 border border-line bg-surface shadow-md animate-in fade-in duration-200">
+              <div className="flex items-start justify-between gap-3 border-b border-line pb-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 rounded bg-brand text-brand-ink text-xs font-bold font-mono">
+                      Active Operational Cycle
+                    </span>
+                    <h3 className="text-base font-bold text-ink">{activeFlows[activeFlowIdx].t}</h3>
+                    <span className="text-xs text-muted font-mono">
+                      ({activeFlows[activeFlowIdx].ids?.length || 0} sequential operational steps)
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted leading-relaxed font-sans">
+                    {activeFlows[activeFlowIdx].x || activeFlows[activeFlowIdx].narrative}
+                  </p>
+                </div>
+                <button
+                  className="btn-ghost btn-sm shrink-0 flex items-center gap-1 text-xs"
+                  onClick={() => {
+                    setActiveFlowIdx(-1)
+                    setSelectedNodeId(null)
+                  }}
+                >
+                  <X size={14} /> Clear Selection
+                </button>
+              </div>
+
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-brand animate-pulse" />
+                    Complete Workflow Pipeline (Connected with →) — Click any step to inspect and focus on canvas:
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-y-3 p-1">
+                  {activeFlows[activeFlowIdx].ids?.map((nodeId, sIdx) => {
+                    const node = nodesById[nodeId]
+                    const isSelected = selectedNodeId === nodeId
+                    const isLastStep = sIdx === activeFlows[activeFlowIdx].ids.length - 1
+
+                    return (
+                      <div key={nodeId || sIdx} className="flex items-center">
+                        <button
+                          type="button"
+                          onClick={() => handleSelectNode(nodeId)}
+                          className={`group relative flex items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition shadow-xs cursor-pointer ${
+                            isSelected
+                              ? 'border-brand bg-brand/15 ring-2 ring-brand/40 shadow-sm'
+                              : 'border-line bg-surface2/60 hover:border-brand/40 hover:bg-surface2'
+                          }`}
+                        >
+                          <span
+                            className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold transition ${
+                              isSelected
+                                ? 'bg-brand text-brand-ink'
+                                : 'bg-brand/10 text-brand border border-brand/20 group-hover:bg-brand group-hover:text-brand-ink'
+                            }`}
+                          >
+                            {sIdx + 1}
+                          </span>
+                          <div className="min-w-0 pr-1">
+                            <span className="block text-xs font-semibold text-ink group-hover:text-brand truncate max-w-[140px] sm:max-w-[190px]">
+                              {node?.name || node?.label || nodeId}
+                            </span>
+                            <span className="block text-[10px] text-muted truncate max-w-[140px]">
+                              {node?.d || node?.domain || 'Master Spine'}
+                            </span>
+                          </div>
+                        </button>
+
+                        {!isLastStep && (
+                          <div className="flex items-center justify-center px-2 text-brand shrink-0 select-none">
+                            <ArrowRight size={16} strokeWidth={2.5} className="text-brand animate-pulse" />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         </details>
       )}
 
