@@ -1,72 +1,417 @@
 import React from 'react'
-import { ArrowDown, ArrowRight, Route, X, Sparkles, CheckCircle2 } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowRight,
+  ArrowLeft,
+  ChevronRight,
+  X,
+  Sparkles,
+  CheckCircle2,
+} from 'lucide-react'
 import { Loading } from '../common/States'
 import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
 
 /**
- * Formats canonical flow narratives into clean visual operational step chains with bold arrows (→).
- * Handles relationship labels (e.g. ──conform──▶, ──computes──▶) and delimiters (──▶, -->, ->, →, ;)
+ * Formats canonical flow narratives into clean visual operational step chains connected with arrows (→).
+ * Cleans delimiters (──conform──▶, ──▶, -->, ->, →, ➔) so non-technical users can easily read the cycle.
  */
 export function NarrativeFlow({ text }) {
   if (!text) return null
 
-  // Split by semicolons for multi-loop structures (e.g. primary cycle ; sub-loop ; feedback loop)
-  const loops = text.split(/;\s*/).filter(Boolean)
+  // Split by arrow patterns while capturing delimiters (e.g. ──conform──▶, ──▶, -->, ->, →, ➔)
+  const tokens = text.split(/(\s*(?:──[a-zA-Z0-9 _-]+──▶|--[a-zA-Z0-9 _-]+-->|──▶|-->|->|→|➔)\s*)/g).filter(Boolean)
 
   return (
-    <div className="space-y-1.5 mt-2">
-      {loops.map((loop, loopIdx) => {
-        // Regex splits on arrow tokens while capturing delimiter with edge label if present
-        const tokens = loop.split(/(\s*(?:──[a-zA-Z0-9 _-]+──▶|--[a-zA-Z0-9 _-]+-->|──▶|-->|->|→)\s*)/g).filter(Boolean)
+    <p className="mt-2 text-[11px] text-muted/90 leading-relaxed font-sans">
+      {tokens.map((token, tokIdx) => {
+        const arrowMatch = token.match(/(?:──|--)(([a-zA-Z0-9 _-]+))(?:──|--)[▶>]|(?:──▶|-->|->|→|➔)/)
+        const isArrow = Boolean(arrowMatch) || /^(?:──▶|-->|->|→|➔)$/.test(token.trim())
+
+        if (isArrow) {
+          const label = arrowMatch && arrowMatch[1] ? arrowMatch[1].trim() : null
+          return (
+            <span
+              key={tokIdx}
+              title={label ? `Relation: ${label}` : undefined}
+              className="text-muted/60 dark:text-muted/70 font-semibold mx-1 inline-block select-none"
+            >
+              →
+            </span>
+          )
+        }
 
         return (
-          <div key={loopIdx} className="flex flex-wrap items-center gap-1 text-[11px] leading-relaxed">
-            {loops.length > 1 && (
-              <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-surface3/80 text-muted font-semibold mr-0.5">
-                L{loopIdx + 1}
-              </span>
-            )}
-            {tokens.map((token, tokIdx) => {
-              // Check if token is an arrow delimiter
-              const arrowMatch = token.match(/(?:──|--)(([a-zA-Z0-9 _-]+))(?:──|--)[▶>]|(?:──▶|-->|->|→)/)
-              const isArrow = Boolean(arrowMatch) || /^(?:──▶|-->|->|→)$/.test(token.trim())
-
-              if (isArrow) {
-                const label = arrowMatch && arrowMatch[1] ? arrowMatch[1].trim() : null
-                return (
-                  <span key={tokIdx} className="inline-flex items-center gap-0.5 text-brand font-bold select-none shrink-0 mx-0.5">
-                    {label && (
-                      <span className="text-[9px] font-normal text-muted/80 italic font-mono">
-                        ({label})
-                      </span>
-                    )}
-                    <span>→</span>
-                  </span>
-                )
-              }
-
-              // Step token
-              return (
-                <span
-                  key={tokIdx}
-                  className="font-mono text-[11px] text-ink/85 font-medium px-1 py-0.2 rounded bg-surface2/60 border border-line/40 max-w-full truncate"
-                  title={token.trim()}
-                >
-                  {token.trim()}
-                </span>
-              )
-            })}
-          </div>
+          <span key={tokIdx} className="text-ink/80 dark:text-ink/90 font-normal">
+            {token}
+          </span>
         )
       })}
+    </p>
+  )
+}
+
+/**
+ * Individual Operational Cycle Card matching the reference design in Image 2.
+ */
+export function FlowCard({
+  flow,
+  index,
+  flowKey,
+  isActive,
+  onToggle,
+  username,
+}) {
+  const title = flow.title || flow.t || flow.name || `Cycle ${index + 1}`
+  const stepCount =
+    flow.step_count ??
+    (Array.isArray(flow.ids)
+      ? flow.ids.length
+      : Array.isArray(flow.steps)
+      ? flow.steps.length
+      : null)
+  const narrative = flow.canonical_narrative || flow.narrative || flow.x || ''
+  const isCustomized = Boolean(flow.customized)
+
+  return (
+    <div
+      onClick={() => onToggle(flowKey)}
+      className={`group/card relative rounded-xl p-4 border transition cursor-pointer flex flex-col justify-between h-full min-h-[145px] ${
+        isActive
+          ? 'border-brand bg-brand/5 ring-2 ring-brand/30 shadow-md'
+          : 'border-line bg-surface hover:border-brand/40 hover:bg-surface2/40'
+      }`}
+    >
+      <div>
+        {/* Card Header: Title on Left, Step count on Right */}
+        <div className="flex items-start justify-between gap-2 mb-1.5">
+          <b
+            className={`text-xs sm:text-[13px] font-bold leading-snug line-clamp-2 ${
+              isActive ? 'text-brand' : 'text-ink'
+            }`}
+          >
+            {title}
+          </b>
+          {stepCount !== null && (
+            <span className="text-[11px] text-muted font-normal shrink-0">
+              {stepCount} steps
+            </span>
+          )}
+        </div>
+
+        {/* Tailored Badge if customized */}
+        {isCustomized && (
+          <div className="mb-1.5">
+            <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Tailored by {username}
+            </span>
+          </div>
+        )}
+
+        {/* Clean Narrative Flow connected with arrows (→) */}
+        <NarrativeFlow text={narrative} />
+      </div>
+
+      {/* Card Footer: Click to trace path > */}
+      <div className="mt-3.5 pt-1 flex items-center justify-between text-[11px] select-none">
+        <span
+          className={
+            isActive
+              ? 'text-brand font-semibold'
+              : 'text-muted/80 group-hover/card:text-brand transition-colors'
+          }
+        >
+          {isActive ? '● Tracing path on graph' : 'Click to trace path'}
+        </span>
+        <ChevronRight
+          size={14}
+          className={`transition-transform group-hover/card:translate-x-0.5 ${
+            isActive ? 'text-brand' : 'text-muted/60 group-hover/card:text-brand'
+          }`}
+        />
+      </div>
     </div>
   )
 }
 
 /**
- * End-to-End Operational Flow Component for all FMCG Domains.
- * Displays operational steps and cycles connected with arrows (→) to clearly represent the complete enterprise workflow.
+ * Serpentine Flow Grid:
+ * Connects operational cycle cards in a continuous snake/serpentine workflow loop
+ * with connecting arrows (→, ↓, ←), perfectly matching Image 2 for any number of cycles.
+ */
+export function SerpentineFlowGrid({ flows, activeKey, onToggle, username }) {
+  if (!flows || flows.length === 0) return null
+
+  // Helper to render card with resolved key & active state
+  const renderCard = (flow, idx) => {
+    if (!flow) return null
+    const flowKey = flow.key !== undefined ? flow.key : idx
+    const isActive =
+      activeKey !== null &&
+      activeKey !== undefined &&
+      (activeKey === flowKey ||
+        activeKey === idx ||
+        activeKey === flow.key ||
+        String(activeKey) === String(flowKey))
+
+    return (
+      <FlowCard
+        key={flowKey}
+        flow={flow}
+        index={idx}
+        flowKey={flowKey}
+        isActive={isActive}
+        onToggle={onToggle}
+        username={username}
+      />
+    )
+  }
+
+  // DESKTOP: Chunk into 4-column rows
+  const chunkSize = 4
+  const desktopRows = []
+  for (let i = 0; i < flows.length; i += chunkSize) {
+    desktopRows.push(flows.slice(i, i + chunkSize))
+  }
+
+  // TABLET: Chunk into 2-column rows
+  const tabletChunk = 2
+  const tabletRows = []
+  for (let i = 0; i < flows.length; i += tabletChunk) {
+    tabletRows.push(flows.slice(i, i + tabletChunk))
+  }
+
+  return (
+    <>
+      {/* =========================================================================
+          DESKTOP VIEW (lg: 4 columns serpentine matching Image 2)
+         ========================================================================= */}
+      <div className="hidden lg:flex flex-col gap-2">
+        {desktopRows.map((rowItems, rowIdx) => {
+          const isEvenRow = rowIdx % 2 === 0
+          const isLastRow = rowIdx === desktopRows.length - 1
+          const baseIdx = rowIdx * chunkSize
+
+          return (
+            <React.Fragment key={rowIdx}>
+              {/* Row Cards */}
+              <div className="flex items-center gap-2">
+                {isEvenRow ? (
+                  // Even Row: Left-to-Right (Col 1 → Col 2 → Col 3 → Col 4)
+                  [0, 1, 2, 3].map((colIdx) => {
+                    const item = rowItems[colIdx]
+                    const actualIdx = baseIdx + colIdx
+                    const hasNext = colIdx < 3 && colIdx < rowItems.length - 1
+
+                    return (
+                      <React.Fragment key={colIdx}>
+                        <div className="flex-1 min-w-0 h-full flex flex-col">
+                          {item ? renderCard(item, actualIdx) : <div className="h-full" />}
+                        </div>
+                        {colIdx < 3 && (
+                          <div className="w-6 shrink-0 flex items-center justify-center text-muted/60 dark:text-muted/70">
+                            {hasNext ? <ArrowRight size={16} strokeWidth={2} /> : null}
+                          </div>
+                        )}
+                      </React.Fragment>
+                    )
+                  })
+                ) : (
+                  // Odd Row: Right-to-Left (Col 4 ← Col 3 ← Col 2 ← Col 1)
+                  // Col 4 (rightmost, under Col 4 of previous row) = rowItems[0]
+                  // Col 3 = rowItems[1]
+                  // Col 2 = rowItems[2]
+                  // Col 1 (leftmost) = rowItems[3]
+                  (() => {
+                    const itemCol1 = rowItems[3]
+                    const itemCol2 = rowItems[2]
+                    const itemCol3 = rowItems[1]
+                    const itemCol4 = rowItems[0]
+
+                    const hasArrow1to2 = Boolean(itemCol1 && itemCol2)
+                    const hasArrow2to3 = Boolean(itemCol2 && itemCol3)
+                    const hasArrow3to4 = Boolean(itemCol3 && itemCol4)
+
+                    return (
+                      <>
+                        {/* Col 1 */}
+                        <div className="flex-1 min-w-0 h-full flex flex-col">
+                          {itemCol1 ? renderCard(itemCol1, baseIdx + 3) : <div className="h-full" />}
+                        </div>
+
+                        {/* Arrow between Col 1 and Col 2 */}
+                        <div className="w-6 shrink-0 flex items-center justify-center text-muted/60 dark:text-muted/70">
+                          {hasArrow1to2 ? <ArrowLeft size={16} strokeWidth={2} /> : null}
+                        </div>
+
+                        {/* Col 2 */}
+                        <div className="flex-1 min-w-0 h-full flex flex-col">
+                          {itemCol2 ? renderCard(itemCol2, baseIdx + 2) : <div className="h-full" />}
+                        </div>
+
+                        {/* Arrow between Col 2 and Col 3 */}
+                        <div className="w-6 shrink-0 flex items-center justify-center text-muted/60 dark:text-muted/70">
+                          {hasArrow2to3 ? <ArrowLeft size={16} strokeWidth={2} /> : null}
+                        </div>
+
+                        {/* Col 3 */}
+                        <div className="flex-1 min-w-0 h-full flex flex-col">
+                          {itemCol3 ? renderCard(itemCol3, baseIdx + 1) : <div className="h-full" />}
+                        </div>
+
+                        {/* Arrow between Col 3 and Col 4 */}
+                        <div className="w-6 shrink-0 flex items-center justify-center text-muted/60 dark:text-muted/70">
+                          {hasArrow3to4 ? <ArrowLeft size={16} strokeWidth={2} /> : null}
+                        </div>
+
+                        {/* Col 4 */}
+                        <div className="flex-1 min-w-0 h-full flex flex-col">
+                          {itemCol4 ? renderCard(itemCol4, baseIdx + 0) : <div className="h-full" />}
+                        </div>
+                      </>
+                    )
+                  })()
+                )}
+              </div>
+
+              {/* Vertical Connector Row between rows */}
+              {!isLastRow && (
+                <div className="flex items-center gap-2 my-1">
+                  {isEvenRow ? (
+                    // Even row transitions at rightmost column (Col 4)
+                    <>
+                      <div className="flex-1" />
+                      <div className="w-6 shrink-0" />
+                      <div className="flex-1" />
+                      <div className="w-6 shrink-0" />
+                      <div className="flex-1" />
+                      <div className="w-6 shrink-0" />
+                      <div className="flex-1 flex justify-center">
+                        <div className="flex items-center justify-center text-muted/60 dark:text-muted/70 py-1">
+                          <ArrowDown size={16} strokeWidth={2} />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    // Odd row transitions at leftmost column (Col 1)
+                    <>
+                      <div className="flex-1 flex justify-center">
+                        <div className="flex items-center justify-center text-muted/60 dark:text-muted/70 py-1">
+                          <ArrowDown size={16} strokeWidth={2} />
+                        </div>
+                      </div>
+                      <div className="w-6 shrink-0" />
+                      <div className="flex-1" />
+                      <div className="w-6 shrink-0" />
+                      <div className="flex-1" />
+                      <div className="w-6 shrink-0" />
+                      <div className="flex-1" />
+                    </>
+                  )}
+                </div>
+              )}
+            </React.Fragment>
+          )
+        })}
+      </div>
+
+      {/* =========================================================================
+          TABLET VIEW (sm to lg: 2 columns serpentine)
+         ========================================================================= */}
+      <div className="hidden sm:flex lg:hidden flex-col gap-2">
+        {tabletRows.map((tRowItems, tRowIdx) => {
+          const isEven = tRowIdx % 2 === 0
+          const isLast = tRowIdx === tabletRows.length - 1
+          const baseIdx = tRowIdx * tabletChunk
+
+          return (
+            <React.Fragment key={tRowIdx}>
+              <div className="flex items-center gap-2">
+                {isEven ? (
+                  // Col 1 → Col 2
+                  <>
+                    <div className="flex-1 min-w-0 h-full flex flex-col">
+                      {tRowItems[0] ? renderCard(tRowItems[0], baseIdx) : <div className="h-full" />}
+                    </div>
+                    <div className="w-6 shrink-0 flex items-center justify-center text-muted/60 dark:text-muted/70">
+                      {tRowItems[1] ? <ArrowRight size={16} strokeWidth={2} /> : null}
+                    </div>
+                    <div className="flex-1 min-w-0 h-full flex flex-col">
+                      {tRowItems[1] ? renderCard(tRowItems[1], baseIdx + 1) : <div className="h-full" />}
+                    </div>
+                  </>
+                ) : (
+                  // Col 1 ← Col 2
+                  <>
+                    <div className="flex-1 min-w-0 h-full flex flex-col">
+                      {tRowItems[1] ? renderCard(tRowItems[1], baseIdx + 1) : <div className="h-full" />}
+                    </div>
+                    <div className="w-6 shrink-0 flex items-center justify-center text-muted/60 dark:text-muted/70">
+                      {tRowItems[1] && tRowItems[0] ? <ArrowLeft size={16} strokeWidth={2} /> : null}
+                    </div>
+                    <div className="flex-1 min-w-0 h-full flex flex-col">
+                      {tRowItems[0] ? renderCard(tRowItems[0], baseIdx) : <div className="h-full" />}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {!isLast && (
+                <div className="flex items-center gap-2 my-1">
+                  {isEven ? (
+                    <>
+                      <div className="flex-1" />
+                      <div className="w-6 shrink-0" />
+                      <div className="flex-1 flex justify-center">
+                        <div className="flex items-center justify-center text-muted/60 dark:text-muted/70 py-1">
+                          <ArrowDown size={16} strokeWidth={2} />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex-1 flex justify-center">
+                        <div className="flex items-center justify-center text-muted/60 dark:text-muted/70 py-1">
+                          <ArrowDown size={16} strokeWidth={2} />
+                        </div>
+                      </div>
+                      <div className="w-6 shrink-0" />
+                      <div className="flex-1" />
+                    </>
+                  )}
+                </div>
+              )}
+            </React.Fragment>
+          )
+        })}
+      </div>
+
+      {/* =========================================================================
+          MOBILE VIEW (< sm: 1 column vertical flow)
+         ========================================================================= */}
+      <div className="flex sm:hidden flex-col gap-2">
+        {flows.map((flow, idx) => {
+          const isLast = idx === flows.length - 1
+          return (
+            <React.Fragment key={flow.key !== undefined ? flow.key : idx}>
+              <div className="w-full">{renderCard(flow, idx)}</div>
+              {!isLast && (
+                <div className="flex justify-center text-muted/60 dark:text-muted/70 py-1">
+                  <ArrowDown size={16} strokeWidth={2} />
+                </div>
+              )}
+            </React.Fragment>
+          )
+        })}
+      </div>
+    </>
+  )
+}
+
+/**
+ * End-to-End Operational Flow Component for all FMCG Domains and Landing Pages.
+ * Displays operational cycles connected with arrows (→, ↓, ←) matching the reference design in Image 2.
  */
 export default function FlowCards({
   flows = [],
@@ -80,34 +425,31 @@ export default function FlowCards({
 }) {
   const { theme } = useTheme()
   const { user } = useAuth()
-  const isDark = theme === 'dark'
   const username = user?.display_name || user?.email?.split('@')[0] || 'User'
 
-  // Identify currently selected step in the active flow detail
+  // Selected step inside active detail
   const selectedStep = detail?.steps?.find((s) => s.node_key === selectedKey)
 
   return (
-    <details className="mt-5 rounded-2xl border border-line bg-surface shadow-card overflow-hidden group" open>
+    <details
+      className="mt-5 rounded-2xl border border-line bg-surface shadow-card overflow-hidden group"
+      open
+    >
       {/* =========================================================================
-          ACCORDION HEADER: TITLE, SUBTITLE & PROGRESS COUNTER
+          ACCORDION HEADER: TITLE & PROGRESS COUNTER (MATCHING IMAGE 2)
          ========================================================================= */}
-      <summary className="cursor-pointer px-5 py-4 text-sm sm:text-base font-bold text-ink flex items-center justify-between select-none hover:bg-surface2 transition">
+      <summary className="cursor-pointer px-5 py-4 text-sm sm:text-base font-bold text-ink flex items-center justify-between select-none hover:bg-surface2/60 transition list-none [&::-webkit-details-marker]:hidden">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-6 w-6 place-items-center rounded-md bg-brand/10 text-brand text-xs font-bold transition-transform group-open:rotate-90">
-            ▸
-          </span>
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 inline-block shrink-0 shadow-xs" />
           <span className="text-brand flex items-center gap-2">
-            <span>End-to-End Operational Cycles (§3 of the FMCG Canon)</span>
-            <span className="hidden md:inline-flex items-center gap-1 rounded-full bg-brand/10 border border-brand/20 px-2 py-0.5 text-[10px] font-bold text-brand font-mono">
-              8 Connected Cycles (01 → 08)
-            </span>
+            <span>End-to-End Operational Cycles</span>
           </span>
-          <span className="text-xs text-muted font-normal hidden lg:inline">
-            — Click any cycle to trace and animate its complete sequential workflow across the graph
+          <span className="text-xs sm:text-sm text-muted font-normal hidden md:inline">
+            — Click any cycle to trace and animate its path across the graph
           </span>
         </div>
 
-        {activeKey && (
+        {activeKey !== null && activeKey !== undefined && (
           <button
             onClick={(e) => {
               e.preventDefault()
@@ -122,135 +464,22 @@ export default function FlowCards({
       </summary>
 
       {/* =========================================================================
-          OPERATIONAL CYCLE CARDS CONNECTED WITH ARROWS (→)
+          OPERATIONAL CYCLE CARDS CONNECTED WITH ARROWS (→, ↓, ←)
          ========================================================================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 sm:p-5 pt-0 bg-surface relative">
-        {flows.map((f, i) => {
-          const isActive = activeKey === f.key
-          const isRow1End = i === 3
-          const isLast = i === flows.length - 1
-
-          return (
-            <React.Fragment key={f.key}>
-              <div
-                onClick={() => onToggle(f.key)}
-                className={`relative rounded-xl p-3.5 border transition cursor-pointer flex flex-col justify-between group/card ${
-                  isActive
-                    ? 'border-brand bg-brand/10 shadow-md ring-2 ring-brand/30'
-                    : 'border-line bg-surface2/40 hover:border-brand/40 hover:bg-surface2'
-                }`}
-              >
-                <div>
-                  {/* Card Header: Phase index, Title, and Step count */}
-                  <div className="flex items-center justify-between gap-1.5 mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold font-mono border ${
-                          isActive
-                            ? 'bg-brand text-brand-ink border-brand'
-                            : 'bg-brand/10 text-brand border-brand/20'
-                        }`}
-                      >
-                        Phase {String(i + 1).padStart(2, '0')}
-                      </span>
-                      <b className={`text-xs font-bold truncate max-w-[140px] sm:max-w-[170px] ${isActive ? 'text-brand' : 'text-ink'}`}>
-                        {f.title}
-                      </b>
-                    </div>
-                    <span className="text-[10px] text-muted font-mono shrink-0">
-                      {f.step_count} steps
-                    </span>
-                  </div>
-
-                  {/* Badges: Tailored & Domain Relevance */}
-                  <div className="flex items-center gap-1.5 flex-wrap my-1">
-                    {Boolean(f.customized) && (
-                      <span className="inline-flex items-center gap-1 rounded bg-emerald-500/15 dark:bg-emerald-500/25 px-1.5 py-0.2 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-500/40">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Tailored by {username}
-                      </span>
-                    )}
-                    {f.relevant ? (
-                      <span className="badge bg-brand/15 text-brand border border-brand/25 text-[10px] py-0">
-                        this domain
-                      </span>
-                    ) : f.touches_domain ? (
-                      <span className="badge bg-surface2 text-muted text-[10px] py-0">
-                        touches
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {/* Parsed Operational Step Flow with bold arrows (→) */}
-                  <NarrativeFlow text={f.canonical_narrative || f.narrative} />
-                </div>
-
-                {/* Card Footer */}
-                <div className="mt-3 pt-2.5 border-t border-line/50 flex items-center justify-between text-[11px]">
-                  <span className={isActive ? 'text-brand font-semibold' : 'text-muted'}>
-                    {isActive ? '● Tracing path on graph' : 'Click to trace on graph'}
-                  </span>
-                  <ArrowRight size={12} className={isActive ? 'text-brand' : 'text-muted'} />
-                </div>
-
-                {/* =========================================================================
-                    CONNECTING ARROWS (→) BETWEEN CARDS
-                   ========================================================================= */}
-                {/* Desktop Connecting Arrows (lg: 4 columns) */}
-                {(i === 0 || i === 1 || i === 2 || i === 4 || i === 5 || i === 6) && (
-                  <div className="hidden lg:flex absolute -right-3.5 top-1/2 -translate-y-1/2 z-20 h-7 w-7 items-center justify-center rounded-full bg-surface border border-line shadow-sm pointer-events-none group-hover/card:scale-110 transition-transform">
-                    <ArrowRight size={13} className="text-brand" strokeWidth={2.5} />
-                  </div>
-                )}
-                {/* Desktop Row 1 to Row 2 wrap indicator (at Card 4) */}
-                {i === 3 && (
-                  <div className="hidden lg:flex absolute -bottom-3.5 right-6 z-20 h-7 w-7 items-center justify-center rounded-full bg-surface border border-line shadow-sm pointer-events-none group-hover/card:scale-110 transition-transform">
-                    <ArrowDown size={13} className="text-brand" strokeWidth={2.5} />
-                  </div>
-                )}
-
-                {/* Tablet Connecting Arrows (sm to lg: 2 columns) */}
-                {(i === 0 || i === 2 || i === 4 || i === 6) && (
-                  <div className="hidden sm:flex lg:hidden absolute -right-3.5 top-1/2 -translate-y-1/2 z-20 h-7 w-7 items-center justify-center rounded-full bg-surface border border-line shadow-sm pointer-events-none">
-                    <ArrowRight size={13} className="text-brand" strokeWidth={2.5} />
-                  </div>
-                )}
-                {(i === 1 || i === 3 || i === 5) && (
-                  <div className="hidden sm:flex lg:hidden absolute -bottom-3.5 right-6 z-20 h-7 w-7 items-center justify-center rounded-full bg-surface border border-line shadow-sm pointer-events-none">
-                    <ArrowDown size={13} className="text-brand" strokeWidth={2.5} />
-                  </div>
-                )}
-
-                {/* Mobile Connecting Arrows (single column) */}
-                {!isLast && (
-                  <div className="flex sm:hidden absolute -bottom-3.5 left-1/2 -translate-x-1/2 z-20 h-7 w-7 items-center justify-center rounded-full bg-surface border border-line shadow-sm pointer-events-none">
-                    <ArrowDown size={13} className="text-brand" strokeWidth={2.5} />
-                  </div>
-                )}
-              </div>
-
-              {/* Operational Hand-off Bridge spanning all 4 columns between Row 1 and Row 2 */}
-              {isRow1End && (
-                <div className="hidden lg:flex col-span-4 items-center justify-center py-2 px-4 gap-3 my-0.5 select-none">
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-brand/30 to-brand/40" />
-                  <div className="flex items-center gap-2 rounded-full border border-brand/30 bg-brand/5 px-4 py-1 text-[11px] font-semibold text-brand shadow-xs">
-                    <span>Demand & Commercial Execution Loops (01–04)</span>
-                    <span className="font-bold text-brand">──▶</span>
-                    <span>Supply Chain & Financial Value Realization (05–08)</span>
-                  </div>
-                  <div className="h-px flex-1 bg-gradient-to-r from-brand/40 via-brand/30 to-transparent" />
-                </div>
-              )}
-            </React.Fragment>
-          )
-        })}
+      <div className="p-4 sm:p-5 pt-1 bg-surface">
+        <SerpentineFlowGrid
+          flows={flows}
+          activeKey={activeKey}
+          onToggle={onToggle}
+          username={username}
+        />
       </div>
 
       {/* =========================================================================
           ACTIVE FLOW STEP-BY-STEP CONNECTED PIPELINE
          ========================================================================= */}
-      {activeKey && (
-        <div className="card m-4 sm:m-5 mt-0 p-4 border border-line bg-surface shadow-md animate-in fade-in duration-200">
+      {activeKey !== null && activeKey !== undefined && (
+        <div className="card m-4 sm:m-5 mt-2 p-4 border border-line bg-surface shadow-md animate-in fade-in duration-200">
           {loading || !detail ? (
             <Loading label="Loading operational steps…" className="!p-4" />
           ) : (
@@ -267,7 +496,9 @@ export default function FlowCards({
                       ({detail.steps?.length || 0} sequential operational steps)
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-muted leading-relaxed font-sans">{detail.narrative}</p>
+                  <p className="mt-1 text-xs text-muted leading-relaxed font-sans">
+                    {detail.narrative}
+                  </p>
                 </div>
                 <button
                   className="btn-ghost btn-sm shrink-0 flex items-center gap-1 text-xs"
@@ -282,7 +513,7 @@ export default function FlowCards({
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-brand animate-pulse" />
-                    Complete Workflow Pipeline (Connected with →) — Click any step to inspect and focus on Knowledge Graph:
+                    Complete Workflow Pipeline (Connected with →) — Click any step to inspect and focus on graph:
                   </span>
                 </div>
 
@@ -293,10 +524,10 @@ export default function FlowCards({
                     const isLastStep = idx === detail.steps.length - 1
 
                     return (
-                      <div key={s.order || idx} className="flex items-center">
+                      <div key={s.node_key || s.order || idx} className="flex items-center">
                         <button
                           type="button"
-                          onClick={() => onStepSelect(s.node_key)}
+                          onClick={() => onStepSelect && onStepSelect(s.node_key)}
                           className={`group relative flex items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition shadow-xs cursor-pointer ${
                             isSelected
                               ? 'border-brand bg-brand/15 ring-2 ring-brand/40 shadow-sm'
@@ -337,7 +568,11 @@ export default function FlowCards({
                         {/* Connected Arrow to next operational step */}
                         {!isLastStep && (
                           <div className="flex items-center justify-center px-2 text-brand shrink-0 select-none">
-                            <ArrowRight size={16} strokeWidth={2.5} className="text-brand animate-pulse" />
+                            <ArrowRight
+                              size={16}
+                              strokeWidth={2.5}
+                              className="text-brand animate-pulse"
+                            />
                           </div>
                         )}
                       </div>
@@ -367,13 +602,15 @@ export default function FlowCards({
                         </p>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => onStepSelect(selectedStep.node_key)}
-                      className="btn-outline btn-xs shrink-0 flex items-center gap-1 border-brand/40 text-brand hover:bg-brand/10"
-                    >
-                      Focus on Graph
-                    </button>
+                    {onStepSelect && (
+                      <button
+                        type="button"
+                        onClick={() => onStepSelect(selectedStep.node_key)}
+                        className="btn-outline btn-xs shrink-0 flex items-center gap-1 border-brand/40 text-brand hover:bg-brand/10"
+                      >
+                        Focus on Graph
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
