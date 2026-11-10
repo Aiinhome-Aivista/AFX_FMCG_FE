@@ -14,13 +14,11 @@ import { Loading, ErrorState } from '../components/common/States'
 import useAsync from '../components/common/useAsync'
 import { apps } from '../api'
 import { useAuth } from '../context/AuthContext'
-import { useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
 
 export default function AppSelect() {
   const { data, loading, error, reload } = useAsync(() => apps.list(), [])
   const { user, refreshUser } = useAuth()
-  const { setTheme } = useTheme()
   const nav = useNavigate()
   const toast = useToast()
   const [busy, setBusy] = useState(null)
@@ -42,8 +40,6 @@ export default function AppSelect() {
   const handleSelectFinance = async () => {
     setBusy('finance')
     try {
-      // Finance interface features consistent dark theme with green and black accents
-      setTheme('dark')
       try {
         await apps.select('finance')
       } catch {
