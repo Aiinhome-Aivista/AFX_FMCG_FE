@@ -531,13 +531,13 @@ export default function Finalize() {
         <div className="mt-4 space-y-5">
           {/* Main 2-Column Grid: Left Graph Preview | Right Digital Twin Governance */}
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-            {/* Left Card: Digital Twin Graph Preview */}
+            {/* Left Card: Graph Preview */}
             <section className="card flex flex-col overflow-hidden p-0 border border-line shadow-card">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3 bg-surface2/20">
                 <div className="flex flex-col">
                   <h2 className="flex items-center gap-1.5 text-sm sm:text-base font-semibold text-ink">
                     <Sparkles size={16} className="text-emerald-500 fill-emerald-500/20" />
-                    <span>Digital Twin Graph Preview · {d?.version?.label || 'Draft'}</span>
+                    <span>{displayTemplateName}</span>
                   </h2>
                   <span className="text-xs text-muted">
                     {d?.graph?.nodes?.length || 0} entities · {d?.graph?.edges?.length || 0} relationships
