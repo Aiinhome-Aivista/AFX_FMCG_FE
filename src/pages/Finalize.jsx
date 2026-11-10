@@ -577,7 +577,7 @@ export default function Finalize() {
               <div className="space-y-4">
                 {/* Governance Header */}
                 <div className="flex items-center justify-between">
-                  <h2 className="text-base font-bold text-ink">Graph Governance</h2>
+                  <h2 className="text-base font-bold text-ink">Review and Validation</h2>
                   {(d?.validation?.errors || []).length === 0 ? (
                     <span className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-3 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                       Ready to Finalize
