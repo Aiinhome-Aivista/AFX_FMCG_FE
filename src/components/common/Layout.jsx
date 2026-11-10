@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { LogOut, Moon, Network, Sun, User } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
@@ -7,19 +6,12 @@ import ChevronTracker, { HeaderNextButton } from './ChevronTracker'
 
 export default function Layout({ children, wide }) {
   const { user, logout } = useAuth()
-  const { theme, setTheme, toggle } = useTheme()
+  const { theme, toggle } = useTheme()
   const nav = useNavigate()
   const location = useLocation()
 
   const isFinance = location.pathname.startsWith('/finance') || user?.selected_app === 'finance'
-  const subTitle = isFinance ? 'Finance KG' : 'FMCG KG'
-
-  // Ensure Finance interface consistently defaults to dark theme with green and black accents
-  useEffect(() => {
-    if (isFinance) {
-      setTheme?.('dark')
-    }
-  }, [isFinance, setTheme])
+  const subTitle = 'FMCG KG'
 
   return (
     <div className="flex min-h-full flex-col bg-bg text-ink">
