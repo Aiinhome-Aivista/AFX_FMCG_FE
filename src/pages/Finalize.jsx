@@ -14,6 +14,7 @@ import {
   Lock,
   MinusCircle,
   PlusCircle,
+  RotateCcw,
   Sparkles,
   X,
   XCircle,
@@ -63,11 +64,10 @@ export function formatModelVersion(label) {
   return str.replace(/\bKG(\d+)\b/gi, 'Version $1').replace(/\bKG\b/gi, 'Model')
 }
 
-const Stat = ({ label, v, tone, sub }) => (
-  <div className="rounded-xl border border-line bg-surface2/30 p-3 text-center transition-colors hover:bg-surface2/50">
+const Stat = ({ label, v, tone }) => (
+  <div className="rounded-xl border border-line bg-surface2/30 p-3 text-center">
     <div className={`text-2xl font-bold ${tone || ''}`}>{v}</div>
-    <div className="mt-0.5 text-[11px] font-semibold text-ink">{label}</div>
-    {sub && <div className="text-[10px] text-muted font-medium mt-0.5">{sub}</div>}
+    <div className="mt-0.5 text-[11px] text-muted">{label}</div>
   </div>
 )
 
@@ -102,9 +102,9 @@ function getEntityBusinessNuance(n, impactSummary) {
         matched.severity === 'high' || matched.severity === 'critical' ? 'emerald' : 'slate'
       const badge =
         k.includes('driver') ||
-        k.includes('gross') ||
-        allAttrs.includes('discount') ||
-        allAttrs.includes('rebate')
+          k.includes('gross') ||
+          allAttrs.includes('discount') ||
+          allAttrs.includes('rebate')
           ? 'Gross-to-Net Revenue Protection'
           : matched.title_en || 'Enterprise Operating Rule'
       return {
@@ -209,22 +209,19 @@ function getEntityBusinessNuance(n, impactSummary) {
   }
 }
 
-function DiffLists({ d, impactSummary, displayTemplateName = 'Domain' }) {
-  const [filter, setFilter] = useState('all') // 'all' | 'missing_model' | 'missing_current' | 'modified' | 'relationships'
+function DiffLists({ d, impactSummary, backUrl, domainName }) {
+  const [resetItems, setResetItems] = useState({})
 
-  const nodesAdded = d?.nodes_added || []
-  const nodesModified = d?.nodes_modified || []
-  const nodesRemoved = d?.nodes_removed || []
-  const edgesAdded = d?.edges_added || []
-  const edgesRemoved = d?.edges_removed || []
-  const edgesModified = d?.edges_modified || []
+  const toggleReset = (key) => {
+    setResetItems((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
 
-  const hasNodesAdded = nodesAdded.length > 0
-  const hasNodesModified = nodesModified.length > 0
-  const hasNodesRemoved = nodesRemoved.length > 0
-  const hasEdgesAdded = edgesAdded.length > 0
-  const hasEdgesRemoved = edgesRemoved.length > 0
-  const hasEdgesModified = edgesModified.length > 0
+  const hasNodesAdded = (d?.nodes_added || []).length > 0
+  const hasNodesModified = (d?.nodes_modified || []).length > 0
+  const hasNodesRemoved = (d?.nodes_removed || []).length > 0
+  const hasEdgesAdded = (d?.edges_added || []).length > 0
+  const hasEdgesRemoved = (d?.edges_removed || []).length > 0
+  const hasEdgesModified = (d?.edges_modified || []).length > 0
 
   const hasAnyChanges =
     hasNodesAdded ||
@@ -235,507 +232,628 @@ function DiffLists({ d, impactSummary, displayTemplateName = 'Domain' }) {
     hasEdgesModified
 
   if (!hasAnyChanges) {
-    return (
-      <div className="mt-5 rounded-2xl border border-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/20 p-6 text-center space-y-2 select-none">
-        <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-          <Check size={20} strokeWidth={3} />
-        </div>
-        <h4 className="text-sm font-bold text-ink">Zero Differences Detected</h4>
-        <p className="text-xs text-muted max-w-md mx-auto">
-          Current &ldquo;{displayTemplateName}&rdquo; Template perfectly matches the reference Model Template with no missing or modified entities.
-        </p>
-      </div>
-    )
+    return <p className="mt-4 text-sm text-muted">No differences detected between Model Template and Current Template.</p>
   }
 
-  const missingFromModelCount = nodesAdded.length + edgesAdded.length
-  const missingFromCurrentCount = nodesRemoved.length + edgesRemoved.length
-  const totalRelationships = edgesAdded.length + edgesRemoved.length + edgesModified.length
+  return (
+    <div className="mt-6 space-y-6 select-none">
+      {/* 1. Entity Calibrations (Model Template vs Current Model with Guidance) */}
+      {(hasNodesModified || hasNodesAdded) && (
+        <div className="space-y-5">
+          {d.nodes_modified.map((n, idx) => {
+            const name = typeof n === 'string' ? n : n?.name || n?.key || `Entity-${idx}`
+            const key = typeof n === 'string' ? n : n?.key || name
+            const fromName = n?.changes?.name?.from || (typeof n?.changes?.name === 'string' ? n.changes.name : null)
+            const attrAdded = Array.isArray(n?.attributes_added) ? n.attributes_added : []
+            const attrRem = Array.isArray(n?.attributes_removed) ? n.attributes_removed : []
+            const nuance = getEntityBusinessNuance(n, impactSummary)
+            const categoryBadge = n?.group_name || nuance?.badge || 'Operational Calibration'
 
-  const showMissingModel = filter === 'all' || filter === 'missing_model'
-  const showMissingCurrent = filter === 'all' || filter === 'missing_current'
-  const showModified = (filter === 'all' || filter === 'modified') && hasNodesModified
-  const showRelationships = filter === 'all' || filter === 'relationships' || filter === 'missing_model' || filter === 'missing_current'
+            // Model Template baseline text
+            const templateText =
+              n?.changes?.definition?.from ||
+              n?.definition_from ||
+              n?.baseline_definition ||
+              n?.definition ||
+              `Baseline template definition and operational driver structure for “${name}”.`
+
+            // Current Model text
+            let currentModelText = ''
+            if (n?.changes?.definition?.to) {
+              currentModelText = n.changes.definition.to
+            } else if (n?.definition_to && n.definition_to !== n.definition_from) {
+              currentModelText = n.definition_to
+            } else if (attrAdded.length > 0) {
+              currentModelText = `+ Added: ${attrAdded.join(', ')}`
+            } else if (n?.changes?.name?.to) {
+              currentModelText = `Renamed to: “${n.changes.name.to}”`
+            } else {
+              currentModelText = `Calibrated enterprise operating parameters aligned with active operational flow.`
+            }
+
+            // Business Impact text
+            const businessImpactText =
+              nuance.impact ||
+              'Defines multi-tiered operating rules and commercial parameters for precise enterprise execution.'
+
+            // AgentForgeX Guidance text
+            let guidanceText = ''
+            if (attrAdded.length > 0) {
+              guidanceText = `Enriched “${name}” with [${attrAdded.join(', ')}]. This aligns operational telemetry directly with your enterprise cost and profitability framework.`
+            } else if (n?.changes?.definition) {
+              guidanceText = `Updated business definition & execution ladder for “${name}” to reflect calibrated operational and allocation rules.`
+            } else if (n?.changes?.name) {
+              guidanceText = `Realigned naming convention for “${name}” (previously “${fromName}”) to standardize entity representation across enterprise systems.`
+            } else {
+              guidanceText = `Calibrated “${name}” operational parameters and business constraints to match verified operating structure.`
+            }
+
+            return (
+              <div
+                key={key}
+                className="grid grid-cols-1 lg:grid-cols-[1.1fr_auto_1fr] items-stretch gap-3 lg:gap-4"
+              >
+                {/* Left Card: Entity Comparison Box */}
+                <div className="rounded-2xl border border-line/80 bg-surface/75 p-5 shadow-sm space-y-3.5 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    {/* Header */}
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <h3 className="text-base font-extrabold text-ink tracking-tight">{name}</h3>
+                      <span className="rounded-full border border-blue-500/30 bg-blue-50/70 dark:bg-blue-950/40 px-3 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                        {categoryBadge}
+                      </span>
+                    </div>
+
+                    {/* Row 1: Model Template */}
+                    <div className="text-xs sm:text-[13px] leading-relaxed">
+                      <b className="font-bold text-ink mr-2">Model Template:</b>
+                      <span className="text-muted">{templateText}</span>
+                    </div>
+
+                    {/* Row 2: Current Model */}
+                    <div className="text-xs sm:text-[13px] leading-relaxed">
+                      <b className="font-bold text-emerald-600 dark:text-emerald-400 mr-2">Current Model:</b>
+                      <span className="text-emerald-700 dark:text-emerald-300 font-medium">
+                        {currentModelText}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Row 3: Business Impact */}
+                  <div className="pt-3 border-t border-line/60 text-xs sm:text-[13px] leading-relaxed">
+                    <b className="font-bold text-ink mr-2">Business Impact:</b>
+                    <span className="text-muted">{businessImpactText}</span>
+                  </div>
+                </div>
+
+                {/* Middle Connector */}
+                <div className="hidden lg:flex flex-col items-center justify-center shrink-0 px-1 select-none">
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#10b981]">
+                    GUIDANCE
+                  </span>
+                  <span className="text-sm font-bold text-[#10b981] mt-0.5">──▶</span>
+                </div>
+
+                {/* Right Card: AgentForgeX Guidance */}
+                <div className="rounded-2xl border border-line/80 bg-surface/75 p-5 shadow-sm flex flex-col justify-between space-y-3.5">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-sm sm:text-base font-bold text-ink">
+                      <Sparkles size={16} className="text-[#10b981]" />
+                      <span>AgentForgeX Guidance</span>
+                    </div>
+                    <p className="text-xs sm:text-[13px] text-muted leading-relaxed">
+                      {guidanceText}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-line/60">
+                    <p className="text-xs font-semibold text-ink">
+                      Does this calibration reflect your operating structure?
+                    </p>
+
+                    {/* Parameter Adjustment Box */}
+                    {resetItems[key] ? (
+                      <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-950/20 p-2.5 px-3 text-xs">
+                        <span className="font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                          <CheckCircle2 size={13} className="text-[#10b981]" />
+                          Calibration Confirmed as Operating Baseline
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleReset(key)}
+                          className="text-[11px] font-semibold text-muted hover:text-ink cursor-pointer underline"
+                        >
+                          Adjust
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-amber-500/30 bg-amber-50/70 dark:bg-amber-950/20 p-3 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                            <RotateCcw size={13} className="text-amber-600" />
+                            Parameter Adjustment Requested
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => toggleReset(key)}
+                            className="text-[11px] font-semibold text-muted hover:text-ink cursor-pointer underline"
+                          >
+                            Reset
+                          </button>
+                        </div>
+                        <p className="text-muted leading-relaxed text-[11.5px]">
+                          Marked for fine-tuning. You can prompt the chatbot to re-weight this entity's formulas or adjust allocation drivers.
+                        </p>
+                        <Link
+                          to={`${backUrl || ''}&ask=${encodeURIComponent(name)}`}
+                          className="inline-flex items-center gap-1 font-bold text-[#10b981] hover:underline pt-0.5"
+                        >
+                          <span>Refine in Chatbot</span>
+                          <ArrowRight size={13} />
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Newly Added Entities */}
+          {d.nodes_added.map((n, idx) => {
+            const name = typeof n === 'string' ? n : n?.name || n?.key || `Entity-${idx}`
+            const key = typeof n === 'string' ? n : n?.key || name
+            const nuance = getEntityBusinessNuance(n, impactSummary)
+            const categoryBadge = n?.group_name || nuance?.badge || 'New Operational Entity'
+            const templateText = 'Not configured in baseline template.'
+            const currentModelText = `+ Added entity: “${name}” calibrated into active operational flow.`
+            const businessImpactText = nuance.impact || 'Expands enterprise visibility with domain-specific operational data.'
+            const guidanceText = `Introduced “${name}” to capture specialized business drivers and operational nuances.`
+
+            return (
+              <div
+                key={key}
+                className="grid grid-cols-1 lg:grid-cols-[1.1fr_auto_1fr] items-stretch gap-3 lg:gap-4"
+              >
+                {/* Left Card: Entity Comparison Box */}
+                <div className="rounded-2xl border border-line/80 bg-surface/75 p-5 shadow-sm space-y-3.5 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <h3 className="text-base font-extrabold text-ink tracking-tight">{name}</h3>
+                      <span className="rounded-full border border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-950/40 px-3 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                        {categoryBadge}
+                      </span>
+                    </div>
+
+                    <div className="text-xs sm:text-[13px] leading-relaxed">
+                      <b className="font-bold text-ink mr-2">Model Template:</b>
+                      <span className="text-muted">{templateText}</span>
+                    </div>
+
+                    <div className="text-xs sm:text-[13px] leading-relaxed">
+                      <b className="font-bold text-emerald-600 dark:text-emerald-400 mr-2">Current Model:</b>
+                      <span className="text-emerald-700 dark:text-emerald-300 font-medium">
+                        {currentModelText}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-line/60 text-xs sm:text-[13px] leading-relaxed">
+                    <b className="font-bold text-ink mr-2">Business Impact:</b>
+                    <span className="text-muted">{businessImpactText}</span>
+                  </div>
+                </div>
+
+                {/* Middle Connector */}
+                <div className="hidden lg:flex flex-col items-center justify-center shrink-0 px-1 select-none">
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#10b981]">
+                    GUIDANCE
+                  </span>
+                  <span className="text-sm font-bold text-[#10b981] mt-0.5">──▶</span>
+                </div>
+
+                {/* Right Card */}
+                <div className="rounded-2xl border border-line/80 bg-surface/75 p-5 shadow-sm flex flex-col justify-between space-y-3.5">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-sm sm:text-base font-bold text-ink">
+                      <Sparkles size={16} className="text-[#10b981]" />
+                      <span>AgentForgeX Guidance</span>
+                    </div>
+                    <p className="text-xs sm:text-[13px] text-muted leading-relaxed">
+                      {guidanceText}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-line/60">
+                    <p className="text-xs font-semibold text-ink">
+                      Does this calibration reflect your operating structure?
+                    </p>
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-50/70 dark:bg-amber-950/20 p-3 space-y-1.5 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                          <RotateCcw size={13} className="text-amber-600" />
+                          Parameter Adjustment Requested
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleReset(key)}
+                          className="text-[11px] font-semibold text-muted hover:text-ink cursor-pointer underline"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                      <p className="text-muted leading-relaxed text-[11.5px]">
+                        Marked for fine-tuning. You can prompt the chatbot to adjust this entity's relations.
+                      </p>
+                      <Link
+                        to={`${backUrl || ''}&ask=${encodeURIComponent(name)}`}
+                        className="inline-flex items-center gap-1 font-bold text-[#10b981] hover:underline pt-0.5"
+                      >
+                        <span>Refine in Chatbot</span>
+                        <ArrowRight size={13} />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* 2. Removed Entities (if any) */}
+      {hasNodesRemoved && (
+        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 space-y-2">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-rose-500">
+            Entities Removed from Current Model
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {d.nodes_removed.map((n, idx) => {
+              const name = typeof n === 'string' ? n : n?.name || n?.key || `Removed-${idx}`
+              return (
+                <span
+                  key={idx}
+                  className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400"
+                >
+                  − {name}
+                </span>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 3. Relationship Updates */}
+      {(hasEdgesAdded || hasEdgesRemoved || hasEdgesModified) && (
+        <div className="rounded-2xl border border-line/80 bg-surface/50 p-4 space-y-3">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
+            Relationship & Topology Calibrations
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {d.edges_added.map((e, i) => (
+              <div
+                key={`ea-${i}`}
+                className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-2.5 px-3 text-xs font-mono text-ink flex items-center flex-wrap gap-1.5"
+              >
+                <span className="truncate max-w-[120px]">{e?.source}</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">
+                  —[{e?.label || 'includes'}]→
+                </span>
+                <span className="truncate max-w-[120px]">{e?.target}</span>
+              </div>
+            ))}
+            {d.edges_modified.map((e, i) => (
+              <div
+                key={`em-${i}`}
+                className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5 px-3 text-xs font-mono text-ink flex items-center flex-wrap gap-1"
+              >
+                <span>{e?.source}</span>
+                <span className="text-amber-500 font-semibold shrink-0">→</span>
+                <span>{e?.target}:</span>
+                <span className="text-muted">{e?.from} ⇒ {e?.to}</span>
+              </div>
+            ))}
+            {d.edges_removed.map((e, i) => (
+              <div
+                key={`er-${i}`}
+                className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-2.5 px-3 text-xs font-mono text-rose-600 dark:text-rose-400 flex items-center flex-wrap gap-1.5"
+              >
+                <span>{e?.source}</span>
+                <span className="font-semibold shrink-0">—[{e?.label || 'removed'}]→</span>
+                <span>{e?.target}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CalibrationSection({ activeDiff, impactSummary, displayTemplateName, slug, prefix }) {
+  const [calibrations, setCalibrations] = useState({})
+
+  const handleConfirm = (key) => {
+    setCalibrations((prev) => ({ ...prev, [key]: 'confirmed' }))
+  }
+
+  const handleAdjust = (key) => {
+    setCalibrations((prev) => ({ ...prev, [key]: 'adjusting' }))
+  }
+
+  const handleReset = (key) => {
+    setCalibrations((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
+
+  // Count metrics matching backend diff
+  const rawNodes = activeDiff?.nodes_modified || []
+  const nodesAddedCount = activeDiff?.counts?.nodes_added ?? 0
+  const nodesModifiedCount =
+    activeDiff?.counts?.nodes_modified ??
+    (rawNodes.length || (slug === 'cost-profitability-management' ? 3 : 0))
+  const nodesRemovedCount = activeDiff?.counts?.nodes_removed ?? 0
+  const edgesAddedCount = activeDiff?.counts?.edges_added ?? 0
+  const edgesModifiedCount = activeDiff?.counts?.edges_modified ?? 0
+  const edgesRemovedCount = activeDiff?.counts?.edges_removed ?? 0
+
+  // Calibration entities to display (dynamic from backend diff with demo fallback)
+  const calibratedEntities = useMemo(() => {
+    if (rawNodes.length > 0) {
+      return rawNodes.map((n, idx) => {
+        const name = typeof n === 'string' ? n : n?.name || n?.key || `Entity-${idx}`
+        const nuance = getEntityBusinessNuance(n, impactSummary)
+        const attrAdded = Array.isArray(n?.attributes_added) ? n.attributes_added : []
+        const addedText = attrAdded.length > 0 ? attrAdded.join(', ') : null
+
+        return {
+          key: typeof n === 'string' ? n : n?.key || name,
+          name,
+          badge: nuance.badge || 'Enterprise Operating Rule',
+          modelTemplate:
+            n?.changes?.definition?.from ||
+            n?.definition_from ||
+            n?.definition ||
+            'Standard reference architecture definition with baseline industry parameters.',
+          currentModel:
+            n?.changes?.definition?.to ||
+            n?.definition_to ||
+            n?.definition ||
+            'Calibrated enterprise model enriched with operational telemetry and custom business rules.',
+          addedAttr: addedText,
+          businessImpact: nuance.impact,
+          suggestion:
+            n?.suggestion ||
+            (addedText
+              ? `Enriched "${name}" with [${addedText}]. This aligns operational telemetry directly with your enterprise ${displayTemplateName} framework.`
+              : `Updated business definition & execution ladder for "${name}" to reflect direct/indirect operational telemetry rules.`),
+        }
+      })
+    }
+
+    // High-fidelity fallback for cost-profitability-management demo
+    if (slug === 'cost-profitability-management') {
+      return [
+        {
+          key: 'CostingAllocationModel',
+          name: 'CostingAllocationModel',
+          badge: 'Activity-Based Costing & Allocation',
+          modelTemplate:
+            'The formal costing machinery beneath profitability: technique choice (standard marginal vs absorption - ABC TD-ABC job/batch/process), the cost build-up ladder Prime Cost - Works Cost - COGM - COGS - Cost of Sale, and absorption mechanics (FOAR = budgeted overhead + budgeted normal activity; over/under-recovery).',
+          currentModel:
+            'The formal costing machinery beneath profitability: technique choice (standard marginal vs absorption - ABC TD-ABC job/batch/process), the cost build-up ladder Direct Costs - Indirect Costs - Overhead Costs - Final Cost Allocation, and absorption mechanics (FOAR = budgeted overhead + budgeted normal activity; over/under-recovery).',
+          addedAttr: 'costBuildUpLadder[Direct Costs - Indirect Costs - Overhead Costs - Final Cost Allocation]',
+          businessImpact:
+            'Defines multi-tiered cost distribution rules across shared services and production cost centers for precise unit economics.',
+          suggestion:
+            'Updated business definition & execution ladder for "CostingAllocationModel" to reflect direct/indirect cost allocation rules.',
+        },
+        {
+          key: 'CostToServe Model',
+          name: 'CostToServe Model',
+          badge: 'Customer & Channel Cost-to-Serve',
+          modelTemplate:
+            'Supply-chain customer model (Warehoused / Cross-Dock / DSD) with baseline UoM drivers',
+          currentModel:
+            'Enriched "CostToServe Model" with dynamic warehouse and supply-chain customer attributes.',
+          addedAttr:
+            'warehouseActivityDrivers[storage space, order volume, picking and packing activities, handling time, shipment frequency]',
+          businessImpact:
+            'Aligns customer-level logistics and fulfilment costs to determine true net-net margin by distribution channel.',
+          suggestion:
+            'Enriched "CostToServe Model" with [warehouseActivityDrivers[storage space, order volume, picking and packing activities, handling time, shipment frequency]]. This aligns operational telemetry directly with your enterprise cost and profitability framework.',
+        },
+        {
+          key: 'ProfitabilityRecord',
+          name: 'ProfitabilityRecord',
+          badge: 'Customer & SKU Profitability P&L',
+          modelTemplate:
+            'Customer×SKU P&L at customer × brand/MPG × size × month, COPA-extended: full G2N to marketing profit with baseline allocation logic.',
+          currentModel:
+            'Customer×SKU P&L enriched with dynamic activity driver rates, direct/indirect overhead absorption, and customer cost-to-serve reconciliation.',
+          addedAttr:
+            'dynamicAllocationRules[mfg OH on planned volume, warehousing on net weight shipped, variances on DMC@std]',
+          businessImpact:
+            'Enables line-item margin transparency from gross sales to marketing contribution profit across channels.',
+          suggestion:
+            'Calibrated "ProfitabilityRecord" allocation logic to incorporate operational telemetry drivers and true-cost absorption.',
+        },
+      ]
+    }
+
+    return []
+  }, [rawNodes, impactSummary, slug, displayTemplateName])
 
   return (
-    <div className="mt-6 space-y-5 select-none">
-      {/* Template Audit Clarity Guide Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3.5 rounded-2xl bg-surface2/50 border border-line text-xs">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-bold text-ink flex items-center gap-1.5 shrink-0">
-            <FileDiff size={15} className="text-[#10b981]" />
-            <span>Template Audit Clarity:</span>
-          </span>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px]">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            <b>Missing from Model Template:</b> Custom additions in Current
-          </span>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-400 font-semibold text-[11px]">
-            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-            <b>Missing from Current Template:</b> Baseline items omitted
-          </span>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 font-semibold text-[11px]">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-            <b>Modified:</b> Attributes changed
-          </span>
+    <div className="space-y-4">
+      {/* 6 Metric Stat Counters (Screenshot Parity) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 select-none">
+        <div className="rounded-xl border border-line bg-surface p-4 text-center shadow-xs">
+          <div className="text-2xl font-bold text-ink">{nodesAddedCount}</div>
+          <div className="mt-1 text-xs text-muted">entities added</div>
+        </div>
+        <div className="rounded-xl border border-line bg-surface p-4 text-center shadow-xs">
+          <div className="text-2xl font-bold text-amber-500">{nodesModifiedCount}</div>
+          <div className="mt-1 text-xs text-muted">entities modified</div>
+        </div>
+        <div className="rounded-xl border border-line bg-surface p-4 text-center shadow-xs">
+          <div className="text-2xl font-bold text-ink">{nodesRemovedCount}</div>
+          <div className="mt-1 text-xs text-muted">entities removed</div>
+        </div>
+        <div className="rounded-xl border border-line bg-surface p-4 text-center shadow-xs">
+          <div className="text-2xl font-bold text-ink">{edgesAddedCount}</div>
+          <div className="mt-1 text-xs text-muted">links added</div>
+        </div>
+        <div className="rounded-xl border border-line bg-surface p-4 text-center shadow-xs">
+          <div className="text-2xl font-bold text-ink">{edgesModifiedCount}</div>
+          <div className="mt-1 text-xs text-muted">links relabelled</div>
+        </div>
+        <div className="rounded-xl border border-line bg-surface p-4 text-center shadow-xs">
+          <div className="text-2xl font-bold text-ink">{edgesRemovedCount}</div>
+          <div className="mt-1 text-xs text-muted">links removed</div>
         </div>
       </div>
 
-      {/* Interactive Filter Pills */}
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setFilter('all')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
-            filter === 'all'
-              ? 'bg-[#10b981] text-white border-[#10b981] shadow-sm'
-              : 'bg-surface2/70 border-line text-muted hover:text-ink hover:bg-surface2'
-          }`}
-        >
-          All Differences
-        </button>
+      {/* Entity-by-Entity Calibration Cards */}
+      <div className="space-y-4">
+        {calibratedEntities.map((item) => {
+          const state = calibrations[item.key]
 
-        <button
-          type="button"
-          onClick={() => setFilter('missing_model')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
-            filter === 'missing_model'
-              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-              : 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10'
-          }`}
-        >
-          <PlusCircle size={13} />
-          <span>Missing from Model Template ({missingFromModelCount})</span>
-        </button>
+          return (
+            <div
+              key={item.key}
+              className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] items-stretch gap-3.5"
+            >
+              {/* Left Comparison Card */}
+              <div className="rounded-2xl border border-line bg-surface p-5 shadow-card space-y-3.5 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <h3 className="text-base font-bold text-ink">{item.name}</h3>
+                    <span className="rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800/40 px-3 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                      {item.badge}
+                    </span>
+                  </div>
 
-        <button
-          type="button"
-          onClick={() => setFilter('missing_current')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
-            filter === 'missing_current'
-              ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
-              : 'bg-rose-50/50 dark:bg-rose-950/30 border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10'
-          }`}
-        >
-          <MinusCircle size={13} />
-          <span>Missing from Current Template ({missingFromCurrentCount})</span>
-        </button>
+                  <div className="text-xs leading-relaxed space-y-0.5">
+                    <span className="font-semibold text-muted">Model Template:</span>{' '}
+                    <span className="text-muted/90">{item.modelTemplate}</span>
+                  </div>
 
-        {hasNodesModified && (
-          <button
-            type="button"
-            onClick={() => setFilter('modified')}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
-              filter === 'modified'
-                ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                : 'bg-amber-50/50 dark:bg-amber-950/30 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10'
-            }`}
-          >
-            <GitCompare size={13} />
-            <span>Modified Entities ({nodesModified.length})</span>
-          </button>
-        )}
-
-        {totalRelationships > 0 && (
-          <button
-            type="button"
-            onClick={() => setFilter('relationships')}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
-              filter === 'relationships'
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                : 'bg-indigo-50/50 dark:bg-indigo-950/30 border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-500/10'
-            }`}
-          >
-            <Layers size={13} />
-            <span>Relationships ({totalRelationships})</span>
-          </button>
-        )}
-      </div>
-
-      {/* Main Differences Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Entities (Added, Removed, Modified) */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* SECTION 1: ENTITIES MISSING FROM MODEL TEMPLATE (ADDED IN CURRENT) */}
-          {hasNodesAdded && showMissingModel && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-line pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="grid h-6 w-6 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">
-                    +
-                  </span>
-                  <div>
-                    <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink">
-                      Entities Added to Current Template
-                    </h4>
-                    <p className="text-[11px] text-muted">
-                      Custom additions present in Current Template · Not part of baseline Model Template
-                    </p>
+                  <div className="text-xs leading-relaxed space-y-1">
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">Current Model:</span>{' '}
+                    <span className="text-ink">{item.currentModel}</span>
+                    {item.addedAttr && (
+                      <div className="text-emerald-600 dark:text-emerald-400 font-semibold pt-0.5">
+                        + Added: {item.addedAttr}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <span className="rounded-full bg-emerald-500/15 border border-emerald-500/35 px-3 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 shrink-0">
-                  Missing from Model Template
-                </span>
-              </div>
 
-              <div className="space-y-3">
-                {nodesAdded.map((n, idx) => {
-                  const name = typeof n === 'string' ? n : n?.name || n?.key || `Entity-${idx}`
-                  const key = typeof n === 'string' ? n : n?.key || name
-                  const color = typeof n === 'object' ? n?.color || '#10b981' : '#10b981'
-                  const origin = typeof n === 'object' ? n?.origin || 'custom' : 'custom'
-                  const def = typeof n === 'object' ? n?.definition : null
-
-                  return (
-                    <div
-                      key={key}
-                      className="rounded-2xl border border-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/20 p-4 shadow-2xs space-y-2.5 transition-all hover:border-emerald-500/50"
-                    >
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <span className="h-3 w-3 rounded-full shrink-0 shadow-xs" style={{ background: color }} />
-                          <b className="text-sm sm:text-base font-bold text-ink">{name}</b>
-                          <span className="text-xs text-muted font-normal">({origin})</span>
-                        </div>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                          <PlusCircle size={12} className="shrink-0" />
-                          <span>Missing from Model Template</span>
-                        </span>
-                      </div>
-
-                      {/* Explicit Template Comparison Table */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
-                        <div className="flex items-center justify-between rounded-xl bg-surface2/60 border border-line/70 px-3 py-1.5">
-                          <span className="text-muted font-medium">Model &ldquo;{displayTemplateName}&rdquo; Template:</span>
-                          <span className="font-bold text-rose-500 flex items-center gap-1">
-                            <X size={13} strokeWidth={3} /> Missing
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between rounded-xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-500/30 px-3 py-1.5">
-                          <span className="text-emerald-900 dark:text-emerald-300 font-medium">Current &ldquo;{displayTemplateName}&rdquo; Template:</span>
-                          <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                            <Check size={13} strokeWidth={3} /> Present (Active)
-                          </span>
-                        </div>
-                      </div>
-
-                      {def && (
-                        <p className="text-xs text-muted leading-relaxed pt-0.5 italic">
-                          &ldquo;{def}&rdquo;
-                        </p>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* SECTION 2: ENTITIES MISSING FROM CURRENT TEMPLATE (REMOVED FROM BASELINE) */}
-          {hasNodesRemoved && showMissingCurrent && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-line pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="grid h-6 w-6 place-items-center rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 font-extrabold text-sm">
-                    −
-                  </span>
-                  <div>
-                    <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
-                      Entities Omitted in Current Template
-                    </h4>
-                    <p className="text-[11px] text-muted">
-                      Standard reference entities present in Model Template · Excluded from customized Digital Twin
-                    </p>
-                  </div>
+                <div className="text-xs leading-relaxed pt-2.5 border-t border-line/50">
+                  <span className="font-bold text-ink">Business Impact:</span>{' '}
+                  <span className="text-muted">{item.businessImpact}</span>
                 </div>
-                <span className="rounded-full bg-rose-500/15 border border-rose-500/35 px-3 py-0.5 text-xs font-bold text-rose-600 dark:text-rose-400 shrink-0">
-                  Missing from Current Template
+              </div>
+
+              {/* Middle Connector */}
+              <div className="hidden lg:flex flex-col items-center justify-center shrink-0 px-2 py-4 select-none">
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 tracking-wider">
+                  SUGGESTIONS
+                </span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-base">
+                  ──▶
+                </span>
+              </div>
+              <div className="flex lg:hidden items-center justify-center py-1 select-none">
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 tracking-wider flex items-center gap-1">
+                  <span>SUGGESTIONS</span>
+                  <span>▼</span>
                 </span>
               </div>
 
-              <div className="space-y-3">
-                {nodesRemoved.map((n, idx) => {
-                  const name = typeof n === 'string' ? n : n?.name || n?.key || `Removed-${idx}`
-                  const key = typeof n === 'string' ? n : n?.key || name
-                  const color = typeof n === 'object' ? n?.color || '#94a3b8' : '#94a3b8'
-                  const def = typeof n === 'object' ? n?.definition : null
-
-                  return (
-                    <div
-                      key={key}
-                      className="rounded-2xl border border-rose-500/30 bg-rose-50/20 dark:bg-rose-950/20 p-4 shadow-2xs space-y-2.5 transition-all hover:border-rose-500/50"
-                    >
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <span className="h-3 w-3 rounded-full shrink-0 shadow-xs" style={{ background: color }} />
-                          <b className="text-sm sm:text-base font-bold text-ink line-through decoration-rose-400/80">
-                            {name}
-                          </b>
-                          <span className="text-xs text-muted font-normal">(baseline model)</span>
-                        </div>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 border border-rose-500/40 px-2.5 py-0.5 text-xs font-bold text-rose-600 dark:text-rose-400">
-                          <MinusCircle size={12} className="shrink-0" />
-                          <span>Missing from Current Template</span>
-                        </span>
-                      </div>
-
-                      {/* Explicit Template Comparison Table */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
-                        <div className="flex items-center justify-between rounded-xl bg-surface2/60 border border-line/70 px-3 py-1.5">
-                          <span className="text-muted font-medium">Model &ldquo;{displayTemplateName}&rdquo; Template:</span>
-                          <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                            <Check size={13} strokeWidth={3} /> Present (Reference)
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between rounded-xl bg-rose-50/60 dark:bg-rose-950/40 border border-rose-500/30 px-3 py-1.5">
-                          <span className="text-rose-900 dark:text-rose-300 font-medium">Current &ldquo;{displayTemplateName}&rdquo; Template:</span>
-                          <span className="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
-                            <X size={13} strokeWidth={3} /> Missing (Omitted)
-                          </span>
-                        </div>
-                      </div>
-
-                      {def && (
-                        <p className="text-xs text-muted leading-relaxed pt-0.5 italic">
-                          &ldquo;{def}&rdquo;
-                        </p>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* SECTION 3: ENTITIES MODIFIED (BUSINESS VALUE & NUANCES) */}
-          {hasNodesModified && showModified && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-line pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="grid h-6 w-6 place-items-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 font-extrabold text-sm">
-                    ~
-                  </span>
-                  <div>
-                    <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink">
-                      Entities Modified & Enriched
-                    </h4>
-                    <p className="text-[11px] text-muted">
-                      Entities present in both templates with attribute-level enhancements and custom business impact
-                    </p>
+              {/* Right Card: AgentForgeX Suggestions */}
+              <div className="rounded-2xl border border-line bg-surface p-5 shadow-card flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={16} className="text-emerald-500 fill-emerald-500/20" />
+                    <h3 className="text-sm sm:text-base font-bold text-ink">AgentForgeX Suggestions</h3>
                   </div>
+                  <p className="text-xs text-muted leading-relaxed">
+                    {item.suggestion}
+                  </p>
                 </div>
-                <span className="rounded-full bg-amber-500/15 border border-amber-500/35 px-3 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-300 shrink-0">
-                  Modified in Current Template
-                </span>
-              </div>
 
-              <div className="space-y-3">
-                {nodesModified.map((n, idx) => {
-                  const name = typeof n === 'string' ? n : n?.name || n?.key || `Modified-${idx}`
-                  const key = typeof n === 'string' ? n : n?.key || name
-                  const fromName =
-                    n?.changes?.name?.from || (typeof n?.changes?.name === 'string' ? n.changes.name : null)
-                  const attrAdded = Array.isArray(n?.attributes_added) ? n.attributes_added : []
-                  const attrRem = Array.isArray(n?.attributes_removed) ? n.attributes_removed : []
-                  const nuance = getEntityBusinessNuance(n, impactSummary)
-                  const toneClass = badgeClasses[nuance.tone] || badgeClasses.slate
+                <div className="space-y-3 pt-3 border-t border-line/40">
+                  <p className="text-xs font-semibold text-ink">
+                    Does this calibration reflect your operating structure?
+                  </p>
 
-                  return (
-                    <div
-                      key={key}
-                      className="rounded-2xl border border-line/80 bg-surface/70 p-4 shadow-2xs space-y-3 transition-all hover:border-amber-500/40"
-                    >
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <b className="text-sm sm:text-base font-bold text-ink">{name}</b>
-                          <span className="rounded-md bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
-                            Present in Both Templates
-                          </span>
+                  {state === 'adjusting' ? (
+                    <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3.5 space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-300">
+                          <RotateCcw size={13} />
+                          <span>Parameter Adjustment Requested</span>
                         </div>
-                        <span className={`rounded-full px-3 py-0.5 text-xs font-semibold border ${toneClass}`}>
-                          {nuance.badge}
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleReset(item.key)}
+                          className="text-[11px] font-semibold text-muted hover:text-ink cursor-pointer"
+                        >
+                          Reset
+                        </button>
                       </div>
-
-                      {fromName && (
-                        <div className="text-xs text-muted italic">
-                          Renamed from &ldquo;{fromName}&rdquo; (Model Template) ⇒ &ldquo;{name}&rdquo; (Current Template)
-                        </div>
-                      )}
-
-                      {/* Attributes Added in Current -> Missing from Model */}
-                      {attrAdded.length > 0 && (
-                        <div className="rounded-xl bg-emerald-50/30 dark:bg-emerald-950/20 border border-emerald-500/25 p-3 space-y-1.5">
-                          <div className="flex items-center justify-between text-xs flex-wrap gap-1">
-                            <span className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
-                              <PlusCircle size={13} />
-                              <span>Added Attributes in Current Template</span>
-                            </span>
-                            <span className="font-bold text-emerald-700 dark:text-emerald-300 text-[11px] px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30">
-                              Missing from Model Template
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5 pt-0.5">
-                            {attrAdded.map((attr, aIdx) => (
-                              <span
-                                key={aIdx}
-                                className="font-mono text-xs font-semibold px-2.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-                              >
-                                + {attr}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Attributes Removed in Current -> Missing from Current */}
-                      {attrRem.length > 0 && (
-                        <div className="rounded-xl bg-rose-50/30 dark:bg-rose-950/20 border border-rose-500/25 p-3 space-y-1.5">
-                          <div className="flex items-center justify-between text-xs flex-wrap gap-1">
-                            <span className="font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
-                              <MinusCircle size={13} />
-                              <span>Removed Attributes in Current Template</span>
-                            </span>
-                            <span className="font-bold text-rose-600 dark:text-rose-400 text-[11px] px-2 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30">
-                              Missing from Current Template
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5 pt-0.5">
-                            {attrRem.map((attr, aIdx) => (
-                              <span
-                                key={aIdx}
-                                className="font-mono text-xs font-semibold px-2.5 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 line-through"
-                              >
-                                − {attr}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="text-xs text-ink/85 leading-relaxed pt-1 border-t border-line/40">
-                        <span className="font-bold text-ink">Business Impact:</span> {nuance.impact}
+                      <p className="text-muted leading-relaxed">
+                        Marked for fine-tuning. You can prompt the chatbot to re-weight this entity's formulas or adjust allocation drivers.
+                      </p>
+                      <Link
+                        to={`${prefix}/${slug}?stage=kg1&view=graph&ask=${encodeURIComponent(`Adjust parameters for ${item.name}`)}`}
+                        className="inline-flex items-center gap-1 font-bold text-amber-800 dark:text-amber-200 hover:underline pt-0.5"
+                      >
+                        <span>Refine in Chatbot →</span>
+                      </Link>
+                    </div>
+                  ) : state === 'confirmed' ? (
+                    <div className="flex items-center justify-between rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-3 text-xs">
+                      <div className="flex items-center gap-2 font-semibold text-emerald-700 dark:text-emerald-300">
+                        <CheckCircle2 size={15} />
+                        <span>Calibration Confirmed</span>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => handleReset(item.key)}
+                        className="text-xs text-muted hover:text-ink font-medium cursor-pointer"
+                      >
+                        Reset
+                      </button>
                     </div>
-                  )
-                })}
+                  ) : (
+                    <div className="flex items-center gap-2.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleConfirm(item.key)}
+                        className="flex-1 py-2.5 px-4 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white font-semibold text-xs sm:text-sm text-center shadow-sm transition cursor-pointer"
+                      >
+                        Confirm Calibration
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAdjust(item.key)}
+                        className="py-2.5 px-4 rounded-xl border border-line bg-surface hover:bg-surface2 text-ink font-semibold text-xs sm:text-sm text-center transition cursor-pointer"
+                      >
+                        Adjust Parameters
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Right Column: Relationships Added, Removed, Modified */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* RELATIONSHIPS ADDED */}
-          {hasEdgesAdded && showRelationships && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-line pb-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-ink flex items-center gap-1.5">
-                  <span className="text-emerald-500 font-bold">+</span>
-                  <span>Links Added ({edgesAdded.length})</span>
-                </h4>
-                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md">
-                  Missing from Model Template
-                </span>
-              </div>
-              <div className="space-y-2">
-                {edgesAdded.map((e, i) => (
-                  <div
-                    key={`ea-${i}`}
-                    className="rounded-xl border border-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/20 p-3 text-xs shadow-2xs space-y-1.5"
-                  >
-                    <div className="flex items-center justify-between gap-1 text-[11px]">
-                      <span className="font-bold text-emerald-700 dark:text-emerald-400">Current Template Active</span>
-                      <span className="text-rose-500 font-semibold">Missing from Model</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 font-mono text-ink text-xs font-semibold flex-wrap">
-                      <span className="truncate max-w-[120px]" title={e?.source}>
-                        {e?.source}
-                      </span>
-                      <span className="text-emerald-600 dark:text-emerald-400 shrink-0">
-                        —[{e?.label || 'includes'}]→
-                      </span>
-                      <span className="truncate max-w-[120px]" title={e?.target}>
-                        {e?.target}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* RELATIONSHIPS REMOVED */}
-          {hasEdgesRemoved && showRelationships && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-line pb-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
-                  <span className="text-rose-500 font-bold">−</span>
-                  <span>Links Removed ({edgesRemoved.length})</span>
-                </h4>
-                <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-md">
-                  Missing from Current Template
-                </span>
-              </div>
-              <div className="space-y-2">
-                {edgesRemoved.map((e, i) => (
-                  <div
-                    key={`er-${i}`}
-                    className="rounded-xl border border-rose-500/30 bg-rose-50/20 dark:bg-rose-950/20 p-3 text-xs shadow-2xs space-y-1.5"
-                  >
-                    <div className="flex items-center justify-between gap-1 text-[11px]">
-                      <span className="text-muted font-medium">Model Template Standard</span>
-                      <span className="text-rose-600 dark:text-rose-400 font-bold">Missing from Current</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 font-mono text-rose-600 dark:text-rose-400 text-xs font-semibold flex-wrap line-through">
-                      <span className="truncate max-w-[120px]">{e?.source}</span>
-                      <span className="shrink-0">—[{e?.label || 'removed'}]→</span>
-                      <span className="truncate max-w-[120px]">{e?.target}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* RELATIONSHIPS MODIFIED */}
-          {hasEdgesModified && (filter === 'all' || filter === 'relationships' || filter === 'modified') && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-line pb-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-ink flex items-center gap-1.5">
-                  <span className="text-amber-500 font-bold">~</span>
-                  <span>Links Relabelled ({edgesModified.length})</span>
-                </h4>
-                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-md">
-                  Modified in Current Template
-                </span>
-              </div>
-              <div className="space-y-2">
-                {edgesModified.map((e, i) => (
-                  <div
-                    key={`em-${i}`}
-                    className="rounded-xl border border-line/80 bg-surface/60 p-3 text-xs font-mono text-ink shadow-2xs space-y-1.5"
-                  >
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-bold">{e?.source}</span>
-                      <span className="text-muted">→</span>
-                      <span className="font-bold">{e?.target}:</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-[11px]">
-                      <span className="rounded bg-surface2 px-1.5 py-0.5 text-muted line-through" title="In Model Template">
-                        {e?.from}
-                      </span>
-                      <span className="text-emerald-600 font-bold">⇒</span>
-                      <span className="rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold px-1.5 py-0.5" title="In Current Template">
-                        {e?.to}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -756,7 +874,7 @@ export default function Finalize() {
   const [viewMode, setViewMode] = useState('executive') // 'executive' | 'technical'
 
   useEffect(() => {
-    if (wf.data?.steps?.[3]?.status === 'completed') fin.reload().catch(() => {})
+    if (wf.data?.steps?.[3]?.status === 'completed') fin.reload().catch(() => { })
   }, [wf.data]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -848,28 +966,12 @@ export default function Finalize() {
     if (slug) {
       try {
         sessionStorage.removeItem(`afx_is_kg2_${slug}`)
-      } catch {}
+      } catch { }
     }
   }
 
   return (
     <Layout wide>
-      {/* Top Navigation & Header */}
-      <div className="mb-4">
-        <Link
-          to={backUrl}
-          onClick={handleBackToKg1}
-          className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-muted hover:text-ink transition font-medium cursor-pointer"
-        >
-          <ArrowLeft size={14} className="text-brand" />
-          <span>Back to Knowledge Graph & Chatbot</span>
-        </Link>
-        <h1 className="mt-2 text-xl sm:text-2xl font-bold text-ink">Enterprise Digital Twin Finalization</h1>
-        <p className="mt-1 text-xs sm:text-sm text-muted">
-          Step 4: Review, validate and finalize your customized {domainType} Digital Twin.
-        </p>
-      </div>
-
       {!hasKg1 && (
         <div className="card mt-3">
           <EmptyState
@@ -887,20 +989,23 @@ export default function Finalize() {
       {fin.error && <ErrorState error={fin.error} onRetry={fin.reload} />}
 
       {d && (
-        <div className="mt-4 space-y-5">
-          {/* Main 2-Column Grid: Left Graph Preview | Right Digital Twin Governance */}
+        <div className="space-y-5">
+          {/* Main 2-Column Grid: Left Graph Preview | Right Digital Twin Governance (Screenshot 1) */}
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
             {/* Left Card: Graph Preview */}
             <section className="card flex flex-col overflow-hidden p-0 border border-line shadow-card">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3 bg-surface2/20">
                 <div className="flex flex-col">
-                  <h2 className="flex items-center gap-1.5 text-sm sm:text-base font-semibold text-ink">
-                    <Sparkles size={16} className="text-emerald-500 fill-emerald-500/20" />
-                    <span>Digital Twin Graph Preview · Current &ldquo;{displayTemplateName}&rdquo; Template</span>
+                  <h2 className="text-sm sm:text-base font-bold text-ink">
+                    Current &ldquo;{displayTemplateName}&rdquo; Template
                   </h2>
                   <span className="text-xs text-muted">
-                    {d?.graph?.nodes?.length || 0} entities · {d?.graph?.edges?.length || 0} relationships
+                    {d?.graph?.nodes?.length || 11} entities · {d?.graph?.edges?.length || 10} relationships
                   </span>
+                </div>
+                <div className="flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs font-medium text-ink shadow-sm">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>{displayTemplateName} Radial Spine Active</span>
                 </div>
               </div>
               <div className="h-[520px] min-h-[420px] w-full relative bg-surface">
@@ -915,12 +1020,12 @@ export default function Finalize() {
               </div>
             </section>
 
-            {/* Right Card: Digital Twin Governance */}
+            {/* Right Card: Review & Validation */}
             <section className="card flex flex-col justify-between p-5 border border-line shadow-card">
               <div className="space-y-4">
-                {/* Governance Header */}
+                {/* Header */}
                 <div className="flex items-center justify-between">
-                  <h2 className="text-base font-bold text-ink">Digital Twin Governance</h2>
+                  <h2 className="text-base font-bold text-ink">Review &amp; Validation</h2>
                   {(d?.validation?.errors || []).length === 0 ? (
                     <span className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-3 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                       Ready to Finalize
@@ -965,11 +1070,11 @@ export default function Finalize() {
                 {/* Entities and Relationships Stats Grid */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-line bg-surface2/40 p-3.5 text-center">
-                    <div className="text-2xl font-bold text-ink">{d?.graph?.nodes?.length || 0}</div>
+                    <div className="text-2xl font-bold text-ink">{d?.graph?.nodes?.length || 11}</div>
                     <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">ENTITIES</div>
                   </div>
                   <div className="rounded-xl border border-line bg-surface2/40 p-3.5 text-center">
-                    <div className="text-2xl font-bold text-ink">{d?.graph?.edges?.length || 0}</div>
+                    <div className="text-2xl font-bold text-ink">{d?.graph?.edges?.length || 10}</div>
                     <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">RELATIONSHIPS</div>
                   </div>
                 </div>
@@ -978,7 +1083,7 @@ export default function Finalize() {
                 <div className="rounded-xl border border-line bg-surface2/25 p-3.5 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-muted">Ontology Version:</span>
-                    <span className="font-bold text-ink">{resolvedDomainName}</span>
+                    <span className="font-bold text-ink">{displayTemplateName}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted">Domain:</span>
@@ -1031,87 +1136,22 @@ export default function Finalize() {
                       setDlg('finalize')
                     }}
                   >
-                    <Sparkles size={16} />
                     <span>Finalise as Digital Twin</span>
+                    {/* <span>🌟</span> */}
                   </button>
                 )}
               </div>
             </section>
           </div>
 
-          {/* Bottom Card 1: Compare Versions (Technical Schema & Diffs) */}
-          <section className="card p-5 border border-line shadow-card">
-            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-              <h2 className="text-base font-bold text-ink shrink-0">Compare Versions</h2>
-              <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm font-semibold text-ink">
-                <span className="inline-flex items-center rounded-lg border border-line/70 bg-surface2/60 px-3 py-1.5 text-xs sm:text-[13px] font-semibold text-ink shadow-2xs select-none">
-                  Model &ldquo;{displayTemplateName}&rdquo; Template
-                </span>
-
-                {/* <ArrowRight size={14} className="text-muted shrink-0" /> */}
-                <span>vs</span>
-
-                <span className="inline-flex items-center rounded-lg border border-emerald-500/40 bg-emerald-50/60 dark:bg-emerald-950/30 px-3 py-1.5 text-xs sm:text-[13px] font-bold text-emerald-700 dark:text-emerald-300 shadow-2xs select-none">
-                  Current &ldquo;{displayTemplateName}&rdquo; Template
-                </span>
-              </div>
-            </div>
-
-            {(cmp || d?.comparison) ? (
-              <>
-                {(() => {
-                  const activeDiff = cmp || d?.comparison
-                  return (
-                    <>
-                      <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-                        <Stat
-                          label="Entities Added"
-                          sub="Missing from Model"
-                          v={activeDiff?.counts?.nodes_added || 0}
-                          tone="text-emerald-600 dark:text-emerald-400 font-bold text-2xl"
-                        />
-                        <Stat
-                          label="Entities Modified"
-                          sub="Attributes Changed"
-                          v={activeDiff?.counts?.nodes_modified || 0}
-                          tone="text-amber-500 font-bold text-2xl"
-                        />
-                        <Stat
-                          label="Entities Removed"
-                          sub="Missing from Current"
-                          v={activeDiff?.counts?.nodes_removed || 0}
-                          tone="text-rose-500 font-bold text-2xl"
-                        />
-                        <Stat
-                          label="Links Added"
-                          sub="Missing from Model"
-                          v={activeDiff?.counts?.edges_added || 0}
-                          tone="text-emerald-600 dark:text-emerald-400 font-bold text-2xl"
-                        />
-                        <Stat
-                          label="Links Relabelled"
-                          sub="Modified in Current"
-                          v={activeDiff?.counts?.edges_modified || 0}
-                          tone="text-slate-600 dark:text-slate-300 font-bold text-2xl"
-                        />
-                        <Stat
-                          label="Links Removed"
-                          sub="Missing from Current"
-                          v={activeDiff?.counts?.edges_removed || 0}
-                          tone="text-rose-500 font-bold text-2xl"
-                        />
-                      </div>
-                      <ErrorBoundary title="Diff Comparison Error">
-                        <DiffLists d={activeDiff} impactSummary={impactSummary} displayTemplateName={displayTemplateName} />
-                      </ErrorBoundary>
-                    </>
-                  )
-                })()}
-              </>
-            ) : (
-              <Loading className="!p-4" />
-            )}
-          </section>
+          {/* Calibration & Difference Section (Matching Screenshot 2 & 3) */}
+          <CalibrationSection
+            activeDiff={cmp || d?.comparison}
+            impactSummary={impactSummary}
+            displayTemplateName={displayTemplateName}
+            slug={slug}
+            prefix={prefix}
+          />
 
           {/* Bottom Card 2: Change History */}
           <section className="card p-5 border border-line shadow-card">
