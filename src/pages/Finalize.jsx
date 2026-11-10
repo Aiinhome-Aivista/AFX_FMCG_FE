@@ -34,6 +34,18 @@ const DOMAIN_NAME_MAP = {
   'data-analytics-foundation': '09 Data & Analytics Foundation',
 }
 
+export function formatModelVersion(label) {
+  if (!label) return 'Draft'
+  const str = String(label).trim()
+  if (/^kg0$/i.test(str)) return 'Baseline Model'
+  if (/^kg1$/i.test(str)) return 'Baseline Model (v1)'
+  if (/^kg2$/i.test(str)) return 'Operational Model (v2)'
+  if (/^kg\s*(\d+)$/i.test(str)) {
+    return str.replace(/^kg\s*(\d+)$/i, 'Version $1')
+  }
+  return str.replace(/\bKG(\d+)\b/gi, 'Version $1').replace(/\bKG\b/gi, 'Model')
+}
+
 const Stat = ({ label, v, tone }) => (
   <div className="rounded-xl border border-line bg-surface2/30 p-3 text-center">
     <div className={`text-2xl font-bold ${tone || ''}`}>{v}</div>
@@ -503,7 +515,7 @@ export default function Finalize() {
           className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-muted hover:text-ink transition font-medium cursor-pointer"
         >
           <ArrowLeft size={14} className="text-brand" />
-          <span>Back to Knowledge Graph & Chatbot</span>
+          <span>Back to Operational Model & Chatbot</span>
         </Link>
         <h1 className="mt-2 text-xl sm:text-2xl font-bold text-ink">Enterprise Digital Twin Finalization</h1>
         <p className="mt-1 text-xs sm:text-sm text-muted">
@@ -518,7 +530,7 @@ export default function Finalize() {
             hint="Answer the chatbot's questions and approve at least one set of changes to create your baseline model."
           >
             <Link className="btn-primary mt-2" to={backUrl}>
-              Go to Knowledge Graph
+              Go to Operational Model
             </Link>
           </EmptyState>
         </div>
@@ -537,7 +549,7 @@ export default function Finalize() {
                 <div className="flex flex-col">
                   <h2 className="flex items-center gap-1.5 text-sm sm:text-base font-semibold text-ink">
                     <Sparkles size={16} className="text-emerald-500 fill-emerald-500/20" />
-                    <span>Digital Twin Graph Preview · {d?.version?.label || 'Draft'}</span>
+                    <span>Digital Twin Graph Preview · {formatModelVersion(d?.version?.label)}</span>
                   </h2>
                   <span className="text-xs text-muted">
                     {d?.graph?.nodes?.length || 0} entities · {d?.graph?.edges?.length || 0} relationships
@@ -629,7 +641,7 @@ export default function Finalize() {
                 <div className="rounded-xl border border-line bg-surface2/25 p-3.5 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-muted">Ontology Version:</span>
-                    <span className="font-bold text-ink">{d?.version?.label || 'Draft'}</span>
+                    <span className="font-bold text-ink">{formatModelVersion(d?.version?.label)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted">Domain:</span>
@@ -647,24 +659,29 @@ export default function Finalize() {
               {/* Bottom Action Button */}
               <div className="mt-5 pt-4 border-t border-line">
                 {finalized ? (
-                  <div className="space-y-2.5">
-                    <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                      <Lock size={16} />
-                      <span>Finalised as Digital Twin ({d?.version?.label || ''})</span>
+                  <div className="space-y-3">
+                    <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/25 p-3.5 space-y-1">
+                      <div className="flex items-center gap-2 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                        <Lock size={16} />
+                        <span>Governed Enterprise Digital Twin · {formatModelVersion(d?.version?.label || 'Finalized')}</span>
+                      </div>
+                      <p className="text-xs text-muted leading-relaxed">
+                        This model is locked and governed. It represents your active {isFinance ? 'financial' : 'operational'} architecture.
+                      </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Link
                         to={`${prefix}/${slug}/telemetry`}
-                        className="btn-primary flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm"
+                        className="btn-primary flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold"
                       >
-                        <span>Continue to telemetry</span>
+                        <span>Explore Digital Twin</span>
                         <ArrowRight size={16} />
                       </Link>
                       <button
-                        className="btn-ghost py-2.5 text-xs text-muted hover:text-ink cursor-pointer"
+                        className="btn-ghost py-2.5 px-3 text-xs text-muted hover:text-ink cursor-pointer"
                         onClick={() => setDlg('reopen')}
                       >
-                        Re-open ontology
+                        Re-open
                       </button>
                     </div>
                   </div>
@@ -768,7 +785,7 @@ export default function Finalize() {
                     <b className="text-sm text-ink font-semibold">{p?.title || 'Proposed Change'}</b>
                     <div className="flex items-center gap-2">
                       <span className="rounded-md border border-line bg-surface2 px-2 py-0.5 text-[11px] font-semibold text-muted">
-                        active — {p?.result_version ? `v${p.result_version}` : ((d?.version?.label || 'Draft').replace(/KG/g, 'v'))}
+                        active — {p?.result_version ? `Version ${p.result_version}` : formatModelVersion(d?.version?.label)}
                       </span>
                       <span className="text-xs text-muted">
                         {p?.source || 'Assistant'} · {timeAgo(p?.created_at)}
@@ -799,7 +816,7 @@ export default function Finalize() {
         onCancel={() => setDlg(null)}
         onConfirm={doFinalize}
       >
-        <p>This locks {d?.version?.label || 'your current version'} as your ontology and unlocks telemetry upload. The chatbot session will be locked until you re-open it.</p>
+        <p>This locks {formatModelVersion(d?.version?.label) || 'your current version'} as your ontology and unlocks telemetry upload. The chatbot session will be locked until you re-open it.</p>
         {(d?.validation?.warnings || []).length > 0 && (
           <label className="mt-3 flex items-start gap-2 text-ink">
             <input

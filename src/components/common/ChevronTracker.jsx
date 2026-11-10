@@ -369,7 +369,9 @@ export default function ChevronTracker({ showNextButton = false }) {
           >
             {/* Outer Chevron Clip Path (Border layer) */}
             <div
-              className={`p-[1.5px] transition-colors duration-200 ${outerBg}`}
+              className={`p-[1.5px] transition-colors duration-200 ${outerBg} ${
+                isActive ? 'animate-active-step' : ''
+              }`}
               style={{
                 clipPath:
                   'polygon(0% 0%, calc(100% - 13px) 0%, 100% 50%, calc(100% - 13px) 100%, 0% 100%, 13px 50%)',
@@ -389,6 +391,15 @@ export default function ChevronTracker({ showNextButton = false }) {
                     <span className="flex h-3.5 sm:h-4 w-3.5 sm:w-4 items-center justify-center rounded-full bg-white dark:bg-slate-950 text-[#10b981] dark:text-white">
                       <Check size={10} strokeWidth={3.5} />
                     </span>
+                  ) : isActive ? (
+                    <span className="relative flex h-3.5 sm:h-4 w-3.5 sm:w-4 items-center justify-center">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-75" />
+                      <span
+                        className={`relative text-[9px] sm:text-[10px] font-bold ${iconColor} border border-[#10b981] bg-white dark:bg-[#192027] rounded-full h-full w-full flex items-center justify-center`}
+                      >
+                        {stage.id}
+                      </span>
+                    </span>
                   ) : (
                     <span
                       className={`text-[9px] sm:text-[10px] font-bold ${iconColor} border border-current rounded-full h-3.5 sm:h-4 w-3.5 sm:w-4 flex items-center justify-center`}
@@ -400,9 +411,17 @@ export default function ChevronTracker({ showNextButton = false }) {
 
                 {/* Step Title & Subtitle */}
                 <div className="flex flex-col min-w-0 leading-tight">
-                  <span className={`text-[10px] sm:text-[11.5px] truncate font-bold ${textColor}`}>
-                    {stage.title}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className={`text-[10px] sm:text-[11.5px] truncate font-bold ${textColor}`}>
+                      {stage.title}
+                    </span>
+                    {isActive && (
+                      <span className="relative flex h-1.5 w-1.5 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-80" />
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#10b981]" />
+                      </span>
+                    )}
+                  </div>
                   <span className={`text-[8.5px] sm:text-[9.5px] truncate ${subColor}`}>
                     {stage.subtitle}
                   </span>

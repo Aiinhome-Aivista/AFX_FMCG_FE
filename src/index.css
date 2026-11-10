@@ -339,4 +339,21 @@ body {
   -webkit-tap-highlight-color: transparent !important;
 }
 
+/* Blinking & pulsing effect for active workflow chevron step */
+@keyframes active-step-blink {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.55));
+  }
+  50% {
+    opacity: 0.5;
+    filter: drop-shadow(0 0 1px rgba(16, 185, 129, 0.15));
+  }
+}
+
+.animate-active-step {
+  animation: active-step-blink 1.6s ease-in-out infinite;
+}
+
+
 
