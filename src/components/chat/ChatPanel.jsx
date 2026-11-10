@@ -361,20 +361,20 @@ export default function ChatPanel({
 
       {/* Nuances Captured Banner: In the conversation box, the Next button is always for Upload Data */}
       {(canUpload || isKg2Active || userChatCount >= 1) ? (
-        <div className="mx-3.5 my-2 flex items-center justify-between rounded-xl border border-emerald-500/35 bg-emerald-50/70 dark:bg-emerald-950/30 px-3.5 py-2.5 shadow-2xs animate-in fade-in">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 size={16} className="text-[#10b981] shrink-0" />
-            <span className="text-xs sm:text-[13px] font-bold text-emerald-800 dark:text-emerald-300">
+        <div className="mx-3.5 my-2 flex items-center justify-between gap-2 rounded-xl border border-emerald-500/35 bg-emerald-50/70 dark:bg-emerald-950/30 px-3 py-2 shadow-2xs animate-in fade-in">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <CheckCircle2 size={14} className="text-[#10b981] shrink-0" />
+            <span className="text-[11px] sm:text-xs font-bold text-emerald-800 dark:text-emerald-300 whitespace-nowrap">
               Nuances Captured · Model Ready
             </span>
           </div>
           <button
             type="button"
             onClick={handleOpenUploadClick}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white font-bold px-3.5 py-1.5 text-xs shadow-sm transition active:scale-95 cursor-pointer"
+            className="inline-flex items-center gap-1 rounded-lg bg-[#10b981] hover:bg-[#059669] text-white font-bold px-2.5 py-1 text-[11px] sm:text-xs shadow-sm transition active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
           >
             <span>Next: Upload Data</span>
-            <ArrowRight size={13} strokeWidth={2.5} />
+            <ArrowRight size={12} strokeWidth={2.5} />
           </button>
         </div>
       ) : (
@@ -506,16 +506,16 @@ export default function ChatPanel({
         {locked ? (
           <p className="text-center text-xs text-muted py-2">{disabledReason}</p>
         ) : isAwaitingDecision ? (
-          <div className="flex items-center justify-between gap-3 rounded-xl bg-[#fff7ed] dark:bg-amber-950/40 border border-orange-200/90 dark:border-amber-800/50 p-3 sm:px-4 sm:py-3 shadow-2xs animate-in fade-in">
-            <span className="text-xs sm:text-[13px] font-bold text-amber-800 dark:text-amber-300 leading-tight">
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-[#fff7ed] dark:bg-amber-950/40 border border-orange-200/90 dark:border-amber-800/50 p-2.5 sm:px-3 sm:py-2 shadow-2xs animate-in fade-in">
+            <span className="text-[11px] sm:text-xs font-bold text-amber-800 dark:text-amber-300 leading-tight whitespace-nowrap">
               Ready to proceed, or continue exploring?
             </span>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
                 disabled={busy}
                 onClick={handleContinueExploring}
-                className="rounded-lg border border-slate-200 dark:border-line bg-white dark:bg-surface2 px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-surface shadow-2xs transition cursor-pointer disabled:opacity-50"
+                className="rounded-lg border border-slate-200 dark:border-line bg-white dark:bg-surface2 px-2.5 py-1 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-surface shadow-2xs transition cursor-pointer disabled:opacity-50 whitespace-nowrap"
               >
                 Continue
               </button>
@@ -523,7 +523,7 @@ export default function ChatPanel({
                 type="button"
                 disabled={busy}
                 onClick={handleProceedToNext}
-                className="rounded-lg bg-[#10b981] hover:bg-[#059669] px-4 py-1.5 text-xs font-bold text-white shadow-2xs transition active:scale-95 cursor-pointer disabled:opacity-50"
+                className="rounded-lg bg-[#10b981] hover:bg-[#059669] px-3 py-1 text-[11px] sm:text-xs font-bold text-white shadow-2xs transition active:scale-95 cursor-pointer disabled:opacity-50 whitespace-nowrap"
               >
                 Proceed
               </button>
