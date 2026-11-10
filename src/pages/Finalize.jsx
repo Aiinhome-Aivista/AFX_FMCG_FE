@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   AlertCircle,
   AlertTriangle,
@@ -862,6 +862,7 @@ function CalibrationSection({ activeDiff, impactSummary, displayTemplateName, sl
 export default function Finalize() {
   const { slug } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const toast = useToast()
   const wf = useAsync(() => domains.workflow(slug), [slug])
   const dom = useAsync(() => domains.list(), [])
@@ -872,6 +873,20 @@ export default function Finalize() {
   const [ack, setAck] = useState(false)
   const [busy, setBusy] = useState(false)
   const [viewMode, setViewMode] = useState('executive') // 'executive' | 'technical'
+
+  const finalized = Boolean(wf.data?.finalized_version_number)
+
+  useEffect(() => {
+    if (slug && wf.data) {
+      try {
+        if (finalized) {
+          sessionStorage.setItem(`afx_finalized_${slug}`, 'true')
+        } else {
+          sessionStorage.removeItem(`afx_finalized_${slug}`)
+        }
+      } catch {}
+    }
+  }, [finalized, slug, wf.data])
 
   useEffect(() => {
     if (wf.data?.steps?.[3]?.status === 'completed') fin.reload().catch(() => { })
@@ -909,15 +924,23 @@ export default function Finalize() {
   if (wf.loading || !wf.data) return <Layout wide><Loading /></Layout>
   if (!wf.data.started) return <Navigate to={`/fmcg/${slug}`} replace />
   const hasKg1 = Boolean(wf.data?.steps?.[3]?.status === 'completed')
-  const finalized = Boolean(wf.data?.finalized_version_number)
 
   const doFinalize = async () => {
     setBusy(true)
     try {
       await graphs.finalize(slug, { confirm: true, acknowledge_warnings: ack })
-      toast.success('Ontology finalised as Digital Twin. Telemetry upload is now unlocked.')
+      toast.success('Ontology finalised as Digital Twin!')
+      try {
+        sessionStorage.setItem(`afx_finalized_${slug}`, 'true')
+        window.dispatchEvent(
+          new CustomEvent('afx-workflow-state', {
+            detail: { slug, isFinalized: true, version: 2 },
+          })
+        )
+      } catch {}
       setDlg(null)
-      await Promise.all([wf.reload(), fin.reload()])
+      // Navigate directly to the Digital Twin Explorer page (next page)!
+      navigate(`${prefix}/${slug}/twin`)
     } catch (e) {
       toast.error(e.message)
     } finally {
@@ -930,6 +953,14 @@ export default function Finalize() {
     try {
       await graphs.reopen(slug)
       toast.success('Ontology re-opened.')
+      try {
+        sessionStorage.removeItem(`afx_finalized_${slug}`)
+        window.dispatchEvent(
+          new CustomEvent('afx-workflow-state', {
+            detail: { slug, isFinalized: false },
+          })
+        )
+      } catch {}
       setDlg(null)
       await Promise.all([wf.reload(), fin.reload()])
     } catch (e) {
@@ -972,6 +1003,18 @@ export default function Finalize() {
 
   return (
     <Layout wide>
+      {/* Back button below navbar on the left */}
+      <div className="mb-3.5 flex items-center select-none">
+        <Link
+          to={`${prefix}/${slug}?stage=kg2&view=graph`}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface/90 hover:bg-surface2 px-3 py-1.5 text-xs font-semibold text-muted hover:text-ink hover:border-brand/40 transition cursor-pointer shadow-2xs group"
+          title="Return to Business Telemetry Gap Analysis"
+        >
+          <ArrowLeft size={13} className="text-brand shrink-0 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Back to Business Telemetry</span>
+        </Link>
+      </div>
+
       {!hasKg1 && (
         <div className="card mt-3">
           <EmptyState

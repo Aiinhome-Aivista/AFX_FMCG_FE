@@ -97,6 +97,26 @@ export default function DomainGraph() {
     }
   })
 
+  const [isFinalizedState, setIsFinalizedState] = useState(() => {
+    try {
+      return slug && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(`afx_finalized_${slug}`) === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    const handleWorkflowState = (e) => {
+      if (e?.detail?.slug === slug && typeof e.detail.isFinalized === 'boolean') {
+        setIsFinalizedState(e.detail.isFinalized)
+      }
+    }
+    window.addEventListener('afx-workflow-state', handleWorkflowState)
+    return () => window.removeEventListener('afx-workflow-state', handleWorkflowState)
+  }, [slug])
+
+  const isFinalized = Boolean(wf.data?.finalized_version_number || isFinalizedState)
+
   // Synchronize stage & view params from URL
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search)
@@ -1138,6 +1158,7 @@ export default function DomainGraph() {
                 processingFileName={processingFileName}
                 onOpenUpload={() => handleSetLeftView('upload')}
                 isKg2Active={isKg2Active}
+                isFinalized={isFinalized}
                 onFinalize={() => nav(location.pathname.startsWith('/finance') ? `/finance/${slug}/finalize` : `/fmcg/${slug}/finalize`)}
                 onGraphUpdate={(res) => {
                   if (res?.graph) {

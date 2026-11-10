@@ -141,6 +141,16 @@ export function useChevronTrackerState() {
     if (!currentSlug) return null
 
     if (isKg2Active) {
+      const isFin = Boolean(
+        workflowDetail?.isFinalized ||
+        (currentSlug && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(`afx_finalized_${currentSlug}`) === 'true')
+      )
+      if (isFin) {
+        return {
+          label: 'Explore Digital Twin',
+          route: `${prefix}/${currentSlug}/twin`,
+        }
+      }
       // In KG2 stage: next step is Finalize Twin (navigates to review / finalize page)
       return {
         label: 'Next: Finalize Twin',
