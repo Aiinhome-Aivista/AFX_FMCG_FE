@@ -70,7 +70,7 @@ export default function Customize() {
       <Link to={`/fmcg/${slug}/graph`} className="mb-3 inline-flex items-center gap-1 text-sm text-muted hover:text-ink"><ArrowLeft size={14} /> Reference graph</Link>
       <Stepper slug={slug} steps={wf.data.steps} current={4} />
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <div><h1 className="text-xl font-semibold">Tell us how your business really works</h1><p className="text-sm text-muted">{dom.data?.name} · answers become proposed changes; you approve them to create KG1, KG2…</p></div>
+        <div><h1 className="text-xl font-semibold">Tell us how your business really works</h1><p className="text-sm text-muted">{dom.data?.name} · answers become proposed changes; you approve them to create new model versions…</p></div>
         {latest && <Link to={`/fmcg/${slug}/finalize`} className="btn-ghost">{finalized ? 'View finalisation' : 'Review & finalise'} <ArrowRight size={16} /></Link>}
       </div>
 
@@ -83,8 +83,8 @@ export default function Customize() {
           <div className="flex flex-wrap items-center gap-2">
             <label className="text-xs text-muted" htmlFor="ver">Showing</label>
             <select id="ver" className="input !w-auto text-sm" value={viewVersion ?? 'work'} onChange={(e) => setViewVersion(e.target.value === 'work' ? null : Number(e.target.value))}>
-              <option value="work">{latest ? `Current: ${latest.label}` : 'Current: KG0 baseline (selected blocks)'}</option>
-              <option value={0}>KG0 baseline (selected blocks)</option>
+              <option value="work">{latest ? `Current: ${latest.label}` : 'Current: Industry reference baseline'}</option>
+              <option value={0}>Industry reference baseline</option>
               {vers.data?.versions.map((v) => <option key={v.number} value={v.number}>{v.label} · {v.kind}</option>)}
             </select>
             {g && <span className="text-xs text-muted">{counts.added} new · {counts.mod} modified · {g.nodes.length} entities · {g.edges.length} relationships</span>}
@@ -108,7 +108,7 @@ export default function Customize() {
               </div>
             </DetailsShell>
           </div>
-          <p className="text-xs text-muted">Green = added, amber = modified (relative to the previous version). The reference graph KG0 is never changed.</p>
+          <p className="text-xs text-muted">Green = added, amber = modified (relative to the previous version). The industry reference model is never changed.</p>
           {proposal && <ProposalReview proposal={proposal} busy={deciding} onDecide={decide} />}
         </div>
       </div>

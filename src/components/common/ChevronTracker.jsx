@@ -4,21 +4,14 @@ import { ArrowRight, Check } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 /**
- * 4-Stage Workflow (Default when no files uploaded yet):
+ * 4-Stage Workflow (matching user screenshot):
  * 1. Industry Identification
- * 2. Domain Prompts
- * 3. Core Nuances (KG1 Discovery)
+ * 2. Domain Prompts & Overview
+ * 3. Core Nuances (Process Discovery)
  * 4. Review (Digital Twin)
- *
- * 5-Stage Workflow (Dynamic when files uploaded / KG2 Gap Analysis active):
- * 1. Industry Identification
- * 2. Domain Prompts
- * 3. Core Nuances (KG1 Discovery)
- * 4. Business Telemetry (KG2 Gap Analysis)
- * 5. Review (Digital Twin)
  */
 
-export default function ChevronTracker() {
+export function useChevronTrackerState() {
   const location = useLocation()
   const { user } = useAuth()
   const path = location.pathname
@@ -88,121 +81,32 @@ export default function ChevronTracker() {
   const searchParams = new URLSearchParams(location.search)
   const isExplicitKg1 = searchParams.get('stage') === 'kg1'
   const isExplicitKg2 = searchParams.get('stage') === 'kg2'
+  const currentSlug = slug || effectiveSlug
+  const isSessionKg2 = currentSlug
+    ? (typeof sessionStorage !== 'undefined' && (
+        sessionStorage.getItem(`afx_is_kg2_${currentSlug}`) === 'true' ||
+        sessionStorage.getItem(`afx_is_kg2_${slug}`) === 'true'
+      ))
+    : false
+
+  const isKg2Active = Boolean(
+    !isExplicitKg1 && (
+      isExplicitKg2 ||
+      workflowDetail?.isKg2 === true ||
+      (workflowDetail?.version && workflowDetail.version >= 2) ||
+      isSessionKg2
+    )
+  )
 
   const isUploadView = searchParams.get('view') === 'upload' || workflowDetail?.activeLeftView === 'upload'
 
   // Check if user has transitioned to KG2 (via Proceed to Gap Analysis button click) or is in Upload view
   const isUploadOrKg2 = Boolean(
     !isExplicitKg1 && (
-      isExplicitKg2 ||
-      workflowDetail?.isKg2 === true ||
+      isKg2Active ||
       isUploadView
     )
   )
-
-  // Stages matching screenshot when navigating domain workflow:
-  // 1: Domain (Prompts & Overview)
-  // 2: Core Nuances (KG1 Discovery)
-  // 3: Business Telemetry (KG2 Gap Analysis)
-  // 4: Review (Digital Twin)
-  const stages = useMemo(() => {
-    if (isIndustryStep) {
-      return [
-        {
-          id: 1,
-          title: 'Industry',
-          subtitle: 'Identification',
-          route: () => '/apps',
-        },
-        {
-          id: 2,
-          title: 'Domain',
-          subtitle: 'Prompts & Overview',
-          route: () => prefix,
-        },
-        {
-          id: 3,
-          title: 'Core Nuances',
-          subtitle: 'KG1 Discovery',
-          route: (s, p, eff) => `${p}/${s || eff}?stage=kg1&view=graph`,
-        },
-        {
-          id: 4,
-          title: 'Review',
-          subtitle: 'Digital Twin',
-          route: (s, p, eff) => `${p}/${s || eff}/finalize`,
-        },
-      ]
-    }
-
-    return [
-      {
-        id: 1,
-        title: 'Domain',
-        subtitle: 'Prompts & Overview',
-        route: () => prefix,
-      },
-      {
-        id: 2,
-        title: 'Core Nuances',
-        subtitle: 'KG1 Discovery',
-        route: (s, p, eff) => `${p}/${s || eff}?stage=kg1&view=graph`,
-      },
-      {
-        id: 3,
-        title: 'Business Telemetry',
-        subtitle: 'KG2 Gap Analysis',
-        route: (s, p, eff) => {
-          if (workflowDetail?.isKg2) return `${p}/${s || eff}?stage=kg2&view=graph`
-          if (workflowDetail?.canUpload || workflowDetail?.hasUploadedFiles) {
-            return `${p}/${s || eff}?stage=kg1&view=upload`
-          }
-          return `${p}/${s || eff}?stage=kg1&view=graph`
-        },
-      },
-      {
-        id: 4,
-        title: 'Review',
-        subtitle: 'Digital Twin',
-        route: (s, p, eff) => `${p}/${s || eff}/finalize`,
-      },
-    ]
-  }, [isIndustryStep, prefix])
-
-  // Calculate status for each stage
-  const getStageStatus = (stageId) => {
-    if (isIndustryStep) {
-      if (stageId === 1) return { isCompleted: false, isActive: true }
-      return { isCompleted: false, isActive: false }
-    }
-
-    // 4-Stage Domain Workflow (matching user screenshot)
-    if (stageId === 1) {
-      // Step 1: Domain
-      if (!isDomainSelected) return { isCompleted: false, isActive: true }
-      return { isCompleted: true, isActive: false }
-    }
-    if (stageId === 2) {
-      // Step 2: Core Nuances (KG1 Discovery)
-      if (!isDomainSelected) return { isCompleted: false, isActive: false }
-      if (isFinalize || isUploadOrKg2) return { isCompleted: true, isActive: false }
-      return { isCompleted: false, isActive: true }
-    }
-    if (stageId === 3) {
-      // Step 3: Business Telemetry (KG2 Gap Analysis)
-      if (!isDomainSelected) return { isCompleted: false, isActive: false }
-      if (isFinalize) return { isCompleted: true, isActive: false }
-      if (isUploadOrKg2) return { isCompleted: false, isActive: true }
-      return { isCompleted: false, isActive: false }
-    }
-    if (stageId === 4) {
-      // Step 4: Review
-      if (isFinalize) return { isCompleted: false, isActive: true }
-      return { isCompleted: false, isActive: false }
-    }
-
-    return { isCompleted: false, isActive: false }
-  }
 
   // Calculate dynamic next step action button right to Review chevron for new users
   const nextStepInfo = useMemo(() => {
@@ -225,30 +129,29 @@ export default function ChevronTracker() {
       }
     }
 
-    const currentSlug = slug || effectiveSlug
     if (!currentSlug) return null
 
-    if (isExplicitKg2 || workflowDetail?.isKg2 === true) {
-      // In KG2 stage: next step is Review / Finalize Twin
+    if (isKg2Active) {
+      // In KG2 stage: next step is Finalize Twin (navigates to review / finalize page)
       return {
-        label: 'Next: Review Twin',
+        label: 'Next: Finalize Twin',
         route: `${prefix}/${currentSlug}/finalize`,
       }
     }
 
     if (isUploadView) {
-      // In Upload stage: next step is KG2 Gap Analysis
+      // In Upload stage: next step is Gap Analysis
       return {
         label: 'Next: Gap Analysis',
         route: `${prefix}/${currentSlug}?stage=kg2&view=graph`,
       }
     }
 
-    // In KG1 (Core Nuances) stage: Only show "Next: Upload Data" after at least 3 chats or when upload is unlocked
+    // In Baseline (Core Nuances) stage: Only show "Next: Upload Data" after at least 3 chats or when upload is unlocked
     const canUploadNow = Boolean(
       workflowDetail?.canUpload ||
       workflowDetail?.hasUploadedFiles ||
-      workflowDetail?.isKg2
+      isKg2Active
     )
 
     if (!canUploadNow) {
@@ -259,12 +162,170 @@ export default function ChevronTracker() {
       label: 'Next: Upload Data',
       route: `${prefix}/${currentSlug}?stage=kg1&view=upload`,
     }
-  }, [isIndustryStep, isFinalize, isDomainSelected, isExplicitKg2, workflowDetail, isUploadView, prefix, slug, effectiveSlug])
+  }, [isIndustryStep, isFinalize, isDomainSelected, isKg2Active, isUploadView, workflowDetail, prefix, currentSlug, effectiveSlug])
+
+  return {
+    path,
+    prefix,
+    slug,
+    effectiveSlug,
+    currentSlug,
+    isIndustryStep,
+    isDomainSelected,
+    isFinalize,
+    isKg2Active,
+    isUploadView,
+    isUploadOrKg2,
+    workflowDetail,
+    nextStepInfo,
+  }
+}
+
+/**
+ * Dedicated Header "Next:" Action Button
+ * Placed on the right side of the navbar beside the icons
+ */
+export function HeaderNextButton({ className = '' }) {
+  const { nextStepInfo } = useChevronTrackerState()
+  if (!nextStepInfo) return null
+
+  return (
+    <Link
+      to={nextStepInfo.route}
+      className={`inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white font-bold px-3.5 sm:px-4 py-1.5 text-xs sm:text-[13px] shadow-sm hover:shadow transition-all duration-200 active:scale-95 shrink-0 select-none cursor-pointer border border-emerald-400/40 ${className}`}
+      title={nextStepInfo.label}
+    >
+      <span>{nextStepInfo.label}</span>
+      <ArrowRight size={13} strokeWidth={2.5} />
+    </Link>
+  )
+}
+
+/**
+ * Workflow Steps Chevron Arrow Navigation
+ * Positioned on the left side beside AgentForgeX FMCG logo
+ */
+export default function ChevronTracker({ showNextButton = false }) {
+  const {
+    prefix,
+    slug,
+    effectiveSlug,
+    isIndustryStep,
+    isDomainSelected,
+    isFinalize,
+    isUploadOrKg2,
+    workflowDetail,
+    nextStepInfo,
+  } = useChevronTrackerState()
+
+  // Stages matching screenshot when navigating domain workflow:
+  // 1: Domain (Prompts & Overview)
+  // 2: Core Nuances (Process Discovery)
+  // 3: Business Telemetry (Data Gap Analysis)
+  // 4: Review (Digital Twin)
+  const stages = useMemo(() => {
+    if (isIndustryStep) {
+      return [
+        {
+          id: 1,
+          title: 'Industry',
+          subtitle: 'Identification',
+          route: () => '/apps',
+        },
+        {
+          id: 2,
+          title: 'Domain',
+          subtitle: 'Prompts & Overview',
+          route: () => prefix,
+        },
+        {
+          id: 3,
+          title: 'Core Nuances',
+          subtitle: 'Process Discovery',
+          route: (s, p, eff) => `${p}/${s || eff}?stage=kg1&view=graph`,
+        },
+        {
+          id: 4,
+          title: 'Review',
+          subtitle: 'Digital Twin',
+          route: (s, p, eff) => `${p}/${s || eff}/finalize`,
+        },
+      ]
+    }
+
+    return [
+      {
+        id: 1,
+        title: 'Domain',
+        subtitle: 'Prompts & Overview',
+        route: () => prefix,
+      },
+      {
+        id: 2,
+        title: 'Core Nuances',
+        subtitle: 'Process Discovery',
+        route: (s, p, eff) => `${p}/${s || eff}?stage=kg1&view=graph`,
+      },
+      {
+        id: 3,
+        title: 'Business Telemetry',
+        subtitle: 'Data Gap Analysis',
+        route: (s, p, eff) => {
+          if (workflowDetail?.isKg2) return `${p}/${s || eff}?stage=kg2&view=graph`
+          if (workflowDetail?.canUpload || workflowDetail?.hasUploadedFiles) {
+            return `${p}/${s || eff}?stage=kg1&view=upload`
+          }
+          return `${p}/${s || eff}?stage=kg1&view=graph`
+        },
+      },
+      {
+        id: 4,
+        title: 'Review',
+        subtitle: 'Digital Twin',
+        route: (s, p, eff) => `${p}/${s || eff}/finalize`,
+      },
+    ]
+  }, [isIndustryStep, prefix, workflowDetail])
+
+  // Calculate status for each stage
+  const getStageStatus = (stageId) => {
+    if (isIndustryStep) {
+      if (stageId === 1) return { isCompleted: false, isActive: true }
+      return { isCompleted: false, isActive: false }
+    }
+
+    // 4-Stage Domain Workflow (matching user screenshot)
+    if (stageId === 1) {
+      // Step 1: Domain
+      if (!isDomainSelected) return { isCompleted: false, isActive: true }
+      return { isCompleted: true, isActive: false }
+    }
+    if (stageId === 2) {
+      // Step 2: Core Nuances
+      if (!isDomainSelected) return { isCompleted: false, isActive: false }
+      if (isFinalize || isUploadOrKg2) return { isCompleted: true, isActive: false }
+      return { isCompleted: false, isActive: true }
+    }
+    if (stageId === 3) {
+      // Step 3: Business Telemetry
+      if (!isDomainSelected) return { isCompleted: false, isActive: false }
+      if (isFinalize) return { isCompleted: true, isActive: false }
+      if (isUploadOrKg2) return { isCompleted: false, isActive: true }
+      return { isCompleted: false, isActive: false }
+    }
+    if (stageId === 4) {
+      // Step 4: Review
+      if (isFinalize) return { isCompleted: false, isActive: true }
+      return { isCompleted: false, isActive: false }
+    }
+
+    return { isCompleted: false, isActive: false }
+  }
 
   return (
     <nav
       aria-label="Workflow Stages"
-      className="flex items-center gap-1 sm:gap-2 overflow-x-auto py-1 no-scrollbar max-w-full"
+      className="flex items-center gap-1 sm:gap-2 overflow-x-auto py-1 no-scrollbar max-w-full select-none"
     >
       {stages.map((stage) => {
         const { isCompleted, isActive } = getStageStatus(stage.id)
@@ -273,63 +334,65 @@ export default function ChevronTracker() {
         // 🟢 Completed: Solid Emerald Green (#10b981), dark checkmark circle, bold dark text
         // 🔵 Active: Highlighted glowing border (Emerald-Cyan gradient), dark surface in dark mode, stark white/emerald text
         // ⚪ Inactive / Upcoming: Subtle border outline, dark surface in dark mode, clean typography
-        let outerBg = 'bg-slate-200/90 dark:bg-slate-800/80 group-hover:bg-slate-300 dark:group-hover:bg-slate-700'
-        let innerBg = 'bg-white dark:bg-[#0c1322] group-hover:bg-slate-50 dark:group-hover:bg-[#141f35]'
-        let textColor = 'text-slate-600 dark:text-slate-400 font-semibold group-hover:dark:text-white'
-        let subColor = 'text-slate-400 dark:text-slate-500'
-        let iconColor = 'text-slate-400 dark:text-slate-500'
+        let outerBg = 'bg-slate-200/90 dark:bg-slate-700/60 group-hover:bg-slate-300 dark:group-hover:bg-slate-600/70'
+        let innerBg = 'bg-white dark:bg-[#192027] group-hover:bg-slate-50 dark:group-hover:bg-[#222a33]'
+        let textColor = 'text-slate-600 dark:text-slate-300 font-semibold group-hover:dark:text-white'
+        let subColor = 'text-slate-400 dark:text-slate-400'
+        let iconColor = 'text-slate-400 dark:text-slate-400'
 
         if (isCompleted) {
           outerBg = 'bg-[#10b981]'
           innerBg = 'bg-[#10b981]' // Solid Primary Green
-          textColor = 'text-slate-950 font-extrabold'
-          subColor = 'text-slate-900/90 font-semibold'
-          iconColor = 'text-slate-950'
+          textColor = 'text-white font-extrabold'
+          subColor = 'text-white/90 font-medium'
+          iconColor = 'text-white'
         } else if (isActive) {
           outerBg =
             'bg-gradient-to-r from-[#10b981] via-[#06b6d4] to-[#10b981] dark:from-[#10b981] dark:via-[#22d3ee] dark:to-[#10b981]'
           innerBg =
-            'bg-gradient-to-r from-emerald-50/90 via-cyan-50/70 to-emerald-50/90 dark:!bg-none dark:bg-[#0c1322]'
+            'bg-gradient-to-r from-emerald-50/90 via-cyan-50/70 to-emerald-50/90 dark:!bg-none dark:bg-[#192027]'
           textColor = 'text-emerald-950 dark:text-white font-extrabold'
           subColor = 'text-emerald-700 dark:text-[#34d399] font-bold'
           iconColor = 'text-[#10b981]'
         }
 
-        const targetRoute =
+        const targetUrl =
           (typeof stage.route === 'function' ? stage.route(slug, prefix, effectiveSlug) : null) || prefix || '/fmcg'
-        const isFirst = stage.id === 1
-        const arrowClass = isFirst ? 'chevron-arrow-start' : 'chevron-arrow'
 
         return (
           <Link
             key={stage.id}
-            to={targetRoute}
-            className={`group chevron-tracker-step ${arrowClass} inline-block cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 border-0 border-none transition-transform duration-200 hover:scale-[1.02] active:scale-95`}
-            title={`${stage.title} - ${stage.subtitle} (Click to navigate)`}
+            to={targetUrl}
+            className={`group relative flex items-center transition-all duration-200 cursor-pointer ${
+              isActive ? 'scale-[1.02] z-10' : 'hover:scale-[1.01]'
+            }`}
           >
+            {/* Outer Chevron Clip Path (Border layer) */}
             <div
-              className={`${arrowClass} relative p-[2px] transition-all duration-300 ${outerBg} ${
-                isActive
-                  ? 'shadow-[0_2px_14px_rgba(16,185,129,0.35)] dark:shadow-[0_0_20px_rgba(16,185,129,0.65),0_0_10px_rgba(34,211,238,0.45)]'
-                  : ''
-              }`}
+              className={`p-[1.5px] transition-colors duration-200 ${outerBg}`}
+              style={{
+                clipPath:
+                  'polygon(0% 0%, calc(100% - 13px) 0%, 100% 50%, calc(100% - 13px) 100%, 0% 100%, 13px 50%)',
+              }}
             >
+              {/* Inner Content Container */}
               <div
-                className={`${arrowClass} ${innerBg} px-2.5 sm:px-3.5 py-1.5 flex items-center gap-1.5 sm:gap-2 select-none min-w-[95px] sm:min-w-[122px] h-[34px] sm:h-[36px] transition-colors`}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 pl-4 sm:pl-5 py-1.5 transition-colors duration-200 ${innerBg}`}
+                style={{
+                  clipPath:
+                    'polygon(0% 0%, calc(100% - 13px) 0%, 100% 50%, calc(100% - 13px) 100%, 0% 100%, 13px 50%)',
+                }}
               >
-                {/* Status Indicator Icon */}
-                <span className="flex items-center justify-center shrink-0">
+                {/* Step Circle: Checkmark if completed, number if upcoming/active */}
+                <span className="flex h-4 sm:h-5 w-4 sm:w-5 items-center justify-center rounded-full shrink-0">
                   {isCompleted ? (
-                    <span className="grid h-4 w-4 place-items-center rounded-full bg-black/15 text-black">
-                      <Check size={11} strokeWidth={3} />
-                    </span>
-                  ) : isActive ? (
-                    <span className="relative flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-90" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#10b981] shadow-[0_0_8px_#10b981]" />
+                    <span className="flex h-3.5 sm:h-4 w-3.5 sm:w-4 items-center justify-center rounded-full bg-white dark:bg-slate-950 text-[#10b981] dark:text-white">
+                      <Check size={10} strokeWidth={3.5} />
                     </span>
                   ) : (
-                    <span className={`text-[11px] font-mono font-medium ${iconColor}`}>
+                    <span
+                      className={`text-[9px] sm:text-[10px] font-bold ${iconColor} border border-current rounded-full h-3.5 sm:h-4 w-3.5 sm:w-4 flex items-center justify-center`}
+                    >
                       {stage.id}
                     </span>
                   )}
@@ -350,16 +413,9 @@ export default function ChevronTracker() {
         )
       })}
 
-      {/* Next Step Action Button Right of Review Step */}
-      {nextStepInfo && (
-        <Link
-          to={nextStepInfo.route || prefix || '/fmcg'}
-          className="ml-1.5 sm:ml-2.5 inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white font-bold px-3 sm:px-3.5 py-1.5 text-xs shadow-sm hover:shadow transition-all duration-200 active:scale-95 shrink-0 select-none cursor-pointer border border-emerald-400/40"
-          title={nextStepInfo.label}
-        >
-          <span>{nextStepInfo.label}</span>
-          <ArrowRight size={13} strokeWidth={2.5} />
-        </Link>
+      {/* Optional In-line Button if enabled */}
+      {showNextButton && nextStepInfo && (
+        <HeaderNextButton className="ml-4 sm:ml-7" />
       )}
     </nav>
   )

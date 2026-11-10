@@ -13,7 +13,7 @@ const KIND_LABEL = {
   node_qa: 'Entity Analysis',
   intro: 'Welcome',
   system: 'System',
-  gap_analysis: 'KG2 Evolution',
+  gap_analysis: 'Reconciliation Evolution',
 }
 
 export default function ChatPanel({
@@ -48,7 +48,7 @@ export default function ChatPanel({
     "Let me read your data and do a deep dive...",
     "I don't even have a coffee break, but analyzing this data is pure dopamine!",
     "Scanning rows and columns... mapping your operational terms to the ontology!",
-    "Checking schemas and reconciling data with KG1 baseline...",
+    "Checking schemas and reconciling data with operational baseline...",
     "Connecting raw records to FMCG business semantics... hold tight!",
     "Untangling spreadsheets so you don't have to on a Friday afternoon...",
   ]
@@ -187,7 +187,7 @@ export default function ChatPanel({
         <div className="pointer-events-none absolute -bottom-12 -left-12 h-44 w-44 rounded-full bg-cyan-400/10 blur-2xl" />
 
         <div className="relative z-10 max-w-sm flex flex-col items-center">
-          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-tr from-brand via-emerald-400 to-cyan-400 text-black shadow-lg shadow-brand/30">
+          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-tr from-brand via-emerald-400 to-cyan-400 text-white dark:text-black shadow-lg shadow-brand/30">
             <Bot size={28} />
           </div>
 
@@ -290,47 +290,20 @@ export default function ChatPanel({
         </div>
       </div>
 
-      {/* Nuances Captured · KG1 Ready Banner OR Telemetry Ingested · KG2 Ready Banner */}
-      {isKg2Active ? (
+      {/* Nuances Captured Banner: In the conversation box, the Next button is always for Upload Data */}
+      {(canUpload || isKg2Active) ? (
         <div className="mx-3.5 my-2 flex items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-50/60 dark:bg-emerald-950/30 px-3.5 py-2 shadow-2xs animate-in fade-in">
           <div className="flex items-center gap-2">
             <CheckCircle2 size={16} className="text-[#10b981] shrink-0" />
             <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-              Telemetry Reconciled · KG2 Ready
-            </span>
-          </div>
-          {onFinalize ? (
-            <button
-              type="button"
-              onClick={onFinalize}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-black font-bold px-3 py-1.5 text-xs shadow-sm transition active:scale-95 cursor-pointer"
-            >
-              <span>Next: Finalize Twin</span>
-              <ArrowRight size={13} strokeWidth={2.5} />
-            </button>
-          ) : onOpenUpload ? (
-            <button
-              type="button"
-              onClick={onOpenUpload}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-black font-bold px-3 py-1.5 text-xs shadow-sm transition active:scale-95 cursor-pointer"
-            >
-              <span>+ Upload Data</span>
-            </button>
-          ) : null}
-        </div>
-      ) : canUpload ? (
-        <div className="mx-3.5 my-2 flex items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-50/60 dark:bg-emerald-950/30 px-3.5 py-2 shadow-2xs animate-in fade-in">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 size={16} className="text-[#10b981] shrink-0" />
-            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-              Nuances Captured · KG1 Ready
+              Nuances Captured · Baseline Ready
             </span>
           </div>
           {onOpenUpload && (
             <button
               type="button"
               onClick={onOpenUpload}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-black font-bold px-3 py-1.5 text-xs shadow-sm transition active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white dark:text-black font-bold px-3 py-1.5 text-xs shadow-sm transition active:scale-95 cursor-pointer"
             >
               <span>Next: Upload Data</span>
               <ArrowRight size={13} strokeWidth={2.5} />
@@ -371,7 +344,7 @@ export default function ChatPanel({
       {/* Interactive Bot Processing Banner for File Parsing */}
       {isProcessingFiles && (
         <div className="mx-3.5 my-2 flex items-start gap-2.5 rounded-xl border border-[#10b981]/40 bg-[#10b981]/10 p-2.5 shadow-sm backdrop-blur-xs animate-in fade-in duration-300">
-          <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#10b981] text-black shadow-2xs">
+          <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#10b981] text-white dark:text-black shadow-2xs">
             <Sparkles size={14} className="animate-spin" />
           </div>
           <div className="flex-1 min-w-0">

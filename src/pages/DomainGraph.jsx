@@ -83,6 +83,9 @@ export default function DomainGraph() {
       const searchParams = new URLSearchParams(window.location.search)
       if (searchParams.get('stage') === 'kg1') return false
       if (searchParams.get('stage') === 'kg2') return true
+      if (slug && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(`afx_is_kg2_${slug}`) === 'true') {
+        return true
+      }
       return false
     } catch {
       return false
@@ -456,7 +459,7 @@ export default function DomainGraph() {
       id: procId,
       role: 'assistant',
       kind: 'system',
-      content: `Let me read your data and do a deep dive into “${targetFileName}”... I don't even have a coffee break, but analyzing this data is pure dopamine! Checking schemas and reconciling data with KG1 baseline.`,
+      content: `Let me read your data and do a deep dive into “${targetFileName}”... I don't even have a coffee break, but analyzing this data is pure dopamine! Checking schemas and reconciling data with operational baseline.`,
       meta: {
         file_name: targetFileName,
         status: 'processing',
@@ -513,7 +516,7 @@ export default function DomainGraph() {
         id: 'gap-analysis-' + Date.now(),
         role: 'assistant',
         kind: 'gap_analysis',
-        content: `Comparing telemetry data (“${targetFileName}”) with KG1.\n\n- Discrepancies (RED): ${mCount} missing element(s) and ${nCount} new telemetry node(s)\n- Matched Elements: ${matchCount} verified entity(ies)\n\nAll discrepancies are highlighted in RED on your Knowledge Graph. Let's review these gaps so we can finalize your Digital Twin.`,
+        content: `Comparing telemetry data (“${targetFileName}”) with operational baseline.\n\n- Discrepancies (RED): ${mCount} missing element(s) and ${nCount} new telemetry node(s)\n- Matched Elements: ${matchCount} verified entity(ies)\n\nAll discrepancies are highlighted in RED on your Knowledge Graph. Let's review these gaps so we can finalize your Digital Twin.`,
         created_at: new Date().toISOString(),
       }
 
@@ -524,7 +527,7 @@ export default function DomainGraph() {
             msg.id === procId
               ? {
                   ...msg,
-                  content: `System Processing Complete: “${targetFileName}” parsed and reconciled with KG1 baseline.`,
+                  content: `System Processing Complete: “${targetFileName}” parsed and reconciled with operational baseline.`,
                   meta: { ...msg.meta, status: 'completed' },
                 }
               : msg
@@ -740,7 +743,7 @@ export default function DomainGraph() {
           </button>
         </div>
 
-        {/* Red KG2 Gap Analysis indicator button on top (Only shown AFTER files are uploaded, never from the beginning) */}
+        {/* Red Gap Analysis indicator button on top (Only shown AFTER files are uploaded, never from the beginning) */}
         {uploadedFiles.length > 0 && !isKg2Active && activeLeftView !== 'upload' && (
           <div className="flex items-center gap-2.5 ml-auto">
             <button
@@ -759,22 +762,22 @@ export default function DomainGraph() {
                 )
               }}
               className="inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-xs sm:text-[13px] font-bold transition shadow-sm cursor-pointer bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-rose-500/25 select-none"
-              title="View KG2 Gap Analysis"
+              title="View Gap Analysis"
             >
               <AlertTriangle size={15} strokeWidth={2.4} />
-              <span>KG2 Gap Analysis</span>
+              <span>Gap Analysis</span>
             </button>
           </div>
         )}
       </div>
 
-      {/* Dedicated KG2 Gap Analysis Evolution Banner (matching reference picture) */}
+      {/* Dedicated Data Gap Analysis Evolution Banner (matching reference picture) */}
       {isKg2Active && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface/80 p-3 sm:p-3.5 backdrop-blur shadow-2xs select-none animate-in fade-in duration-200">
           <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             <span className="flex items-center gap-1.5 text-xs font-bold text-ink">
               <span className="h-2.5 w-2.5 rounded-full bg-[#ef4444] inline-block animate-pulse" />
-              KG2 Gap Analysis Evolution:
+              Data Gap Analysis Evolution:
             </span>
             <span className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-1 text-xs font-bold text-rose-600 dark:text-rose-400">
               {gapStats.totalGaps} Gaps in RED ({gapStats.missingCount} Missing, {gapStats.newCount} New)
@@ -805,7 +808,7 @@ export default function DomainGraph() {
               <div className="absolute top-3.5 left-3.5 z-20 flex items-center gap-2 rounded-xl border border-rose-500/40 bg-surface/90 px-3.5 py-1.5 text-xs backdrop-blur shadow-md select-none">
                 <span className="h-2 w-2 rounded-full bg-[#ef4444] inline-block animate-pulse" />
                 <span className="font-bold text-rose-600 dark:text-rose-400">
-                  KG2 Gap Analysis:
+                  Gap Analysis:
                 </span>
                 <span className="text-muted font-medium">
                   Discrepancies highlighted in RED
@@ -880,7 +883,7 @@ export default function DomainGraph() {
                 <Bot size={14} />
                 <span>Chatbot</span>
                 {snap?.messages?.length > 0 && (
-                  <span className="rounded-full bg-black/20 px-1.5 py-0.2 text-[10px] font-bold text-black">
+                  <span className="rounded-full bg-white/25 dark:bg-black/20 px-1.5 py-0.2 text-[10px] font-bold text-white dark:text-black">
                     {snap.messages.length}
                   </span>
                 )}

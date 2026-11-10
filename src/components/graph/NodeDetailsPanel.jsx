@@ -70,7 +70,7 @@ export default function NodeDetailsPanel({ nodeKey, graphNode, graphNodes, graph
             {role && ROLE_LABEL[role] && <span className="badge border border-line text-muted">{ROLE_LABEL[role]}</span>}
             {graphNode?.kind && graphNode.kind !== 'domain' && <span className="badge border border-line text-muted">{graphNode.kind}</span>}
             {custom && <span className="badge border border-brand/40 bg-brand/10 text-brand">origin: {graphNode.origin}</span>}
-            {custom && graphNode.change_state !== 'unchanged' && <span className={`badge border ${graphNode.change_state === 'added' ? 'border-ok/40 bg-ok/10 text-ok' : 'border-warn/40 bg-warn/10 text-warn'}`}>{graphNode.change_state}{graphNode.added_in_version ? ` in KG${graphNode.added_in_version}` : ''}</span>}
+            {custom && graphNode.change_state !== 'unchanged' && <span className={`badge border ${graphNode.change_state === 'added' ? 'border-ok/40 bg-ok/10 text-ok' : 'border-warn/40 bg-warn/10 text-warn'}`}>{graphNode.change_state}{graphNode.added_in_version ? ` in v${graphNode.added_in_version}` : ''}</span>}
           </div>
         </div>
         <button className="rounded-lg p-1 text-muted hover:bg-surface2 hover:text-ink" onClick={onClose} aria-label="Close details"><X size={18} /></button>
