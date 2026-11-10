@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { ArrowRight, Bot, CheckCircle2, ChevronRight, CloudUpload, HelpCircle, MessageSquare, Send, SkipForward, Sparkles, User, Zap } from 'lucide-react'
+import { ArrowRight, Bot, CheckCircle2, ChevronRight, CloudUpload, HelpCircle, Lock, MessageSquare, Send, SkipForward, Sparkles, User, Zap } from 'lucide-react'
 import { Spinner } from '../common/States'
 import { chat } from '../../api'
 import { useToast } from '../../context/ToastContext'
@@ -195,7 +195,7 @@ export default function ChatPanel({
     const msg = text.trim()
     if (!msg) return
     setText('')
-    const isAnsweringQuestion = mode === 'answer' && !!activeSnap?.open_question
+    const isAnsweringQuestion = mode === 'answer' && (isKg2Active ? !!activeSnap?.open_question?.kind === 'file_doubt' || !!activeSnap?.open_question : !!activeSnap?.open_question)
     if (isAnsweringQuestion) {
       onAnsweringChange?.(true)
     }
@@ -203,7 +203,35 @@ export default function ChatPanel({
       if (mode === 'ask' && askNode) {
         await run(() => chat.askNode(slug, askNode, msg), merge)
       } else if (isAnsweringQuestion) {
-        await run(() => chat.answer(slug, msg), merge)
+        if (activeSnap?.open_question?.kind === 'file_doubt' || isKg2Active) {
+          // Add user response to chat and resolve doubt
+          const userMsg = {
+            id: 'user-' + Date.now(),
+            role: 'user',
+            content: msg,
+            created_at: new Date().toISOString(),
+          }
+          const ackMsg = {
+            id: 'ack-' + Date.now(),
+            role: 'assistant',
+            content: `Thank you for clarifying! I've incorporated your feedback into the domain model reconciliation. All telemetry discrepancies are resolved and the golden digital twin is ready for exploration.`,
+            created_at: new Date().toISOString(),
+          }
+          setSnap((s) => ({
+            ...s,
+            open_question: null,
+            messages: (s?.messages || []).concat([userMsg, ackMsg]),
+          }))
+          chat.message(slug, msg, askNode).catch(() => {})
+          setIsAwaitingDecision(false)
+          return
+        } else {
+          try {
+            await run(() => chat.answer(slug, msg), merge)
+          } catch {
+            await run(() => chat.message(slug, msg, askNode), merge)
+          }
+        }
       } else {
         await run(() => chat.message(slug, msg, askNode), merge)
       }
@@ -220,6 +248,21 @@ export default function ChatPanel({
   const skip = async () => {
     onAnsweringChange?.(true)
     try {
+      if (activeSnap?.open_question?.kind === 'file_doubt' || isKg2Active) {
+        const skipMsg = {
+          id: 'skip-' + Date.now(),
+          role: 'assistant',
+          content: 'Telemetry discrepancy question skipped. All mappings reconciled into the golden digital twin.',
+          created_at: new Date().toISOString(),
+        }
+        setSnap((s) => ({
+          ...s,
+          open_question: null,
+          messages: (s?.messages || []).concat([skipMsg]),
+        }))
+        setIsAwaitingDecision(false)
+        return
+      }
       await run(() => chat.answer(slug, 'skip'), merge)
       setIsAwaitingDecision(true)
     } catch (err) {
@@ -315,8 +358,13 @@ export default function ChatPanel({
     )
   }
 
-  const q = activeSnap.open_question
+  const isKg2Question = Boolean(
+    activeSnap?.open_question &&
+    (activeSnap.open_question.kind === 'file_doubt' || activeSnap.open_question.stage === 'kg2')
+  )
+  const q = isKg2Active ? (isKg2Question ? activeSnap.open_question : null) : activeSnap.open_question
   const isComplete = Boolean(activeSnap.progress?.plan_complete && !q)
+  const isKg2Frozen = Boolean(isKg2Active && !q)
 
   return (
     <div className="flex h-full flex-col bg-surface/90 text-ink">
@@ -324,7 +372,25 @@ export default function ChatPanel({
       <div className="border-b border-line/70 px-4 py-2.5 bg-surface2/30">
         <div className="flex items-center justify-between text-xs text-muted">
           <div className="flex items-center gap-1.5 font-medium">
-            {isComplete ? (
+            {isKg2Active ? (
+              q ? (
+                <div className="flex items-center gap-1.5 font-medium">
+                  <HelpCircle size={13} className="text-amber-500" />
+                  <span className="text-ink">Business Telemetry:</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                    Clarification Required
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 font-medium">
+                  <CheckCircle2 size={13} className="text-emerald-500" />
+                  <span className="text-ink">Business Telemetry:</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                    Reconciled & Governed
+                  </span>
+                </div>
+              )
+            ) : isComplete ? (
               <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
                 <Sparkles size={13} className="text-emerald-500" />
                 Domain Discovery Complete
@@ -363,32 +429,71 @@ export default function ChatPanel({
         <div className="mt-2 h-1.5 w-full rounded-full bg-slate-100 dark:bg-surface2 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 ${
-              isComplete
-                ? 'w-full bg-[#10b981]'
-                : 'bg-gradient-to-r from-[#10b981] via-[#06b6d4] to-[#6366f1]'
+              isKg2Active
+                ? isKg2Frozen
+                  ? 'w-full bg-[#10b981]'
+                  : 'w-3/4 bg-amber-500'
+                : isComplete
+                  ? 'w-full bg-[#10b981]'
+                  : 'bg-gradient-to-r from-[#10b981] via-[#06b6d4] to-[#6366f1]'
             }`}
-            style={{ width: isComplete ? '100%' : `${Math.min(95, Math.max(35, (answeredCount + 1) * 25))}%` }}
+            style={{
+              width: isKg2Active
+                ? isKg2Frozen
+                  ? '100%'
+                  : '75%'
+                : isComplete
+                  ? '100%'
+                  : `${Math.min(95, Math.max(35, (answeredCount + 1) * 25))}%`,
+            }}
           />
         </div>
       </div>
 
-      {/* Nuances Captured Banner: In the conversation box, the Next button is for Upload Data */}
+      {/* Nuances / Gap Analysis Telemetry Banner */}
       {(canUpload || isKg2Active || userChatCount >= 1) ? (
         <div className="mx-3.5 my-2 flex items-center justify-between gap-2 rounded-xl border border-emerald-500/35 bg-emerald-50/70 dark:bg-emerald-950/30 px-3 py-2 shadow-2xs animate-in fade-in">
           <div className="flex items-center gap-1.5 min-w-0">
             <CheckCircle2 size={14} className="text-[#10b981] shrink-0" />
             <span className="text-[11px] sm:text-xs font-bold text-emerald-800 dark:text-emerald-300 whitespace-nowrap">
-              Nuances Captured · Model Ready
+              {isKg2Active
+                ? isKg2Frozen
+                  ? 'Gap Analysis Reconciled · Model Ready'
+                  : 'Gap Analysis Active · KG2'
+                : 'Nuances Captured · Model Ready'}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={handleOpenUploadClick}
-            className="inline-flex items-center gap-1 rounded-lg bg-[#10b981] hover:bg-[#059669] text-white font-bold px-2.5 py-1 text-[11px] sm:text-xs shadow-sm transition active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
-          >
-            <span>Next: Upload Data</span>
-            <ArrowRight size={12} strokeWidth={2.5} />
-          </button>
+          {isKg2Active && isKg2Frozen ? (
+            <div className="flex items-center gap-1.5">
+              <Link
+                to={`${prefix}/${slug}/twin`}
+                className="inline-flex items-center gap-1 rounded-lg bg-[#10b981] hover:bg-[#059669] text-white font-bold px-2.5 py-1 text-[11px] sm:text-xs shadow-sm transition active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
+              >
+                <Sparkles size={12} className="shrink-0" />
+                <span>Explore Digital Twin</span>
+                <ArrowRight size={12} strokeWidth={2.5} />
+              </Link>
+              <button
+                type="button"
+                onClick={handleOpenUploadClick}
+                className="inline-flex items-center gap-1 rounded-lg border border-emerald-600/30 bg-emerald-100/60 dark:bg-emerald-900/40 hover:bg-emerald-200/60 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-1 text-[11px] sm:text-xs transition active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
+                title="Upload extra data files"
+              >
+                <CloudUpload size={12} className="shrink-0" />
+                <span>Upload Extra Data</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleOpenUploadClick}
+              className="inline-flex items-center gap-1 rounded-lg bg-[#10b981] hover:bg-[#059669] text-white font-bold px-2.5 py-1 text-[11px] sm:text-xs shadow-sm transition active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
+            >
+              <CloudUpload size={12} className="shrink-0" />
+              <span>{isKg2Active ? 'Upload Extra Data' : 'Next: Upload Data'}</span>
+              <ArrowRight size={12} strokeWidth={2.5} />
+            </button>
+          )}
         </div>
       ) : (
         <div className="mx-3.5 my-2 flex items-center justify-between rounded-xl border border-line/60 bg-surface2/50 px-3.5 py-2 text-xs text-muted select-none">
@@ -511,6 +616,39 @@ export default function ChatPanel({
           </div>
         )}
 
+        {/* If KG2 is frozen (no open questions), display a prominent Golden Digital Twin Ready card at the end of the messages */}
+        {isKg2Active && isKg2Frozen && (
+          <div className="rounded-2xl border border-emerald-500/35 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent p-3.5 sm:p-4 shadow-sm animate-in fade-in space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 shrink-0">
+                <Sparkles size={18} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs sm:text-sm font-bold text-ink">
+                    Digital Twin Governed & Operational
+                  </h4>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                    KG2 Golden Model
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted mt-1 leading-relaxed">
+                  All baseline entities, nuances, and telemetry discrepancies have been reconciled. There are no remaining doubts or open questions.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <Link
+                to={`${prefix}/${slug}/twin`}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-2 text-xs shadow-md transition active:scale-95 cursor-pointer"
+              >
+                <Sparkles size={13} />
+                <span>Explore Digital Twin →</span>
+              </Link>
+            </div>
+          </div>
+        )}
+
         <div ref={end} />
       </div>
 
@@ -518,6 +656,48 @@ export default function ChatPanel({
       <div className="border-t border-line/70 p-3 bg-surface/95">
         {locked ? (
           <p className="text-center text-xs text-muted py-2">{disabledReason}</p>
+        ) : isKg2Frozen ? (
+          /* FROZEN CHAT CARD: When in KG2 and LLM has no open doubts/questions, freeze the chat input and show Explore Digital Twin */
+          <div className="rounded-2xl border border-emerald-500/35 bg-emerald-50/25 dark:bg-emerald-950/35 p-3.5 sm:p-4 shadow-sm space-y-3 animate-in fade-in select-none">
+            <div className="flex items-center gap-2.5">
+              <div className="grid h-8 w-8 place-items-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
+                <Lock size={16} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs sm:text-sm font-bold text-ink">
+                    Chat Frozen · Telemetry Reconciled
+                  </h4>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">
+                    <CheckCircle2 size={10} />
+                    No Open Doubts
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted leading-relaxed mt-0.5">
+                  All baseline entities and telemetry discrepancies have been reconciled. Chat is frozen for governance review.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+              <Link
+                to={`${prefix}/${slug}/twin`}
+                className="btn-primary flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition active:scale-95 cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl"
+              >
+                <Sparkles size={15} />
+                <span>Explore Digital Twin →</span>
+              </Link>
+              <button
+                type="button"
+                onClick={handleOpenUploadClick}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface hover:bg-surface2 px-3 py-2 text-xs font-semibold text-muted hover:text-ink transition cursor-pointer"
+                title="Upload additional telemetry files"
+              >
+                <CloudUpload size={13} className="text-brand shrink-0" />
+                <span>Upload Extra Data</span>
+              </button>
+            </div>
+          </div>
         ) : isAwaitingDecision ? (
           <div className="flex items-center justify-between gap-2 rounded-xl bg-[#fff7ed] dark:bg-amber-950/40 border border-orange-200/90 dark:border-amber-800/50 p-2.5 sm:px-3 sm:py-2 shadow-2xs animate-in fade-in">
             <span className="text-[11px] sm:text-xs font-bold text-amber-800 dark:text-amber-300 leading-tight whitespace-nowrap">

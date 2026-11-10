@@ -83,9 +83,6 @@ export default function DomainGraph() {
       const searchParams = new URLSearchParams(window.location.search)
       if (searchParams.get('stage') === 'kg1') return false
       if (searchParams.get('stage') === 'kg2') return true
-      if (slug && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(`afx_is_kg2_${slug}`) === 'true') {
-        return true
-      }
       return false
     } catch {
       return false
@@ -106,21 +103,16 @@ export default function DomainGraph() {
     const stage = searchParams.get('stage')
     const view = searchParams.get('view')
 
-    if (view === 'upload') {
-      setIsKg2Active(false)
-      setGapAnalysisMode(false)
-    } else if (stage === 'kg2') {
+    if (stage === 'kg2') {
       setIsKg2Active(true)
       setGapAnalysisMode(true)
-    } else if (stage === 'kg1' || view === 'graph') {
-      if (stage === 'kg1') {
-        setIsKg2Active(false)
-        setGapAnalysisMode(false)
-        if (slug) {
-          try {
-            sessionStorage.removeItem(`afx_is_kg2_${slug}`)
-          } catch {}
-        }
+    } else {
+      setIsKg2Active(false)
+      setGapAnalysisMode(false)
+      if (slug && stage === 'kg1') {
+        try {
+          sessionStorage.removeItem(`afx_is_kg2_${slug}`)
+        } catch {}
       }
     }
   }, [location.search, slug])
@@ -319,9 +311,34 @@ export default function DomainGraph() {
 
   const rawBase = aiGraph || g.data
 
-  // Node keys that belong to the KG1 baseline established during operational conversation
-  const kg1NodeKeys = useMemo(() => {
-    return new Set((rawBase?.nodes || []).map((n) => n.key || n.id))
+  // Separate baseline template nodes from client-specific / chat nuances nodes
+  const { templateNodes, chatNewNodes } = useMemo(() => {
+    const tNodes = []
+    const cNodes = []
+    const rawList = rawBase?.nodes || []
+
+    rawList.forEach((n) => {
+      const isClientOrNew =
+        n.role === 'client' ||
+        n.group_key === 'client' ||
+        n.group_name === 'Client-specific entities' ||
+        n.origin === 'user' ||
+        (n.added_in_version && n.added_in_version >= 2) ||
+        n.change_state === 'added' ||
+        String(n.id || n.key).startsWith('client-')
+
+      if (isClientOrNew) {
+        cNodes.push({
+          ...n,
+          isDiscrepancy: true,
+          role: 'client',
+        })
+      } else {
+        tNodes.push(n)
+      }
+    })
+
+    return { templateNodes: tNodes, chatNewNodes: cNodes }
   }, [rawBase?.nodes])
 
   // When in Gap Analysis (KG2), dynamically generate newly introduced node(s) ONLY if file was uploaded
@@ -338,7 +355,7 @@ export default function DomainGraph() {
     // If no file was uploaded, do NOT show any extra telemetry node or discrepancy!
     if (fileItems.length === 0) return []
 
-    const existingNodes = rawBase?.nodes || []
+    const existingNodes = [...templateNodes, ...chatNewNodes]
     const avgX = existingNodes.length > 0
       ? existingNodes.reduce((acc, n) => acc + (n.x || 450), 0) / existingNodes.length
       : 450
@@ -375,14 +392,14 @@ export default function DomainGraph() {
         y: maxY + 95 + idx * 55,
       }
     })
-  }, [isKg2Active, gapAnalysisMode, uploadedFiles, lastUploadedName, rawBase?.nodes])
+  }, [isKg2Active, gapAnalysisMode, uploadedFiles, lastUploadedName, templateNodes, chatNewNodes])
 
-  // Edges connecting newly introduced telemetry nodes to matching KG1 baseline nodes
+  // Edges connecting newly introduced telemetry nodes to matching baseline nodes
   const uploadedTelemetryEdges = useMemo(() => {
-    if (!isKg2Active || !gapAnalysisMode || !uploadedTelemetryNodes.length || !rawBase?.nodes?.length) return []
+    if (!isKg2Active || !gapAnalysisMode || !uploadedTelemetryNodes.length || !templateNodes.length) return []
 
     return uploadedTelemetryNodes.map((tNode, idx) => {
-      const targetNode = rawBase.nodes[idx % rawBase.nodes.length] || rawBase.nodes[0]
+      const targetNode = templateNodes[idx % templateNodes.length] || templateNodes[0]
       const tgtId = targetNode.key || targetNode.id
       return {
         id: `edge-${tNode.id}-${tgtId}`,
@@ -395,21 +412,30 @@ export default function DomainGraph() {
         kind: 'telemetry',
       }
     })
-  }, [isKg2Active, gapAnalysisMode, uploadedTelemetryNodes, rawBase?.nodes])
+  }, [isKg2Active, gapAnalysisMode, uploadedTelemetryNodes, templateNodes])
 
-  // Merged Graph (KG2): Merges KG1 conversation baseline with uploaded data
+  // Graph state:
+  // - In KG1 (Discovery / Core Nuances chat): Baseline model template ONLY. Client-specific new entities are hidden.
+  // - In KG2 (Business Telemetry / Gap Analysis): Merged graph showing baseline template + client entities from chat nuances + uploaded telemetry
   const base = useMemo(() => {
     if (!rawBase) return null
     if (!isKg2Active || !gapAnalysisMode) {
-      return rawBase
+      const tKeys = new Set(templateNodes.map((n) => n.key || n.id))
+      return {
+        ...rawBase,
+        version: { number: 1, label: 'KG1' },
+        nodes: templateNodes,
+        edges: (rawBase.edges || []).filter((e) => tKeys.has(e.source) && tKeys.has(e.target)),
+      }
     }
+
     return {
       ...rawBase,
       version: { number: 2, label: 'KG2' },
-      nodes: [...(rawBase.nodes || []), ...uploadedTelemetryNodes],
+      nodes: [...templateNodes, ...chatNewNodes, ...uploadedTelemetryNodes],
       edges: [...(rawBase.edges || []), ...uploadedTelemetryEdges],
     }
-  }, [rawBase, isKg2Active, gapAnalysisMode, uploadedTelemetryNodes, uploadedTelemetryEdges])
+  }, [rawBase, isKg2Active, gapAnalysisMode, templateNodes, chatNewNodes, uploadedTelemetryNodes, uploadedTelemetryEdges])
 
   const groups = useMemo(() => {
     const m = new Map()
@@ -485,7 +511,13 @@ export default function DomainGraph() {
     const addedKeys = new Set(diffData?.nodes_added?.map((n) => n.key || n.id) || [])
     const missingKeys = new Set(diffData?.nodes_removed?.map((n) => n.key || n.id) || [])
 
-    // Newly introduced node(s) from the uploaded data are marked as discrepancies
+    // 1. Newly introduced entities from KG1 chat nuances are discrepancies outside template (highlighted in RED)
+    chatNewNodes.forEach((n) => {
+      addedKeys.add(n.id)
+      addedKeys.add(n.key)
+    })
+
+    // 2. Newly introduced node(s) from uploaded telemetry are discrepancies (highlighted in RED)
     uploadedTelemetryNodes.forEach((n) => {
       addedKeys.add(n.id)
       addedKeys.add(n.key)
@@ -493,7 +525,15 @@ export default function DomainGraph() {
 
     base?.nodes?.forEach((n) => {
       const k = n.key || n.id
-      if (n.kind === 'datasource' || n.origin === 'telemetry' || n.isDiscrepancy) {
+      if (
+        n.kind === 'datasource' ||
+        n.origin === 'telemetry' ||
+        n.role === 'client' ||
+        n.origin === 'user' ||
+        n.group_key === 'client' ||
+        n.group_name === 'Client-specific entities' ||
+        n.isDiscrepancy
+      ) {
         addedKeys.add(k)
       }
       if (n.isMissing) {
@@ -501,16 +541,14 @@ export default function DomainGraph() {
       }
     })
 
-    // Protection: All nodes from the chat conversation baseline (KG1) are protected from being marked as added!
-    // Matching elements from chat remain neutral.
-    kg1NodeKeys.forEach((k) => {
-      if (!diffData?.nodes_removed?.some((r) => (r.key || r.id) === k)) {
-        addedKeys.delete(k)
-      }
+    // Protection: All standard template nodes remain NEUTRAL matching elements (never in addedKeys)
+    templateNodes.forEach((n) => {
+      const k = n.key || n.id
+      addedKeys.delete(k)
     })
 
     return { addedKeys, missingKeys }
-  }, [isKg2Active, gapAnalysisMode, diffData, uploadedTelemetryNodes, base?.nodes, kg1NodeKeys])
+  }, [isKg2Active, gapAnalysisMode, diffData, chatNewNodes, uploadedTelemetryNodes, base?.nodes, templateNodes])
 
   const gapStats = useMemo(() => {
     const newCount = discrepancies.addedKeys.size
@@ -536,21 +574,28 @@ export default function DomainGraph() {
     const url = new URL(window.location.href)
     if (view === 'upload') {
       url.searchParams.set('view', 'upload')
-      url.searchParams.delete('stage')
-      setIsKg2Active(false)
-      setGapAnalysisMode(false)
+      if (isKg2Active) {
+        url.searchParams.set('stage', 'kg2')
+      } else {
+        url.searchParams.set('stage', 'kg1')
+      }
     } else {
       url.searchParams.delete('view')
+      if (isKg2Active) {
+        url.searchParams.set('stage', 'kg2')
+      } else {
+        url.searchParams.set('stage', 'kg1')
+      }
     }
-    window.history.replaceState({}, '', url.toString())
+    nav(`${location.pathname}?${url.searchParams.toString()}`, { replace: true })
     window.dispatchEvent(
       new CustomEvent('afx-workflow-state', {
-        detail: { slug, activeLeftView: view, isKg2: view === 'upload' ? false : isKg2Active },
+        detail: { slug, activeLeftView: view, isKg2: isKg2Active },
       })
     )
   }
 
-  const handleUploadComplete = (fileName) => {
+  const handleUploadComplete = async (fileName) => {
     const targetFileName = fileName || uploadedFiles[0]?.name
     if (!targetFileName) return
     const procId = 'proc-' + Date.now()
@@ -573,7 +618,7 @@ export default function DomainGraph() {
       id: procId,
       role: 'assistant',
       kind: 'system',
-      content: `Let me read your data and do a deep dive into “${targetFileName}”... I don't even have a coffee break, but analyzing this data is pure dopamine! Checking schemas and reconciling data with operational baseline.`,
+      content: `Reading and reconciling “${targetFileName}” against your operational template... Parsing columns, verifying data types, and checking mapping confidence.`,
       meta: {
         file_name: targetFileName,
         status: 'processing',
@@ -589,17 +634,27 @@ export default function DomainGraph() {
     // 3. Reconcile telemetry data: Check for LLM doubts vs. Clean reconciliation
     setTimeout(async () => {
       setIsProcessingFiles(false)
+
+      let fileDetail = null
       try {
-        const convRes = await chat.get(slug).catch(() => null)
-        // If LLM has doubts regarding the CSV, present the question in chat for user answer
-        if (convRes?.open_question || convRes?.messages?.some((m) => m.meta?.kind === 'csv_doubt')) {
-          setSnap(convRes)
-          setActiveLeftView('graph')
-          return
+        const fileListRes = await filesApi.list(slug).catch(() => null)
+        const targetFile =
+          fileListRes?.files?.find((f) => f.name === targetFileName || f.original_name === targetFileName) ||
+          fileListRes?.files?.[0]
+        if (targetFile?.id) {
+          fileDetail = await filesApi.get(targetFile.id).catch(() => null)
         }
       } catch {}
 
-      // If no doubt question or clean match, transition directly to KG2 Gap Analysis
+      const unmatchedTerms = fileDetail?.mapping?.unmatched || []
+      const convRes = await chat.get(slug).catch(() => null)
+      const hasDoubt = Boolean(
+        convRes?.open_question ||
+        convRes?.messages?.some((m) => m.meta?.kind === 'csv_doubt') ||
+        unmatchedTerms.length > 0
+      )
+
+      // Advance to KG2 (Gap Analysis stage)
       setIsKg2Active(true)
       setGapAnalysisMode(true)
       if (slug) {
@@ -612,7 +667,7 @@ export default function DomainGraph() {
       const url = new URL(window.location.href)
       url.searchParams.set('stage', 'kg2')
       url.searchParams.delete('view')
-      window.history.replaceState({}, '', url.toString())
+      nav(`${location.pathname}?${url.searchParams.toString()}`, { replace: true })
       setActiveLeftView('graph')
 
       window.dispatchEvent(
@@ -626,28 +681,77 @@ export default function DomainGraph() {
       const nCount = Math.max(1, gapStats.newCount)
       const matchCount = Math.max(1, gapStats.matchedCount)
 
-      const gapAnalysisMsg = {
-        id: 'gap-analysis-' + Date.now(),
-        role: 'assistant',
-        kind: 'gap_analysis',
-        content: `Comparing uploaded data (“${targetFileName}”) with your operational conversation baseline (KG1).\n\n- Discrepancy (RED): ${nCount} newly introduced telemetry node(s) from your uploaded file\n${mCount > 0 ? `- Missing Items (RED): ${mCount} missing element(s)\n` : ''}- Matched Elements (NEUTRAL): ${matchCount} verified entity(ies) from your chat\n\nThe extra node from your uploaded file is highlighted in RED on the graph, while all matching elements remain neutral.`,
-        created_at: new Date().toISOString(),
-      }
+      if (hasDoubt) {
+        // If LLM has doubts regarding unmapped columns / terms, ask clarification question in chat
+        const unmappedList =
+          unmatchedTerms.length > 0
+            ? unmatchedTerms.slice(0, 3)
+            : ['unmapped_telemetry_variance', 'custom_data_field']
+        const doubtQuestionText = `I analyzed “${targetFileName}” and reconciled baseline entities into KG2. However, I have doubts regarding some unmapped telemetry fields:\n\n• ${unmappedList.join(
+          ', '
+        )}\n\nHow does your organization categorize these fields in your workflow? You can type your answer below to refine the mapping, or click 'Upload Extra Data' to upload an additional reference sheet.`
 
-      setSnap((s) => ({
-        ...s,
-        messages: (s?.messages || [])
-          .map((msg) =>
-            msg.id === procId
-              ? {
-                  ...msg,
-                  content: `System Processing Complete: “${targetFileName}” parsed and reconciled with operational baseline.`,
-                  meta: { ...msg.meta, status: 'completed' },
-                }
-              : msg
-          )
-          .concat(gapAnalysisMsg),
-      }))
+        const doubtMsg = {
+          id: 'doubt-' + Date.now(),
+          role: 'assistant',
+          kind: 'question',
+          content: doubtQuestionText,
+          meta: {
+            kind: 'file_doubt',
+            file_name: targetFileName,
+            unmapped: unmappedList,
+          },
+          created_at: new Date().toISOString(),
+        }
+
+        setSnap((s) => ({
+          ...s,
+          open_question: {
+            text: `How does your organization categorize these unmapped fields from “${targetFileName}”? (${unmappedList.join(
+              ', '
+            )})`,
+            kind: 'file_doubt',
+            field_names: unmappedList,
+          },
+          messages: (s?.messages || [])
+            .map((msg) =>
+              msg.id === procId
+                ? {
+                    ...msg,
+                    content: `System Processing Complete: “${targetFileName}” parsed. Discrepancies identified in Gap Analysis (KG2).`,
+                    meta: { ...msg.meta, status: 'completed' },
+                  }
+                : msg
+            )
+            .concat(doubtMsg),
+        }))
+      } else {
+        const gapAnalysisMsg = {
+          id: 'gap-analysis-' + Date.now(),
+          role: 'assistant',
+          kind: 'gap_analysis',
+          content: `Comparing uploaded data (“${targetFileName}”) with your operational conversation baseline (KG1).\n\n- Discrepancy (RED): ${nCount} newly introduced telemetry node(s) outside your template\n${
+            mCount > 0 ? `- Missing Items (RED): ${mCount} missing element(s)\n` : ''
+          }- Matched Elements (NEUTRAL): ${matchCount} verified entity(ies) from your chat\n\nThe extra node from your uploaded file is highlighted in RED on the graph, while all matching elements remain neutral. You can answer questions or click 'Upload Extra Data' anytime to add more files.`,
+          created_at: new Date().toISOString(),
+        }
+
+        setSnap((s) => ({
+          ...s,
+          open_question: null,
+          messages: (s?.messages || [])
+            .map((msg) =>
+              msg.id === procId
+                ? {
+                    ...msg,
+                    content: `System Processing Complete: “${targetFileName}” parsed and reconciled with operational baseline.`,
+                    meta: { ...msg.meta, status: 'completed' },
+                  }
+                : msg
+            )
+            .concat(gapAnalysisMsg),
+        }))
+      }
     }, 2000)
   }
 
@@ -820,32 +924,40 @@ export default function DomainGraph() {
             </span>
           )}
 
-          {/* Red Gap Analysis indicator button on top (Only shown AFTER files are uploaded, never from the beginning) */}
-          {uploadedFiles.length > 0 && !isKg2Active && activeLeftView !== 'upload' && (
-            <div className="flex items-center gap-2.5 ml-auto">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsKg2Active(true)
-                  setGapAnalysisMode(true)
-                  const url = new URL(window.location.href)
-                  url.searchParams.set('stage', 'kg2')
-                  url.searchParams.delete('view')
-                  window.history.replaceState({}, '', url.toString())
-                  window.dispatchEvent(
-                    new CustomEvent('afx-workflow-state', {
-                      detail: { slug, activeLeftView: 'graph', isKg2: true, version: 2 },
-                    })
-                  )
-                }}
-                className="inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-xs sm:text-[13px] font-bold transition shadow-sm cursor-pointer bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-rose-500/25 select-none"
-                title="View Gap Analysis"
-              >
-                <AlertTriangle size={15} strokeWidth={2.4} />
-                <span>Gap Analysis</span>
-              </button>
-            </div>
-          )}
+          {/* Red Gap Analysis button at the very end of the line (in KG1, clicking navigates to KG2; persists after file upload) */}
+          <div className="flex items-center gap-2.5 ml-auto">
+            <button
+              type="button"
+              onClick={() => {
+                setIsKg2Active(true)
+                setGapAnalysisMode(true)
+                setActiveLeftView('graph')
+                if (slug) {
+                  try {
+                    sessionStorage.setItem(`afx_is_kg2_${slug}`, 'true')
+                  } catch {}
+                }
+                const url = new URL(window.location.href)
+                url.searchParams.set('stage', 'kg2')
+                url.searchParams.delete('view')
+                nav(`${location.pathname}?${url.searchParams.toString()}`, { replace: true })
+                window.dispatchEvent(
+                  new CustomEvent('afx-workflow-state', {
+                    detail: { slug, activeLeftView: 'graph', isKg2: true, version: 2 },
+                  })
+                )
+              }}
+              className={`inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-xs sm:text-[13px] font-bold transition-all shadow-sm select-none ${
+                isKg2Active
+                  ? 'bg-[#ef4444] text-white ring-2 ring-rose-400/50 shadow-rose-500/30'
+                  : 'bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-rose-500/25 cursor-pointer active:scale-95'
+              }`}
+              title={isKg2Active ? 'Gap Analysis Active (KG2)' : 'Go to Gap Analysis (KG2)'}
+            >
+              <AlertTriangle size={15} strokeWidth={2.4} />
+              <span>{isKg2Active ? 'Gap Analysis Active' : 'Gap Analysis'}</span>
+            </button>
+          </div>
         </div>
       ) : (
         <div className="mb-4 flex flex-col gap-2.5 rounded-2xl border border-line bg-surface/70 p-3 sm:p-3.5 backdrop-blur shadow-2xs">
@@ -894,7 +1006,7 @@ export default function DomainGraph() {
         </div>
       )}
 
-      {/* Dedicated Data Gap Analysis Evolution Banner (matching reference picture) */}
+      {/* Dedicated Data Gap Analysis Evolution Banner */}
       {isKg2Active && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface/80 p-3 sm:p-3.5 backdrop-blur shadow-2xs select-none animate-in fade-in duration-200">
           <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
@@ -908,15 +1020,6 @@ export default function DomainGraph() {
             <span className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
               {gapStats.matchedCount} Matched
             </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Link
-              to={location.pathname.startsWith('/finance') ? `/finance/${slug}/finalize` : `/fmcg/${slug}/finalize`}
-              className="btn-primary btn-sm font-bold gap-1 text-xs"
-            >
-              <span>Next: Finalize Twin →</span>
-            </Link>
           </div>
         </div>
       )}

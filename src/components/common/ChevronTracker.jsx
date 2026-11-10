@@ -27,7 +27,7 @@ export function useChevronTrackerState() {
     if (
       ['fmcg', 'finance'].includes(firstPart) &&
       parts[1] &&
-      !['overview', 'customize', 'finalize', 'telemetry'].includes(parts[1])
+      !['overview', 'customize', 'finalize', 'telemetry', 'twin'].includes(parts[1])
     ) {
       return parts[1]
     }
@@ -76,7 +76,7 @@ export function useChevronTrackerState() {
   // Determine workflow states
   const isIndustryStep = path.startsWith('/apps')
   const isDomainSelected = Boolean(slug)
-  const isFinalize = path.includes('/finalize') || path.includes('/telemetry')
+  const isFinalize = path.includes('/finalize') || path.includes('/telemetry') || path.includes('/twin')
 
   const searchParams = new URLSearchParams(location.search)
   const isExplicitKg1 = searchParams.get('stage') === 'kg1'
@@ -98,22 +98,23 @@ export function useChevronTrackerState() {
   )
 
   const isKg2Active = Boolean(
-    !isExplicitKg1 && (
-      isExplicitKg2 ||
-      workflowDetail?.isKg2 === true ||
-      (workflowDetail?.version && workflowDetail.version >= 2) ||
-      isSessionKg2
+    workflowDetail?.isKg2 === true ||
+    (workflowDetail?.version && workflowDetail.version >= 2) ||
+    isExplicitKg2 ||
+    (!isExplicitKg1 && isSessionKg2)
+  )
+
+  const isUploadView = Boolean(
+    !isKg2Active && (
+      searchParams.get('view') === 'upload' ||
+      workflowDetail?.activeLeftView === 'upload'
     )
   )
 
-  const isUploadView = searchParams.get('view') === 'upload' || workflowDetail?.activeLeftView === 'upload'
-
   // Check if user has transitioned to KG2 (via Proceed to Gap Analysis button click) or is in Upload view
   const isUploadOrKg2 = Boolean(
-    !isExplicitKg1 && (
-      isKg2Active ||
-      isUploadView
-    )
+    isKg2Active ||
+    (!isExplicitKg1 && isUploadView)
   )
 
   // Calculate dynamic next step action button right to Review chevron for new users

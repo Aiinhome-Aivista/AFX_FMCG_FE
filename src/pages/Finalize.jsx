@@ -1008,7 +1008,7 @@ export default function Finalize() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Link
-                        to={`${prefix}/${slug}/telemetry`}
+                        to={`${prefix}/${slug}/twin`}
                         className="btn-primary flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold"
                       >
                         <span>Explore Digital Twin</span>

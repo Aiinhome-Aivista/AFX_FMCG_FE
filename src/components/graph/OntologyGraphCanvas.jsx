@@ -68,9 +68,11 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
         n.d === activeDomain ||
         n.d === 'spine' ||
         n.role === 'client' ||
+        n.role === 'telemetry' ||
         n.change_state === 'added' ||
         n.change_state === 'modified' ||
         gKey.includes('client') ||
+        gKey.includes('telemetry') ||
         gKey.includes('custom')
       ) {
         s.add(n.id)
@@ -634,21 +636,33 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
           {Object.entries(domMetas).map(([d, m]) => {
             if (!m) return null
             const isTargetDomain = activeDomain === d
+            const isClientOrTelemetry =
+              d === 'client' ||
+              d === 'telemetry' ||
+              m.n === 'Client-specific entities' ||
+              m.n === 'Business Telemetry'
+            const haloColor = gapAnalysis && isClientOrTelemetry ? '#EF4444' : m.c
             return (
               <g key={`halo-${d}`} className="pointer-events-none transition-opacity">
                 <circle
                   cx={m.cx}
                   cy={m.cy}
                   r={m.r + 72}
-                  fill={m.c}
-                  opacity={isTargetDomain ? (isDark ? '0.15' : '0.11') : (isDark ? '0.065' : '0.055')}
+                  fill={haloColor}
+                  opacity={
+                    gapAnalysis && isClientOrTelemetry
+                      ? isDark ? '0.18' : '0.12'
+                      : isTargetDomain
+                        ? isDark ? '0.15' : '0.11'
+                        : isDark ? '0.065' : '0.055'
+                  }
                 />
                 <text
                   x={m.cx}
                   y={m.cy + m.r + 100}
                   textAnchor="middle"
-                  fill={m.c}
-                  opacity={isTargetDomain ? '1' : '0.85'}
+                  fill={haloColor}
+                  opacity={isTargetDomain || (gapAnalysis && isClientOrTelemetry) ? '1' : '0.85'}
                   className="select-none font-bold"
                   style={{
                     fontFamily: "'Barlow', 'Inter', sans-serif",
@@ -776,14 +790,28 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
               const opacity = isDim ? 0.1 : isNeighbour ? 0.38 : 1
 
               // Check if node is a discrepancy during Gap Analysis (KG1 vs KG2)
+              const isClientEntity =
+                n.role === 'client' ||
+                n.origin === 'user' ||
+                n.group_key === 'client' ||
+                n.group_name === 'Client-specific entities' ||
+                String(n.id || n.key).startsWith('client-')
+
+              const isTelemetryNode =
+                n.kind === 'datasource' ||
+                n.origin === 'telemetry' ||
+                n.role === 'telemetry' ||
+                n.group_key === 'telemetry'
+
               const isAddedDiscrepancy = gapAnalysis && (
                 discrepancies?.addedKeys?.has(n.id) ||
                 discrepancies?.addedKeys?.has(n.key) ||
-                n.kind === 'datasource' ||
-                n.origin === 'telemetry' ||
-                (n.added_in_version && n.added_in_version >= 2 && n.origin !== 'chat') ||
+                isTelemetryNode ||
+                isClientEntity ||
+                (n.added_in_version && n.added_in_version >= 2) ||
                 (n.isDiscrepancy && !n.isMissing)
-              )
+              ) && !(n.origin === 'reference' && !n.isDiscrepancy)
+
               const isMissingDiscrepancy = gapAnalysis && (
                 discrepancies?.missingKeys?.has(n.id) ||
                 discrepancies?.missingKeys?.has(n.key) ||
@@ -883,15 +911,29 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                     fill={dotColor}
                   />
                   {/* Status badge: Red for discrepancies in Gap Analysis, or regular status */}
-                  {gapAnalysis && isDiscrepancy && (
-                    <g transform={`translate(${n.x + n.w / 2 - (isMissingDiscrepancy ? 45 : 55)}, ${n.y - n.h / 2 - 8})`}>
-                      <rect width={isMissingDiscrepancy ? 54 : 70} height={16} rx={5} fill="#EF4444" />
-                      <text x={isMissingDiscrepancy ? 27 : 35} y={11.5} textAnchor="middle" fill="#FFFFFF" fontSize="8" fontWeight="bold" fontFamily="system-ui">
-                        {isMissingDiscrepancy ? 'MISSING' : 'EXTRA NODE'}
-                      </text>
-                    </g>
-                  )}
-                  {!gapAnalysis && n.change_state === 'added' && (
+                  {gapAnalysis && isDiscrepancy && (() => {
+                    const badgeText = isMissingDiscrepancy
+                      ? 'MISSING'
+                      : (isClientEntity ? 'NEW ENTITY' : 'EXTRA NODE')
+                    const badgeWidth = badgeText === 'NEW ENTITY' ? 76 : badgeText === 'EXTRA NODE' ? 70 : 54
+                    return (
+                      <g transform={`translate(${n.x + n.w / 2 - (badgeWidth - 14)}, ${n.y - n.h / 2 - 8})`}>
+                        <rect width={badgeWidth} height={16} rx={5} fill="#EF4444" />
+                        <text
+                          x={badgeWidth / 2}
+                          y={11.5}
+                          textAnchor="middle"
+                          fill="#FFFFFF"
+                          fontSize="8"
+                          fontWeight="bold"
+                          fontFamily="system-ui"
+                        >
+                          {badgeText}
+                        </text>
+                      </g>
+                    )
+                  })()}
+                  {!gapAnalysis && n.change_state === 'added' && !isClientEntity && (
                     <g transform={`translate(${n.x + n.w / 2 - 28}, ${n.y - n.h / 2 - 7})`}>
                       <rect width={32} height={15} rx={5} fill="#10B981" />
                       <text x={16} y={11} textAnchor="middle" fill="#FFFFFF" fontSize="9" fontWeight="bold" fontFamily="system-ui">
