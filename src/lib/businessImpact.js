@@ -1,139 +1,139 @@
 /**
- * Business Impact & Plain Language ("Pati Bangla") Engine for Frontend
+ * Business Impact & Plain Language Engine for Frontend
  * Converts technical diffs and validation gaps into plain language explanations,
  * business impact assessments, and clear action items for decision makers.
  */
 
 export const BUSINESS_TERM_KNOWLEDGE = {
   tradespend: {
-    title_bn: 'ট্রেড প্রমোশন ও রিটেইলার ডিসকাউন্ট স্কিম',
+    title: 'Trade Promotion & Retailer Scheme Spend',
     title_en: 'Trade Promotion & Retailer Scheme Spend',
-    explanation_bn: 'ডিস্ট্রিবিউটর, ডিলার বা রিটেইলারদের দেওয়া বিশেষ ডিসকাউন্ট, ক্যাশ ব্যাক বা ফ্রি স্যাম্পল অফার।',
-    impact_bn: 'ইনভয়েসের পর কত টাকা ডিসকাউন্টে খরচ হলো তা ট্র্যাক করা যাবে না। বাজেট ছাড়া অতিরিক্ত ছাড় চলে গেলে কোম্পানির মোট মার্জিন বা মুনাফা কমে যাবে।',
-    action_bn: 'আপনার ব্যবসায় ডিলার স্কিম বা ক্যাশ ডিসকাউন্ট থাকলে এটি মডেলে বহাল রাখুন। ফিক্সড প্রাইসে সেল হলে বাদ দিতে পারেন।',
+    explanation: 'Special discounts, cashbacks, or free sampling schemes offered to distributors and retailers.',
+    impact: 'Post-invoice scheme costs cannot be tracked, risking budget overruns and margin erosion.',
+    action: 'Retain this if your business utilizes dealer schemes or cash discounts.',
     severity: 'high',
   },
   promoplan: {
-    title_bn: 'প্রমোশনাল ক্যাম্পেইন ও অফার প্ল্যানিং',
+    title: 'Trade Promotional Campaign Planning',
     title_en: 'Trade Promotional Campaign Planning',
-    explanation_bn: 'উৎসব বা সিজনভিত্তিক প্রমোশনাল অফার ও স্কিম পূর্বপরিকল্পনা করার কাঠামো।',
-    impact_bn: 'কোন স্কিমে কত বিক্রি বাড়ল এবং স্কিমের খরচ পুষিয়ে লাভ হলো কিনা (Promo ROI) তা যাচাই করা অসম্ভব হবে।',
-    action_bn: 'ভবিষ্যতে প্রমোশনের লাভ-ক্ষতি হিসাব করতে চাইলে এটি অন্তর্ভুক্ত রাখা অত্যন্ত জরুরি।',
+    explanation: 'Framework for planning seasonal and festive promotional campaigns and retailer schemes.',
+    impact: 'Measuring scheme uplift, promo spend, and promo ROI becomes impossible without this entity.',
+    action: 'Keep this entity to evaluate promotional profitability and sales uplift.',
     severity: 'high',
   },
   grosstonetwaterfall: {
-    title_bn: 'গ্রস থেকে আসল নেট আয় হিসাব (Gross-to-Net)',
+    title: 'Gross-to-Net Revenue Reconciliation',
     title_en: 'Gross-to-Net Revenue Reconciliation',
-    explanation_bn: 'ইনভয়েসের মোট মূল্য (Gross) থেকে ডিসকাউন্ট, ড্যামেজ রিটার্ন ও ট্যাক্স বাদ দিয়ে ব্যাংকে জমা হওয়া আসল রেভিনিউ গণনা।',
-    impact_bn: 'এই নিয়ম পরিবর্তিত হলে ব্যালেন্স শিটে মোট বিক্রির সাথে ব্যাংকে ঢোকা আসল টাকার অমিল হবে।',
-    action_bn: 'ক্যাশ ফ্লো এবং ফাইন্যান্সিয়াল অডিটের সুরক্ষার জন্য এই ক্যালকুলেশন রুল সতর্কতার সাথে যাচাই করুন।',
+    explanation: 'Reconciles gross invoice revenue down to net banked revenue after deducting discounts, damage returns, and taxes.',
+    impact: 'Alterations will cause discrepancies between balance sheet gross billings and actual collected cash.',
+    action: 'Carefully review and maintain this rule to protect audit compliance and cash flow visibility.',
     severity: 'high',
   },
   onoffinvoice: {
-    title_bn: 'অন-ইনভয়েস বনাম অফ-ইনভয়েস ছাড় পলিসি',
+    title: 'On-Invoice vs Off-Invoice Deduction Policy',
     title_en: 'On-Invoice vs Off-Invoice Deduction Policy',
-    explanation_bn: 'বিলের ভেতরে দেওয়া তাৎক্ষণিক ছাড় এবং বিলের বাইরে মাস শেষে দেওয়া বিশেষ রিবেট বা ইনসেন্টিভ।',
-    impact_bn: 'বিল বা রসিদের বাইরে পরে দেওয়া কমিশন ও রিবেট ট্র্যাক না হলে অ্যাকাউন্টিংয়ে অসঙ্গতি ও রাজস্ব ফাঁক তৈরি হবে।',
-    action_bn: 'যদি ডিলারদের বছর বা মাস শেষে টার্নওভার রিবেট দেওয়ার নিয়ম থাকে তবে এটি রাখুন।',
+    explanation: 'Distinguishes upfront line-item discounts from retrospective turnover rebates and incentives.',
+    impact: 'Untracked retrospective rebates cause revenue leakages and accounting mismatches.',
+    action: 'Keep this if your commercial policy provides periodic turnover or volume rebates.',
     severity: 'medium',
   },
   accrualbasis: {
-    title_bn: 'বকেয়া ও অগ্রিম সমন্বয়ের নিয়ম (Accrual Accounting)',
+    title: 'Accrual Accounting Principle',
     title_en: 'Accrual Accounting Principle',
-    explanation_bn: 'মাল ডেলিভারির সাথে সাথেই খাতায় খরচ বা আয় তোলা, টাকা হাতে পাওয়ার জন্য অপেক্ষা না করা।',
-    impact_bn: 'এটি বাদ দিলে যেদিন ক্যাশ টাকা লেনদেন হবে শুধু সেদিন হিসাব হবে, ফলে চলতি মাসের লাভ-ক্ষতির চিত্র ভুল দেখাবে।',
-    action_bn: 'স্ট্যান্ডার্ড অ্যাকাউন্টিং এবং কর অডিটের জন্য অ্যাক্রুয়াল পলিসি সচল রাখা শ্রেয়।',
+    explanation: 'Recognizes expenses and revenues upon fulfillment rather than waiting for cash settlement.',
+    impact: 'Without accruals, monthly profit & loss reports will distort true commercial performance.',
+    action: 'Maintain accruals for standard accounting and statutory financial audit compliance.',
     severity: 'medium',
   },
   deductionmethod: {
-    title_bn: 'ডিসকাউন্ট কর্তনের পদ্ধতি (Deduction Method)',
+    title: 'Deduction Method Rules',
     title_en: 'Deduction Method Rules',
-    explanation_bn: 'পার্সেন্টেজ হারে নাকি ফিক্সড টাকায় ডিসকাউন্ট কাটা হবে তার ফর্মুলা।',
-    impact_bn: 'নির্দিষ্ট ফর্মুলা না থাকলে বিলিং সিস্টেম স্বয়ংক্রিয়ভাবে ডিসকাউন্ট কাটতে পারবে না, ম্যানুয়াল ভুলের সুযোগ তৈরি হবে।',
-    action_bn: 'বিলিং সফটওয়্যার ও ইআরপির সাথে মেলানোর জন্য নির্দিষ্ট ফর্মুলা বহাল রাখুন।',
+    explanation: 'Standardizes formula logic for percentage-based vs fixed deduction computations.',
+    impact: 'Without defined logic, automated ERP/billing reconciliation fails and causes billing errors.',
+    action: 'Retain deduction rules to align with ERP billing systems.',
     severity: 'medium',
   },
   secondarysales: {
-    title_bn: 'ডিস্ট্রিবিউটর সেকেন্ডারি সেলস (দোকানে আসল বিক্রি)',
+    title: 'Secondary Sales (Distributor to Retail Outlet)',
     title_en: 'Secondary Sales (Distributor to Retail Outlet)',
-    explanation_bn: 'কোম্পানি থেকে ডিস্ট্রিবিউটরের গুদামে মাল যাওয়ার পর সেখান থেকে রিটেইল দোকানে প্রতিদিন কত বিক্রি হচ্ছে।',
-    impact_bn: 'দোকানে কী বিক্রি হচ্ছে না জানলে বাজারে কোন মালের ঘাটতি বা ওভারস্টক আছে বোঝা যাবে না। এতে ফ্যাক্টরিতে ভুল পরিমাণের উৎপাদন হতে পারে।',
-    action_bn: 'মার্কেটের রিয়েল ডিমান্ড বুঝতে সেকেন্ডারি সেলস ডেটা পয়েন্ট আবশ্যক।',
+    explanation: 'Tracks daily sales execution and off-take from distributor warehouses to retail stores.',
+    impact: 'Lack of secondary sales visibility leads to bullwhip effects, stockouts, or overproduction.',
+    action: 'Essential for demand sensing and factory replenishment scheduling.',
     severity: 'high',
   },
   primarysales: {
-    title_bn: 'কোম্পানির প্রাইমারি সেলস ও ডিলার ইনভয়েসিং',
+    title: 'Primary Sales (Company Billing to Distributors)',
     title_en: 'Primary Sales (Company Billing to Distributors)',
-    explanation_bn: 'ফ্যাক্টরি বা সিপিসি ডিপো থেকে ডিস্ট্রিবিউটর বা ডিলারের কাছে সরাসরি পণ্যের চালান পাঠানো।',
-    impact_bn: 'এটি কোম্পানির প্রাথমিক রাজস্ব প্রবাহ নির্দেশ করে। এটি ব্যাহত হলে কোম্পানির টপ-লাইন রেভিনিউ রিপোর্টিং বন্ধ হয়ে যাবে।',
-    action_bn: 'কোম্পানির নিজস্ব বিলিং ও অ্যাকাউন্টস মেলানোর জন্য এটি মডেলে অপরিবর্তিত রাখুন।',
+    explanation: 'Direct shipments and billing invoices from factory/depots to authorized distribution partners.',
+    impact: 'Primary sales reflect the core top-line revenue engine of the business.',
+    action: 'Keep intact to maintain financial synchronization with enterprise ledger.',
     severity: 'high',
   },
   outlet: {
-    title_bn: 'রিটেইল আউটলেট ও স্টোর মাস্টার ডেটা',
+    title: 'Retail Outlet Master & Coverage',
     title_en: 'Retail Outlet Master & Coverage',
-    explanation_bn: 'মুদি দোকান, ফার্মেসি বা সুপারশপের নাম, অবস্থান ও ক্যাটাগরি।',
-    impact_bn: 'দোকানের মাস্টার ডেটা না থাকলে সেলস রিপ্রেজেন্টেটিভদের (SR) রুট প্ল্যান ও অর্ডার কালেকশনের কার্যকারিতা মনিটর করা যাবে না।',
-    action_bn: 'ফিল্ড ফোর্সের দক্ষতা এবং আউটলেট পেনিট্রেশন ট্র্যাক করতে এটি অবশ্যই বজায় রাখুন।',
+    explanation: 'Master registry of grocery stores, pharmacies, supermarkets, locations, and trade channels.',
+    impact: 'Missing outlet master data impairs beat planning, sales rep tracking, and store penetration metrics.',
+    action: 'Maintain outlet hierarchy for field sales execution and route-to-market visibility.',
     severity: 'high',
   },
   customeroutlet: {
-    title_bn: 'গ্রাহক আউটলেট ও রিটেইলার প্রোফাইল',
+    title: 'Customer Outlet & Retailer Profile',
     title_en: 'Customer Outlet & Retailer Profile',
-    explanation_bn: 'রিটেইলারদের ক্রেডিট লিমিট, পেমেন্ট হিস্ট্রি ও শপের সাইজ।',
-    impact_bn: 'কোন দোকান থেকে টাকা আদায় বাকি বা কার ক্রেডিট রিক্স বেশি তা চিহ্নিত করা যাবে না।',
-    action_bn: 'বকেয়া আদায়ের ঝুঁকি কমাতে আউটলেট প্রোফাইল সংযুক্ত রাখা উচিত।',
+    explanation: 'Retailer credit limits, payment history, store tiering, and commercial profile.',
+    impact: 'Inability to assess retailer credit risks and overdue payment exposures.',
+    action: 'Keep linked to mitigate retailer credit defaults and manage receivables.',
     severity: 'medium',
   },
   distributor: {
-    title_bn: 'ডিস্ট্রিবিউটর ও ডিলারশিপ নেটওয়ার্ক',
+    title: 'Distributor & Channel Partner Network',
     title_en: 'Distributor & Channel Partner Network',
-    explanation_bn: 'পণ্য সরবরাহকারী ডিলারদের ভৌগোলিক সীমানা, গুদাম ও চুক্তি।',
-    impact_bn: 'ডিস্ট্রিবিউটর চ্যানেল ছাড়া সামগ্রিক ডিস্ট্রিবিউশন পাইপলাইন ও পণ্যের প্রাপ্যতা ট্র্যাক করা অসম্ভব।',
-    action_bn: 'ডিস্ট্রিবিউটর কমিশন ও পারফরম্যান্স পরিমাপে এটি সেন্ট্রাল নোড হিসেবে রাখুন।',
+    explanation: 'Geographic territories, warehousing agreements, and commercial contracts for distributors.',
+    impact: 'Disrupts distribution pipeline monitoring and territory exclusivity management.',
+    action: 'Keep as a primary spine node for commission calculations and channel performance.',
     severity: 'high',
   },
   inventory: {
-    title_bn: 'ইনভেন্টরি ও পণ্য স্টক ব্যালেন্স',
+    title: 'Warehouse & In-Transit Inventory',
     title_en: 'Warehouse & In-Transit Inventory',
-    explanation_bn: 'গুদামে, ফ্যাক্টরিতে ও রাস্তায় ট্রাকে কত টাকার ফিনিশড গুডস ও কাঁচামাল মজুত রয়েছে।',
-    impact_bn: 'স্টকের হিসাব না থাকলে অতিরিক্ত স্টক জমে ক্যাশ আটকে যেতে পারে (Working Capital Blocked) অথবা পণ্য মেয়াদোত্তীর্ণ হয়ে ক্ষতি হতে পারে।',
-    action_bn: 'কার্যকর সাপ্লাই চেইনের জন্য স্টক ট্র্যাকারের সাথে ইনভেন্টরি নোড বজায় রাখুন।',
+    explanation: 'Stock balances across depots, transit hubs, and distributor facilities.',
+    impact: 'Risk of working capital blockage, expired inventory write-offs, or stockouts.',
+    action: 'Maintain inventory nodes for supply chain resilience and working capital optimization.',
     severity: 'high',
   },
 }
 
 export const WARNING_TRANSLATIONS = {
   reference_entities_removed: {
-    title_bn: 'রেফারেন্স স্ট্যান্ডার্ড থেকে কিছু উপাদান বাদ পড়েছে',
+    title: 'Industry Reference Elements Removed',
     title_en: 'Industry Reference Elements Removed',
-    explanation_bn: 'গ্লোবাল স্ট্যান্ডার্ডের কিছু উপাদান বর্তমান মডেলে রাখা হয়নি।',
-    impact_bn: 'ভবিষ্যতে কোম্পানি যখন নতুন সিস্টেম বা উন্নত অটোমেশন চালু করতে যাবে, তখন এই বাদ পড়া বিষয়গুলোর অভাব দেখা দিতে পারে।',
-    action_bn: 'বাদ পড়া উপাদানগুলো দেখে নিন; আপনার বর্তমান অপারেশনাল স্কোপে প্রয়োজন না হলে আপনি নিশ্চিন্তে ফাইনাল করতে পারেন।',
+    explanation: 'Several elements from the industry benchmark reference have been omitted.',
+    impact: 'Future integration with standard industry applications or automation may require these elements.',
+    action: 'Review removed items. If they are outside your operational scope, you can proceed safely.',
     severity: 'medium',
   },
   no_attributes: {
-    title_bn: 'একাধিক উপাদানে ডেটা ফিল্ডের অভাব (No Attributes)',
+    title: 'Entities Lack Detailed Data Fields',
     title_en: 'Entities Lack Detailed Data Fields',
-    explanation_bn: 'এন্টিটির নাম আছে কিন্তু ভেতরে কী কী ফিল্ড (যেমন: তারিখ, টাকা, পরিমাণ) থাকবে তা ফাঁকা রয়েছে।',
-    impact_bn: 'ভবিষ্যতে এক্সেল, সিএসভি বা ইআরপি ডাটা আপলোড করলে সিস্টেম স্বয়ংক্রিয়ভাবে হিসাব মেলাতে পারবে না।',
-    action_bn: 'ডেটা আপলোড করার আগে প্রয়োজনে চ্যাটবটের মাধ্যমে এই এন্টিটিগুলোতে প্রয়োজনীয় অ্যাট্রিবিউট যোগ করে নিন।',
+    explanation: 'Entities are defined without property schemas or attributes.',
+    impact: 'File upload and automated mapping cannot bind spreadsheet columns without attributes.',
+    action: 'Add attributes in the refinement step before uploading telemetry datasets.',
     severity: 'high',
   },
   isolated_entity: {
-    title_bn: 'সম্পর্কহীন বা বিচ্ছিন্ন উপাদান (Isolated Entities)',
+    title: 'Disconnected Data Elements',
     title_en: 'Disconnected Data Elements',
-    explanation_bn: 'মডেলে কিছু নতুন উপাদান যুক্ত করা হয়েছে কিন্তু অন্যান্য ডিপার্টমেন্টের সাথে এদের কোনো সংযোগ নেই।',
-    impact_bn: 'রিপোর্টিংয়ের সময় সামগ্রিক ডেটার সাথে এটি যুক্ত হবে না, ফলে সাইলো (Data Silo) তৈরি হবে।',
-    action_bn: 'অন্যান্য বিজনেস প্রসেসের সাথে লিঙ্ক তৈরি করুন অথবা অপ্রয়োজনীয় হলে বাদ দিন।',
+    explanation: 'Entities are present without links to other business processes or departments.',
+    impact: 'Creates data silos that are disconnected from enterprise analytics.',
+    action: 'Connect with relationships or remove if redundant.',
     severity: 'medium',
   },
   disconnected: {
-    title_bn: 'মডেলের বিভিন্ন অংশের মধ্যে সংযোগের অভাব',
+    title: 'Disconnected Process Sub-Graphs',
     title_en: 'Disconnected Process Sub-Graphs',
-    explanation_bn: 'নলেজ গ্রাফের একটি বড় অংশ সম্পূর্ণ আলাদা হয়ে রয়েছে, মূল প্রক্রিয়ার সাথে যোগসূত্র নেই।',
-    impact_bn: 'এন্ড-টু-এন্ড অটোমেশন বা ডেটা ফ্লো মাঝপথে আটকে যাবে।',
-    action_bn: 'প্রসেসগুলোর মধ্যে মিসিং রিলেশনশিপ তৈরি করুন।',
+    explanation: 'Substantial parts of the model lack integration with core process flows.',
+    impact: 'End-to-end telemetry and digital twin simulations will stall.',
+    action: 'Add missing relationship links between process stages.',
     severity: 'high',
   },
 }
@@ -181,11 +181,15 @@ export function buildBusinessImpactSummary(backendImpact, comparison, validation
         type: 'entity_removed',
         severity: matched.severity,
         technical_ref: `Node removed: ${name}`,
-        title_bn: `‘${matched.title_bn}’ মডেল থেকে বাদ দেওয়া হয়েছে`,
+        title: `‘${matched.title_en}’ removed from ontology`,
         title_en: `‘${matched.title_en}’ removed from ontology`,
-        explanation_bn: matched.explanation_bn,
-        impact_bn: matched.impact_bn,
-        action_bn: matched.action_bn,
+        title_bn: `‘${matched.title_en}’ removed from ontology`,
+        explanation: matched.explanation,
+        explanation_bn: matched.explanation,
+        impact: matched.impact,
+        impact_bn: matched.impact,
+        action: matched.action,
+        action_bn: matched.action,
       })
     } else {
       items.push({
@@ -193,11 +197,15 @@ export function buildBusinessImpactSummary(backendImpact, comparison, validation
         type: 'entity_removed',
         severity: 'medium',
         technical_ref: `Node removed: ${name}`,
-        title_bn: `‘${name}’ সংক্রান্ত তথ্য মডেল থেকে সরানো হয়েছে`,
+        title: `‘${name}’ entity removed from ontology`,
         title_en: `‘${name}’ entity removed from ontology`,
-        explanation_bn: `স্ট্যান্ডার্ড আর্কিটেকচারের ‘${name}’ কম্পোনেন্টটি বর্তমান মডেলে রাখা হয়নি।`,
-        impact_bn: `কোম্পানির অপারেশনে ‘${name}’ সংক্রান্ত কোনো ডেটা ডিজিটাল টুইনে ট্র্যাক হবে না।`,
-        action_bn: `যদি কোম্পানিতে এটি দরকার না হয় তবে বাদ রাখা নিরাপদ। অন্যথায় ব্যাক করে চ্যাটে এটি যুক্ত করতে পারেন।`,
+        title_bn: `‘${name}’ entity removed from ontology`,
+        explanation: `Standard architecture component ‘${name}’ was excluded from the current model.`,
+        explanation_bn: `Standard architecture component ‘${name}’ was excluded from the current model.`,
+        impact: `No data associated with ‘${name}’ will be tracked in the digital twin.`,
+        impact_bn: `No data associated with ‘${name}’ will be tracked in the digital twin.`,
+        action: `If not relevant to your business scope, this can be safely ignored. Otherwise, restore it in the chatbot.`,
+        action_bn: `If not relevant to your business scope, this can be safely ignored. Otherwise, restore it in the chatbot.`,
       })
     }
   }
@@ -221,11 +229,15 @@ export function buildBusinessImpactSummary(backendImpact, comparison, validation
           type: 'attribute_removed',
           severity: matched.severity,
           technical_ref: `${name} attribute removed: ${attr}`,
-          title_bn: `${name}-এর ভেতরে ‘${matched.title_bn}’ ফিল্ডটি বাদ দেওয়া হয়েছে`,
+          title: `Field '${attr}' removed from ${name}`,
           title_en: `Field '${attr}' removed from ${name}`,
-          explanation_bn: matched.explanation_bn,
-          impact_bn: matched.impact_bn,
-          action_bn: matched.action_bn,
+          title_bn: `Field '${attr}' removed from ${name}`,
+          explanation: matched.explanation,
+          explanation_bn: matched.explanation,
+          impact: matched.impact,
+          impact_bn: matched.impact,
+          action: matched.action,
+          action_bn: matched.action,
         })
       } else {
         items.push({
@@ -233,11 +245,15 @@ export function buildBusinessImpactSummary(backendImpact, comparison, validation
           type: 'attribute_removed',
           severity: 'low',
           technical_ref: `${name} attribute removed: ${attr}`,
-          title_bn: `${name}-এর ডেটা ফিল্ড ‘${attr}’ সরানো হয়েছে`,
+          title: `Attribute '${attr}' removed from ${name}`,
           title_en: `Attribute '${attr}' removed from ${name}`,
-          explanation_bn: `এই এন্টিটি থেকে ‘${attr}’ তথ্যের কলামটি বাদ দেওয়া হয়েছে।`,
-          impact_bn: `ভবিষ্যতে আপলোড করা ডকুমেন্টে এই ফিল্ডটি থাকলে তা এই মডেলে অটোম্যাপ হবে না।`,
-          action_bn: 'যদি এই ফিল্ডের তথ্য আপনার ব্যবসায় অপ্রয়োজনীয় হয়, তবে ইগনোর করতে পারেন।',
+          title_bn: `Attribute '${attr}' removed from ${name}`,
+          explanation: `Field column ‘${attr}’ was excluded from entity ${name}.`,
+          explanation_bn: `Field column ‘${attr}’ was excluded from entity ${name}.`,
+          impact: `Future document uploads containing this attribute will not be auto-mapped.`,
+          impact_bn: `Future document uploads containing this attribute will not be auto-mapped.`,
+          action: 'If this attribute is unnecessary for your commercial operations, you can safely ignore.',
+          action_bn: 'If this attribute is unnecessary for your commercial operations, you can safely ignore.',
         })
       }
     }
@@ -253,11 +269,15 @@ export function buildBusinessImpactSummary(backendImpact, comparison, validation
           type: 'renamed',
           severity: 'low',
           technical_ref: `Renamed: '${oldName}' -> '${newName}'`,
-          title_bn: `নাম পরিবর্তন: ‘${oldName}’ থেকে ‘${newName}’ করা হয়েছে`,
+          title: `Terminology adapted: '${oldName}' to '${newName}'`,
           title_en: `Terminology adapted: '${oldName}' to '${newName}'`,
-          explanation_bn: `কোম্পানির ব্যবহৃত নিজস্ব অভ্যন্তরীণ পরিভাষার সাথে মিল রাখতে এটি রিনেম করা হয়েছে।`,
-          impact_bn: `এটি একটি পজিটিভ পরিবর্তন। আপনার টিম নিজেদের চেনা নামে ডেটা দেখতে পারবে।`,
-          action_bn: 'নামকরণ সঠিক থাকলে এটি অনুমোদন করে এগিয়ে যান।',
+          title_bn: `Terminology adapted: '${oldName}' to '${newName}'`,
+          explanation: `Renamed to match your internal organizational terminology.`,
+          explanation_bn: `Renamed to match your internal organizational terminology.`,
+          impact: `Fosters organizational familiarity and user adoption across business teams.`,
+          impact_bn: `Fosters organizational familiarity and user adoption across business teams.`,
+          action: 'Verify naming aligns with your team standards and approve.',
+          action_bn: 'Verify naming aligns with your team standards and approve.',
         })
       }
     }
@@ -280,11 +300,15 @@ export function buildBusinessImpactSummary(backendImpact, comparison, validation
         type: 'validation_warning',
         severity: rule.severity,
         technical_ref: `Warning [${code}]: ${msg}`,
-        title_bn: rule.title_bn,
+        title: rule.title_en,
         title_en: rule.title_en,
-        explanation_bn: `${rule.explanation_bn} (${msg})`,
-        impact_bn: rule.impact_bn,
-        action_bn: rule.action_bn,
+        title_bn: rule.title_en,
+        explanation: `${rule.explanation} (${msg})`,
+        explanation_bn: `${rule.explanation} (${msg})`,
+        impact: rule.impact,
+        impact_bn: rule.impact,
+        action: rule.action,
+        action_bn: rule.action,
       })
     }
   }
@@ -303,11 +327,15 @@ export function buildBusinessImpactSummary(backendImpact, comparison, validation
       type: 'validation_error',
       severity: 'critical',
       technical_ref: `Error [${code}]: ${msg}`,
-      title_bn: 'গুরুত্বপূর্ণ ত্রুটি যা সংশোধন করা বাধ্যতামূলক',
+      title: 'Critical schema error required to fix',
       title_en: 'Critical schema error required to fix',
-      explanation_bn: `মডেলে একটি টেকনিক্যাল ত্রুটি রয়েছে: ${msg}।`,
-      impact_bn: 'এই ত্রুটি ঠিক না করা পর্যন্ত ডিজিটাল টুইন ফাইনাল করা যাবে না এবং কোনো ফাইল প্রসেস হবে না।',
-      action_bn: 'চ্যাটবটে ফিরে গিয়ে ত্রুটিটি সমাধান করুন।',
+      title_bn: 'Critical schema error required to fix',
+      explanation: `Technical schema error: ${msg}.`,
+      explanation_bn: `Technical schema error: ${msg}.`,
+      impact: 'The digital twin cannot be finalized until all critical errors are resolved.',
+      impact_bn: 'The digital twin cannot be finalized until all critical errors are resolved.',
+      action: 'Return to chatbot to resolve this schema error.',
+      action_bn: 'Return to chatbot to resolve this schema error.',
     })
   }
 
@@ -320,27 +348,24 @@ export function buildBusinessImpactSummary(backendImpact, comparison, validation
   const lowCount = items.filter((i) => i.severity === 'low').length
 
   let readinessStatus = 'ready'
-  let verdictBn = 'অভিনন্দন! আপনার মডেলটি সম্পূর্ণ নিখুঁত এবং ব্যবসার জন্য শতভাগ প্রস্তুত।'
-  let verdictEn = 'All business requirements verified. Fully ready for enterprise finalization.'
+  let verdict = 'All business requirements verified. Fully ready for enterprise finalization.'
 
   if (critCount > 0) {
     readinessStatus = 'blocked'
-    verdictBn = `${critCount}টি গুরুতর ত্রুটি রয়েছে যা ঠিক না করলে ডিজিটাল টুইন চূড়ান্ত করা যাবে না।`
-    verdictEn = `${critCount} critical error(s) must be resolved before finalization.`
+    verdict = `${critCount} critical error(s) must be resolved before finalization.`
   } else if (highCount > 0) {
     readinessStatus = 'review_needed'
-    verdictBn = `${highCount}টি গুরুত্বপূর্ণ পয়েন্টে বিজনেস সিদ্ধান্ত প্রয়োজন। এগুলো ব্যবসার জন্য প্রযোজ্য না হলে ইগনোর করে ফাইনাল করতে পারেন।`
-    verdictEn = `${highCount} high-impact business decisions require review.`
+    verdict = `${highCount} high-impact business decisions require review.`
   } else if (medCount > 0) {
     readinessStatus = 'acceptable'
-    verdictBn = `মডেলটি গ্রহণযোগ্য পর্যায়ে রয়েছে (${medCount}টি মাঝারি পর্যবেক্ষণ রয়েছে)। আপনি চাইলে ফাইনাল করতে পারেন।`
-    verdictEn = `Model is largely ready with ${medCount} minor operational notes.`
+    verdict = `Model is largely ready with ${medCount} minor operational notes.`
   }
 
   return {
     status: readinessStatus,
-    verdict_bn: verdictBn,
-    verdict_en: verdictEn,
+    verdict,
+    verdict_en: verdict,
+    verdict_bn: verdict,
     counts: {
       critical: critCount,
       high: highCount,
@@ -351,4 +376,3 @@ export function buildBusinessImpactSummary(backendImpact, comparison, validation
     items,
   }
 }
-
