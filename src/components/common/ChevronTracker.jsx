@@ -171,6 +171,7 @@ export function useChevronTrackerState() {
     isKg2Active,
     isUploadView,
     isUploadOrKg2,
+    isConversationStarted,
     workflowDetail,
     nextStepInfo,
   }
@@ -209,6 +210,7 @@ export default function ChevronTracker({ showNextButton = false }) {
     isDomainSelected,
     isFinalize,
     isUploadOrKg2,
+    isConversationStarted,
     workflowDetail,
     nextStepInfo,
   } = useChevronTrackerState()
