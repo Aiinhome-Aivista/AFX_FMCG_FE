@@ -6,7 +6,6 @@ import ConfirmDialog from '../components/common/ConfirmDialog'
 import { EmptyState, ErrorState, Loading } from '../components/common/States'
 import ErrorBoundary from '../components/common/ErrorBoundary'
 import OntologyGraphCanvas from '../components/graph/OntologyGraphCanvas'
-import ExecutiveImpactGuide from '../components/review/ExecutiveImpactGuide'
 import useAsync from '../components/common/useAsync'
 import { domains, graphs } from '../api'
 import { cleanMojibake, timeAgo } from '../lib/format'
@@ -42,112 +41,343 @@ const Stat = ({ label, v, tone }) => (
   </div>
 )
 
-function DiffLists({ d }) {
-  const none = !Object.entries(d?.counts || {}).some(([k, v]) => /added|removed|modified/.test(k) && v)
-  if (none) return <p className="mt-3 text-sm text-muted">No differences.</p>
+const badgeClasses = {
+  emerald:
+    'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300',
+  amber:
+    'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300',
+  slate:
+    'bg-slate-500/10 border-slate-500/25 text-slate-700 dark:text-slate-300',
+}
+
+function getEntityBusinessNuance(n, impactSummary) {
+  const name = typeof n === 'string' ? n : n?.name || n?.key || ''
+  const k = name.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const attrAdded = Array.isArray(n?.attributes_added) ? n.attributes_added : []
+  const allAttrs = attrAdded.map((a) => String(a).toLowerCase()).join(' ')
+
+  // 1. Check if impactSummary has matching item
+  if (impactSummary && Array.isArray(impactSummary.items)) {
+    const matched = impactSummary.items.find((item) => {
+      const itId = (item.id || '').toLowerCase()
+      const itRef = (item.technical_ref || '').toLowerCase()
+      return (
+        itId.includes(k) ||
+        itRef.includes(k) ||
+        (k.length > 3 && (itId.includes(k) || itRef.includes(k)))
+      )
+    })
+    if (matched && matched.impact && !/[\u0980-\u09FF]/.test(matched.impact)) {
+      const tone =
+        matched.severity === 'high' || matched.severity === 'critical' ? 'emerald' : 'slate'
+      const badge =
+        k.includes('driver') ||
+        k.includes('gross') ||
+        allAttrs.includes('discount') ||
+        allAttrs.includes('rebate')
+          ? 'Gross-to-Net Revenue Protection'
+          : matched.title_en || 'Enterprise Operating Rule'
+      return {
+        badge,
+        impact: matched.impact,
+        tone,
+      }
+    }
+  }
+
+  // 2. Explicit notes on entity
+  const changesNotes = n?.changes?.notes || n?.notes || n?.business_impact
+  if (changesNotes && typeof changesNotes === 'string' && changesNotes.length > 5) {
+    return {
+      badge: n?.badge || 'Enterprise Operating Rule',
+      impact: changesNotes,
+      tone: 'slate',
+    }
+  }
+
+  // 3. Gross-to-Net / Pricing / Discounts / Rebates / Promo
+  if (
+    k.includes('driver') ||
+    k.includes('trade') ||
+    k.includes('discount') ||
+    k.includes('rebate') ||
+    k.includes('grosstonet') ||
+    k.includes('promoplan') ||
+    k.includes('promotional') ||
+    k.includes('allowance') ||
+    allAttrs.includes('discount') ||
+    allAttrs.includes('rebate') ||
+    allAttrs.includes('return') ||
+    allAttrs.includes('allowance')
+  ) {
+    return {
+      badge: 'Gross-to-Net Revenue Protection',
+      impact:
+        'Captures off-invoice rebates & promotional trade discounts. Eliminates margin discrepancies between Gross Sales and Net Revenue.',
+      tone: 'emerald',
+    }
+  }
+
+  // 4. Secondary Sales / RtM / Distribution / Outlet / Store
+  if (
+    k.includes('secondary') ||
+    k.includes('sales') ||
+    k.includes('outlet') ||
+    k.includes('distributor') ||
+    k.includes('customer') ||
+    k.includes('route') ||
+    k.includes('rtm') ||
+    allAttrs.includes('outlet') ||
+    allAttrs.includes('store')
+  ) {
+    return {
+      badge: 'Route-to-Market Visibility',
+      impact:
+        'Secures granular distributor-to-retail off-take data. Prevents bullwhip distortions and outlet coverage stockouts.',
+      tone: 'emerald',
+    }
+  }
+
+  // 5. Inventory / Stock / Supply Chain / Warehouse
+  if (
+    k.includes('inventory') ||
+    k.includes('stock') ||
+    k.includes('supply') ||
+    k.includes('warehouse') ||
+    k.includes('transit') ||
+    allAttrs.includes('stock')
+  ) {
+    return {
+      badge: 'Working Capital Optimization',
+      impact:
+        'Tracks transit and warehouse stock levels to reduce working capital lockup and stock expiration risks.',
+      tone: 'amber',
+    }
+  }
+
+  // 6. Revenue Variance / Financial Controls
+  if (
+    k.includes('revenuevariance') ||
+    k.includes('variance') ||
+    k.includes('cost') ||
+    k.includes('finance')
+  ) {
+    return {
+      badge: 'Financial Governance',
+      impact:
+        'Enforces automated variance tracking and financial controls across commercial planning cycles.',
+      tone: 'emerald',
+    }
+  }
+
+  // 7. Default Enterprise Operating Rule
+  return {
+    badge: 'Enterprise Operating Rule',
+    impact:
+      'Customized client operating constraint calibrated against enterprise finance architecture standards.',
+    tone: 'slate',
+  }
+}
+
+function DiffLists({ d, impactSummary }) {
+  const hasNodesAdded = (d?.nodes_added || []).length > 0
+  const hasNodesModified = (d?.nodes_modified || []).length > 0
+  const hasNodesRemoved = (d?.nodes_removed || []).length > 0
+  const hasEdgesAdded = (d?.edges_added || []).length > 0
+  const hasEdgesRemoved = (d?.edges_removed || []).length > 0
+  const hasEdgesModified = (d?.edges_modified || []).length > 0
+
+  const hasAnyChanges =
+    hasNodesAdded ||
+    hasNodesModified ||
+    hasNodesRemoved ||
+    hasEdgesAdded ||
+    hasEdgesRemoved ||
+    hasEdgesModified
+
+  if (!hasAnyChanges) return <p className="mt-4 text-sm text-muted">No differences.</p>
+
   return (
-    <div className="mt-4 space-y-4">
-      {(d?.nodes_added || []).length > 0 && (
-        <div>
-          <h4 className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">
-            Entities Added
-          </h4>
-          <ul className="space-y-1.5 text-sm">
-            {(d.nodes_added || []).map((n, idx) => {
-              const name = typeof n === 'string' ? n : n?.name || n?.key || `Entity-${idx}`
-              const key = typeof n === 'string' ? n : n?.key || name
-              const color = typeof n === 'object' ? n?.color || '#10b981' : '#10b981'
-              const origin = typeof n === 'object' ? n?.origin || 'Custom' : 'Custom'
-              return (
-                <li key={key} className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ background: color }} />
-                  <b className="text-ink">{name}</b>
-                  <span className="text-xs text-muted">({origin})</span>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      )}
+    <div className="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 select-none">
+      {/* Left Column: Entities Added, Modified (Business Value & Nuances), Removed */}
+      <div className="lg:col-span-8 space-y-5">
+        {/* ENTITIES ADDED */}
+        {hasNodesAdded && (
+          <div>
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted mb-2.5">
+              ENTITIES ADDED
+            </h4>
+            <div className="space-y-2">
+              {d.nodes_added.map((n, idx) => {
+                const name = typeof n === 'string' ? n : n?.name || n?.key || `Entity-${idx}`
+                const key = typeof n === 'string' ? n : n?.key || name
+                const color = typeof n === 'object' ? n?.color || '#f59e0b' : '#f59e0b'
+                const origin = typeof n === 'object' ? n?.origin || 'user' : 'user'
+                return (
+                  <div
+                    key={key}
+                    className="flex items-center gap-2 rounded-xl border border-line/80 bg-surface/60 px-4 py-2.5 text-sm shadow-2xs"
+                  >
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: color }} />
+                    <b className="text-ink font-bold">{name}</b>
+                    <span className="text-xs text-muted font-normal">({origin})</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
-      {(d?.nodes_modified || []).length > 0 && (
-        <div>
-          <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-500 mb-2">
-            ENTITIES MODIFIED
-          </h4>
-          <ul className="space-y-3 text-sm">
-            {(d.nodes_modified || []).map((n, idx) => {
-              const name = typeof n === 'string' ? n : n?.name || n?.key || `Modified-${idx}`
-              const key = typeof n === 'string' ? n : n?.key || name
-              const fromName = n?.changes?.name?.from || (typeof n?.changes?.name === 'string' ? n.changes.name : null)
-              const attrAdded = Array.isArray(n?.attributes_added) ? n.attributes_added : []
-              const attrRem = Array.isArray(n?.attributes_removed) ? n.attributes_removed : []
-              return (
-                <li key={key} className="rounded-lg border border-line bg-surface2/20 p-3">
-                  <b className="text-ink font-semibold">{name}</b>
-                  {fromName && (
-                    <div className="text-xs text-muted italic">renamed from “{fromName}”</div>
-                  )}
-                  {attrAdded.length > 0 && (
-                    <div className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 leading-relaxed font-mono">
-                      + {attrAdded.join(', ')}
+        {/* ENTITIES MODIFIED (BUSINESS VALUE & NUANCES) */}
+        {hasNodesModified && (
+          <div>
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted mb-2.5">
+              ENTITIES MODIFIED (BUSINESS VALUE & NUANCES)
+            </h4>
+            <div className="space-y-3">
+              {d.nodes_modified.map((n, idx) => {
+                const name = typeof n === 'string' ? n : n?.name || n?.key || `Modified-${idx}`
+                const key = typeof n === 'string' ? n : n?.key || name
+                const fromName =
+                  n?.changes?.name?.from || (typeof n?.changes?.name === 'string' ? n.changes.name : null)
+                const attrAdded = Array.isArray(n?.attributes_added) ? n.attributes_added : []
+                const attrRem = Array.isArray(n?.attributes_removed) ? n.attributes_removed : []
+                const nuance = getEntityBusinessNuance(n, impactSummary)
+                const toneClass = badgeClasses[nuance.tone] || badgeClasses.slate
+
+                return (
+                  <div
+                    key={key}
+                    className="rounded-2xl border border-line/80 bg-surface/70 p-4 shadow-2xs space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <b className="text-sm sm:text-base font-bold text-ink">{name}</b>
+                      <span className={`rounded-full px-3 py-0.5 text-xs font-semibold border ${toneClass}`}>
+                        {nuance.badge}
+                      </span>
                     </div>
-                  )}
-                  {attrRem.length > 0 && (
-                    <div className="mt-1 text-xs text-rose-500 leading-relaxed font-mono">
-                      − {attrRem.join(', ')}
+
+                    {fromName && (
+                      <div className="text-xs text-muted italic">renamed from “{fromName}”</div>
+                    )}
+
+                    {attrAdded.length > 0 && (
+                      <div className="text-xs text-emerald-600 dark:text-emerald-400 font-mono leading-relaxed">
+                        + {attrAdded.join(', ')}
+                      </div>
+                    )}
+
+                    {attrRem.length > 0 && (
+                      <div className="text-xs text-rose-500 font-mono leading-relaxed">
+                        − {attrRem.join(', ')}
+                      </div>
+                    )}
+
+                    <div className="text-xs text-ink/85 leading-relaxed pt-1">
+                      <span className="font-bold text-ink">Business Impact:</span> {nuance.impact}
                     </div>
-                  )}
-                  {n?.changes?.notes && <div className="mt-1 text-xs text-muted">business-rule note added</div>}
-                  {n?.changes?.formulas && <div className="mt-1 text-xs text-muted">formulas changed</div>}
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
-      {(d?.nodes_removed || []).length > 0 && (
-        <div>
-          <h4 className="text-[11px] font-bold uppercase tracking-wider text-rose-500 mb-2">
-            Entities Removed
-          </h4>
-          <ul className="space-y-1 text-sm">
-            {(d.nodes_removed || []).map((n, idx) => {
-              const name = typeof n === 'string' ? n : n?.name || n?.key || `Removed-${idx}`
-              const key = typeof n === 'string' ? n : n?.key || name
-              return (
-                <li key={key} className="text-rose-500 font-semibold">{name}</li>
-              )
-            })}
-          </ul>
-        </div>
-      )}
+        {/* ENTITIES REMOVED */}
+        {hasNodesRemoved && (
+          <div>
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-rose-500 mb-2.5">
+              ENTITIES REMOVED
+            </h4>
+            <div className="space-y-2">
+              {d.nodes_removed.map((n, idx) => {
+                const name = typeof n === 'string' ? n : n?.name || n?.key || `Removed-${idx}`
+                const key = typeof n === 'string' ? n : n?.key || name
+                return (
+                  <div
+                    key={key}
+                    className="rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-2 text-sm text-rose-600 dark:text-rose-400 font-semibold"
+                  >
+                    − {name}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
-      {((d?.edges_added || []).length > 0 || (d?.edges_removed || []).length > 0 || (d?.edges_modified || []).length > 0) && (
-        <div className="pt-2 border-t border-line">
-          <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted mb-2">
-            Relationship Changes
-          </h4>
-          <ul className="space-y-1 text-xs text-muted">
-            {(d.edges_added || []).map((e, i) => (
-              <li key={`ea-${i}`} className="text-emerald-600 dark:text-emerald-400">
-                + {e?.source} —{e?.label}→ {e?.target}
-              </li>
-            ))}
-            {(d.edges_removed || []).map((e, i) => (
-              <li key={`er-${i}`} className="text-rose-500">
-                − {e?.source} —{e?.label}→ {e?.target}
-              </li>
-            ))}
-            {(d.edges_modified || []).map((e, i) => (
-              <li key={`em-${i}`}>
-                {e?.source} → {e?.target}: {e?.from} ⇒ {e?.to}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* Right Column: Relationships Added & Removed */}
+      <div className="lg:col-span-4 space-y-5">
+        {hasEdgesAdded && (
+          <div>
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted mb-2.5">
+              RELATIONSHIPS ADDED
+            </h4>
+            <div className="space-y-2">
+              {d.edges_added.map((e, i) => (
+                <div
+                  key={`ea-${i}`}
+                  className="rounded-xl border border-line/80 bg-surface/60 p-2.5 px-3.5 text-xs font-mono text-ink flex items-center flex-wrap gap-1.5 shadow-2xs"
+                >
+                  <span className="truncate max-w-[130px]" title={e?.source}>
+                    {e?.source}
+                  </span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">
+                    —[{e?.label || 'includes'}]→
+                  </span>
+                  <span className="truncate max-w-[130px]" title={e?.target}>
+                    {e?.target}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {hasEdgesRemoved && (
+          <div>
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-rose-500 mb-2.5">
+              RELATIONSHIPS REMOVED
+            </h4>
+            <div className="space-y-2">
+              {d.edges_removed.map((e, i) => (
+                <div
+                  key={`er-${i}`}
+                  className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-2.5 px-3.5 text-xs font-mono text-rose-600 dark:text-rose-400 flex items-center flex-wrap gap-1.5 shadow-2xs"
+                >
+                  <span>{e?.source}</span>
+                  <span className="font-semibold shrink-0">—[{e?.label || 'removed'}]→</span>
+                  <span>{e?.target}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {hasEdgesModified && (
+          <div>
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted mb-2.5">
+              RELATIONSHIPS MODIFIED
+            </h4>
+            <div className="space-y-2">
+              {d.edges_modified.map((e, i) => (
+                <div
+                  key={`em-${i}`}
+                  className="rounded-xl border border-line/80 bg-surface/60 p-2.5 px-3 text-xs font-mono text-ink flex items-center flex-wrap gap-1 shadow-2xs"
+                >
+                  <span>{e?.source}</span>
+                  <span className="text-amber-500 font-semibold shrink-0">→</span>
+                  <span>{e?.target}:</span>
+                  <span className="text-muted">
+                    {e?.from} ⇒ {e?.to}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -456,19 +686,6 @@ export default function Finalize() {
             </section>
           </div>
 
-          {/* Executive Business Impact & Decision Guide (Pati Bangla / Plain Terms) */}
-          {impactSummary && (
-            <ErrorBoundary title="Executive Impact Guide Error">
-              <ExecutiveImpactGuide
-                impactData={impactSummary}
-                backUrl={backUrl}
-                domainName={resolvedDomainName}
-                viewMode={viewMode}
-                onToggleViewMode={() => setViewMode((prev) => (prev === 'executive' ? 'technical' : 'executive'))}
-              />
-            </ErrorBoundary>
-          )}
-
           {/* Bottom Card 1: Compare Versions (Technical Schema & Diffs) */}
           <section className="card p-5 border border-line shadow-card">
             <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
@@ -526,7 +743,7 @@ export default function Finalize() {
                         />
                       </div>
                       <ErrorBoundary title="Diff Comparison Error">
-                        <DiffLists d={activeDiff} />
+                        <DiffLists d={activeDiff} impactSummary={impactSummary} />
                       </ErrorBoundary>
                     </>
                   )
