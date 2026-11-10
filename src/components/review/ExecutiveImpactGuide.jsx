@@ -17,6 +17,14 @@ import {
   Sparkles,
 } from 'lucide-react'
 
+const BENGALI_REGEX = /[\u0980-\u09FF]/
+function cleanText(text, fallback = '') {
+  if (!text || typeof text !== 'string' || BENGALI_REGEX.test(text)) {
+    return fallback
+  }
+  return text
+}
+
 export default function ExecutiveImpactGuide({
   impactData,
   backUrl,
@@ -142,7 +150,7 @@ export default function ExecutiveImpactGuide({
               Enterprise Readiness Verdict
             </div>
             <div className="mt-0.5 text-sm sm:text-base font-bold text-ink">
-              {impactData?.verdict_en || impactData?.verdict || 'Model evaluation complete.'}
+              {cleanText(impactData?.verdict_en, cleanText(impactData?.verdict, 'Model evaluation complete.'))}
             </div>
           </div>
         </div>
@@ -218,7 +226,7 @@ export default function ExecutiveImpactGuide({
                   <div className="flex items-center gap-2.5 flex-wrap">
                     {severityBadge(item.severity)}
                     <h3 className="text-sm sm:text-base font-bold text-ink">
-                      {item.title_en || item.title || item.name}
+                      {cleanText(item.title_en, cleanText(item.title, cleanText(item.name, 'Model Gap Item')))}
                     </h3>
                   </div>
 
@@ -240,7 +248,13 @@ export default function ExecutiveImpactGuide({
                       <span>Plain Explanation</span>
                     </div>
                     <p className="text-ink/90 leading-relaxed text-xs sm:text-[13px]">
-                      {item.explanation || item.explanation_en || item.explanation_bn}
+                      {cleanText(
+                        item.explanation,
+                        cleanText(
+                          item.explanation_en,
+                          'A process element or sub-graph is disconnected from the main ontology flow.'
+                        )
+                      )}
                     </p>
                   </div>
 
@@ -251,7 +265,13 @@ export default function ExecutiveImpactGuide({
                       <span>Business Impact & Risk</span>
                     </div>
                     <p className="text-amber-950 dark:text-amber-200 leading-relaxed text-xs sm:text-[13px]">
-                      {item.impact || item.impact_en || item.impact_bn}
+                      {cleanText(
+                        item.impact,
+                        cleanText(
+                          item.impact_en,
+                          'End-to-end automation or telemetry data flow may stall or become disconnected.'
+                        )
+                      )}
                     </p>
                   </div>
 
@@ -262,7 +282,13 @@ export default function ExecutiveImpactGuide({
                       <span>Recommended Client Action</span>
                     </div>
                     <p className="text-emerald-950 dark:text-emerald-200 leading-relaxed text-xs sm:text-[13px]">
-                      {item.action || item.action_en || item.action_bn}
+                      {cleanText(
+                        item.action,
+                        cleanText(
+                          item.action_en,
+                          'Create the missing relationships between processes or review this entity in chatbot.'
+                        )
+                      )}
                     </p>
 
                     {/* Action Buttons */}

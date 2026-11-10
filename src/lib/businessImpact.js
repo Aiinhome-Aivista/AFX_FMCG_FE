@@ -151,12 +151,64 @@ function findTermMatch(term) {
   return null
 }
 
+const BENGALI_REGEX = /[\u0980-\u09FF]/
+
+function cleanEnglish(str, fallback = '') {
+  if (!str || typeof str !== 'string' || BENGALI_REGEX.test(str)) {
+    return fallback
+  }
+  return str
+}
+
 /**
  * Builds or enhances Business Impact Insights from backend data or raw diffs.
  */
 export function buildBusinessImpactSummary(backendImpact, comparison, validation) {
   if (backendImpact && Array.isArray(backendImpact.items) && backendImpact.items.length > 0) {
-    return backendImpact
+    const sanitizedItems = backendImpact.items.map((item) => {
+      const matched = findTermMatch(item.id) || findTermMatch(item.technical_ref)
+      const warningKey = Object.keys(WARNING_TRANSLATIONS).find(
+        (k) => (item.id || '').includes(k) || (item.technical_ref || '').includes(k)
+      )
+      const rule = warningKey ? WARNING_TRANSLATIONS[warningKey] : null
+
+      const fallbackTitle =
+        rule?.title_en || matched?.title_en || item.title_en || 'Model Gap Identified'
+      const fallbackExplanation =
+        rule?.explanation ||
+        matched?.explanation ||
+        'A process element was modified or disconnected in the current ontology.'
+      const fallbackImpact =
+        rule?.impact ||
+        matched?.impact ||
+        'End-to-end automation or telemetry data flow may stall between process steps.'
+      const fallbackAction =
+        rule?.action ||
+        matched?.action ||
+        'Create missing relationships between processes or review this entity in chatbot.'
+
+      return {
+        ...item,
+        title: cleanEnglish(item.title, cleanEnglish(item.title_en, fallbackTitle)),
+        title_en: cleanEnglish(item.title_en, fallbackTitle),
+        explanation: cleanEnglish(item.explanation, cleanEnglish(item.explanation_en, fallbackExplanation)),
+        impact: cleanEnglish(item.impact, cleanEnglish(item.impact_en, fallbackImpact)),
+        action: cleanEnglish(item.action, cleanEnglish(item.action_en, fallbackAction)),
+      }
+    })
+
+    const fallbackVerdict = 'Model review complete. Please inspect decisions.'
+    const verdict = cleanEnglish(
+      backendImpact.verdict,
+      cleanEnglish(backendImpact.verdict_en, fallbackVerdict)
+    )
+
+    return {
+      ...backendImpact,
+      verdict,
+      verdict_en: verdict,
+      items: sanitizedItems,
+    }
   }
 
   const items = []
