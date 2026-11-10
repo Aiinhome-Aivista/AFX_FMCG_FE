@@ -123,10 +123,7 @@ export function useChevronTrackerState() {
 
     // If user has NOT selected a sub-domain yet (on domain overview/landing page)
     if (!isDomainSelected) {
-      return {
-        label: 'Next: Select Sub-Domain',
-        route: `${prefix}/${effectiveSlug}?stage=kg1&view=graph`,
-      }
+      return null
     }
 
     if (!currentSlug) return null
@@ -217,6 +214,11 @@ export default function ChevronTracker({ showNextButton = false }) {
     workflowDetail,
     nextStepInfo,
   } = useChevronTrackerState()
+
+  // Hide workflow steps in the header on the All Domain page (and when no domain is selected)
+  if (!isDomainSelected) {
+    return null
+  }
 
   // Stages matching screenshot when navigating domain workflow:
   // 1: Domain (Prompts & Overview)
