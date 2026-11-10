@@ -214,7 +214,11 @@ export default function UploadZone({
   const hasFilesToAnalyze = files.length > 0 || Boolean(lastUploadedName) || queue.length > 0
 
   const handleTriggerGapAnalysis = () => {
-    const targetFile = lastUploadedName || files[0]?.name || queue[0]?.name || 'rag_test_questions_60.pdf'
+    const targetFile = lastUploadedName || files[0]?.name || queue[0]?.name
+    if (!targetFile) {
+      toast.error('Please upload at least one file before proceeding to Gap Analysis.')
+      return
+    }
     if (onViewGapAnalysis) {
       onViewGapAnalysis(targetFile)
     } else if (onUploadComplete) {

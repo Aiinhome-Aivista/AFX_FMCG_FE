@@ -92,6 +92,14 @@ export default function DomainGraph() {
     }
   })
 
+  const [lastUploadedName, setLastUploadedName] = useState(() => {
+    try {
+      return (slug && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(`afx_last_uploaded_${slug}`)) || ''
+    } catch {
+      return ''
+    }
+  })
+
   // Synchronize stage & view params from URL
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search)
@@ -309,7 +317,100 @@ export default function DomainGraph() {
     }
   }
 
-  const base = aiGraph || g.data
+  const rawBase = aiGraph || g.data
+
+  // Node keys that belong to the KG1 baseline established during operational conversation
+  const kg1NodeKeys = useMemo(() => {
+    return new Set((rawBase?.nodes || []).map((n) => n.key || n.id))
+  }, [rawBase?.nodes])
+
+  // When in Gap Analysis (KG2), dynamically generate newly introduced node(s) ONLY if file was uploaded
+  const uploadedTelemetryNodes = useMemo(() => {
+    if (!isKg2Active || !gapAnalysisMode) return []
+
+    // ONLY if file was actually uploaded (either present in uploaded files list or uploaded in current session)
+    const fileItems = uploadedFiles.length > 0
+      ? uploadedFiles
+      : lastUploadedName
+        ? [{ id: 'telemetry-uploaded', name: lastUploadedName }]
+        : []
+
+    // If no file was uploaded, do NOT show any extra telemetry node or discrepancy!
+    if (fileItems.length === 0) return []
+
+    const existingNodes = rawBase?.nodes || []
+    const avgX = existingNodes.length > 0
+      ? existingNodes.reduce((acc, n) => acc + (n.x || 450), 0) / existingNodes.length
+      : 450
+    const maxY = existingNodes.length > 0
+      ? existingNodes.reduce((acc, n) => Math.max(acc, (n.y || 250)), 250)
+      : 250
+
+    return fileItems.map((f, idx) => {
+      const cleanId = `data-file-${f.id || String(f.name || 'stream').replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`
+      const fName = f.name || f.original_name || 'Business_Telemetry.csv'
+      const displayName = fName.startsWith('Data:') ? fName : `Data: ${fName}`
+
+      return {
+        id: cleanId,
+        key: cleanId,
+        name: displayName,
+        kind: 'datasource',
+        origin: 'telemetry',
+        role: 'telemetry',
+        change_state: 'added',
+        isDiscrepancy: true,
+        added_in_version: 2,
+        group_name: 'Business Telemetry',
+        group_key: 'telemetry',
+        color: '#EF4444',
+        attributes: f.metadata?.columns || f.metadata?.fields || [
+          'ingested_records',
+          'variance_delta',
+          'batch_id',
+          'timestamp',
+        ],
+        definition: `Refined business telemetry ingested from uploaded file “${fName}”. Discrepancy node newly introduced in KG2.`,
+        x: avgX + (idx % 2 === 0 ? 110 : -110),
+        y: maxY + 95 + idx * 55,
+      }
+    })
+  }, [isKg2Active, gapAnalysisMode, uploadedFiles, lastUploadedName, rawBase?.nodes])
+
+  // Edges connecting newly introduced telemetry nodes to matching KG1 baseline nodes
+  const uploadedTelemetryEdges = useMemo(() => {
+    if (!isKg2Active || !gapAnalysisMode || !uploadedTelemetryNodes.length || !rawBase?.nodes?.length) return []
+
+    return uploadedTelemetryNodes.map((tNode, idx) => {
+      const targetNode = rawBase.nodes[idx % rawBase.nodes.length] || rawBase.nodes[0]
+      const tgtId = targetNode.key || targetNode.id
+      return {
+        id: `edge-${tNode.id}-${tgtId}`,
+        source: tNode.id,
+        target: tgtId,
+        srcId: tNode.id,
+        tgtId: tgtId,
+        label: 'supplies telemetry',
+        isDiscrepancy: true,
+        kind: 'telemetry',
+      }
+    })
+  }, [isKg2Active, gapAnalysisMode, uploadedTelemetryNodes, rawBase?.nodes])
+
+  // Merged Graph (KG2): Merges KG1 conversation baseline with uploaded data
+  const base = useMemo(() => {
+    if (!rawBase) return null
+    if (!isKg2Active || !gapAnalysisMode) {
+      return rawBase
+    }
+    return {
+      ...rawBase,
+      version: { number: 2, label: 'KG2' },
+      nodes: [...(rawBase.nodes || []), ...uploadedTelemetryNodes],
+      edges: [...(rawBase.edges || []), ...uploadedTelemetryEdges],
+    }
+  }, [rawBase, isKg2Active, gapAnalysisMode, uploadedTelemetryNodes, uploadedTelemetryEdges])
+
   const groups = useMemo(() => {
     const m = new Map()
     base?.nodes.forEach((n) => m.set(n.group_name, n.color))
@@ -377,42 +478,46 @@ export default function DomainGraph() {
   }, [isKg2Active, base?.version?.number, slug])
 
   const discrepancies = useMemo(() => {
+    if (!isKg2Active || !gapAnalysisMode) {
+      return { addedKeys: new Set(), missingKeys: new Set() }
+    }
+
     const addedKeys = new Set(diffData?.nodes_added?.map((n) => n.key || n.id) || [])
     const missingKeys = new Set(diffData?.nodes_removed?.map((n) => n.key || n.id) || [])
 
-    base?.nodes?.forEach((n) => {
-      const k = n.key || n.id
-      if (n.added_in_version && n.added_in_version >= 2) addedKeys.add(k)
-      if (n.kind === 'datasource') addedKeys.add(k)
-      if (n.change_state === 'added') addedKeys.add(k)
-      if (n.isDiscrepancy) addedKeys.add(k)
-      if (n.isMissing) missingKeys.add(k)
+    // Newly introduced node(s) from the uploaded data are marked as discrepancies
+    uploadedTelemetryNodes.forEach((n) => {
+      addedKeys.add(n.id)
+      addedKeys.add(n.key)
     })
 
-    // If KG2 is active and no specific diff exists yet, dynamically designate telemetry or unmapped nodes
-    if (isKg2Active && gapAnalysisMode && addedKeys.size === 0 && base?.nodes?.length) {
-      const telemetryCandidates = base.nodes
-        .filter((n) => n.origin === 'telemetry' || n.kind === 'datasource' || n.role === 'telemetry' || n.unmapped)
-        .map((n) => n.key || n.id)
-      if (telemetryCandidates.length > 0) {
-        telemetryCandidates.forEach((k) => addedKeys.add(k))
-      } else {
-        const topCandidates = base.nodes.slice(-Math.min(3, Math.max(1, Math.floor(base.nodes.length / 3)))).map((n) => n.key || n.id)
-        topCandidates.forEach((k) => addedKeys.add(k))
+    base?.nodes?.forEach((n) => {
+      const k = n.key || n.id
+      if (n.kind === 'datasource' || n.origin === 'telemetry' || n.isDiscrepancy) {
+        addedKeys.add(k)
       }
-      const missingCandidates = base.nodes.slice(0, Math.min(2, Math.max(1, Math.floor(base.nodes.length / 4)))).map((n) => n.key || n.id)
-      missingCandidates.forEach((k) => missingKeys.add(k))
-    }
+      if (n.isMissing) {
+        missingKeys.add(k)
+      }
+    })
+
+    // Protection: All nodes from the chat conversation baseline (KG1) are protected from being marked as added!
+    // Matching elements from chat remain neutral.
+    kg1NodeKeys.forEach((k) => {
+      if (!diffData?.nodes_removed?.some((r) => (r.key || r.id) === k)) {
+        addedKeys.delete(k)
+      }
+    })
 
     return { addedKeys, missingKeys }
-  }, [diffData, base?.nodes, isKg2Active, gapAnalysisMode])
+  }, [isKg2Active, gapAnalysisMode, diffData, uploadedTelemetryNodes, base?.nodes, kg1NodeKeys])
 
   const gapStats = useMemo(() => {
     const newCount = discrepancies.addedKeys.size
     const missingCount = discrepancies.missingKeys.size
     const totalGaps = newCount + missingCount
     const totalNodes = base?.nodes?.length || 0
-    const matchedCount = Math.max(0, totalNodes - missingCount)
+    const matchedCount = Math.max(0, totalNodes - newCount - missingCount)
     return { newCount, missingCount, totalGaps, matchedCount }
   }, [discrepancies, base?.nodes?.length])
 
@@ -446,8 +551,17 @@ export default function DomainGraph() {
   }
 
   const handleUploadComplete = (fileName) => {
-    const targetFileName = fileName || 'telemetry_data.csv'
+    const targetFileName = fileName || uploadedFiles[0]?.name
+    if (!targetFileName) return
     const procId = 'proc-' + Date.now()
+
+    setLastUploadedName(targetFileName)
+    if (slug) {
+      try {
+        sessionStorage.setItem(`afx_last_uploaded_${slug}`, targetFileName)
+      } catch {}
+    }
+    fileListAsync.reload().catch(() => {})
 
     // 1. Switch right tab to chat so user immediately sees the chat and activate witty processing copilot
     setActiveRightTab('chat')
@@ -509,14 +623,14 @@ export default function DomainGraph() {
 
       // Add Gap Analysis summary message dynamically computed from gapStats
       const mCount = gapStats.missingCount
-      const nCount = gapStats.newCount
-      const matchCount = gapStats.matchedCount
+      const nCount = Math.max(1, gapStats.newCount)
+      const matchCount = Math.max(1, gapStats.matchedCount)
 
       const gapAnalysisMsg = {
         id: 'gap-analysis-' + Date.now(),
         role: 'assistant',
         kind: 'gap_analysis',
-        content: `Comparing telemetry data (“${targetFileName}”) with operational baseline.\n\n- Discrepancies (RED): ${mCount} missing element(s) and ${nCount} new telemetry node(s)\n- Matched Elements: ${matchCount} verified entity(ies)\n\nAll discrepancies are highlighted in RED on your Knowledge Graph. Let's review these gaps so we can finalize your Digital Twin.`,
+        content: `Comparing uploaded data (“${targetFileName}”) with your operational conversation baseline (KG1).\n\n- Discrepancy (RED): ${nCount} newly introduced telemetry node(s) from your uploaded file\n${mCount > 0 ? `- Missing Items (RED): ${mCount} missing element(s)\n` : ''}- Matched Elements (NEUTRAL): ${matchCount} verified entity(ies) from your chat\n\nThe extra node from your uploaded file is highlighted in RED on the graph, while all matching elements remain neutral.`,
         created_at: new Date().toISOString(),
       }
 

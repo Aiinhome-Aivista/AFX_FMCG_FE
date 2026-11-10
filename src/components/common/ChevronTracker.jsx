@@ -131,7 +131,10 @@ export function useChevronTrackerState() {
 
     // If user has NOT selected a sub-domain yet (on domain overview/landing page)
     if (!isDomainSelected) {
-      return null
+      return {
+        label: 'Next: Select Domain',
+        route: `${prefix}/${effectiveSlug}?stage=kg1&view=graph`,
+      }
     }
 
     if (!currentSlug) return null
@@ -152,8 +155,11 @@ export function useChevronTrackerState() {
       }
     }
 
-    // Do not show "Next: Upload Data" in the navigation bar
-    return null
+    // In Core Nuances stage: Next step is Business Telemetry (not 'Upload Data')
+    return {
+      label: 'Next: Business Telemetry',
+      route: `${prefix}/${currentSlug}?stage=kg1&view=upload`,
+    }
   }, [isIndustryStep, isFinalize, isDomainSelected, isKg2Active, isUploadView, workflowDetail, prefix, currentSlug, effectiveSlug])
 
   return {
@@ -212,11 +218,6 @@ export default function ChevronTracker({ showNextButton = false }) {
     nextStepInfo,
   } = useChevronTrackerState()
 
-  // Hide workflow steps in the header on the All Domain page (and when no domain is selected)
-  if (!isDomainSelected) {
-    return null
-  }
-
   // Stages matching screenshot when navigating domain workflow:
   // 1: Domain (Prompts & Overview)
   // 2: Core Nuances (Process Discovery)
@@ -262,13 +263,13 @@ export default function ChevronTracker({ showNextButton = false }) {
       {
         id: 2,
         title: 'Core Nuances',
-        subtitle: 'Process Discovery',
+        subtitle: 'Discovery',
         route: (s, p, eff) => `${p}/${s || eff}?stage=kg1&view=graph`,
       },
       {
         id: 3,
         title: 'Business Telemetry',
-        subtitle: 'Data Gap Analysis',
+        subtitle: 'Gap Analysis',
         route: (s, p, eff) => {
           if (workflowDetail?.isKg2) return `${p}/${s || eff}?stage=kg2&view=graph`
           if (workflowDetail?.canUpload || workflowDetail?.hasUploadedFiles) {
@@ -289,6 +290,12 @@ export default function ChevronTracker({ showNextButton = false }) {
   // Calculate status for each stage
   const getStageStatus = (stageId) => {
     if (isIndustryStep) {
+      if (stageId === 1) return { isCompleted: false, isActive: true }
+      return { isCompleted: false, isActive: false }
+    }
+
+    // On All Domains overview page (before selecting a sub-domain)
+    if (!isDomainSelected) {
       if (stageId === 1) return { isCompleted: false, isActive: true }
       return { isCompleted: false, isActive: false }
     }
@@ -321,101 +328,106 @@ export default function ChevronTracker({ showNextButton = false }) {
   return (
     <nav
       aria-label="Workflow Stages"
-      className="flex items-center gap-1 sm:gap-2 overflow-x-auto py-1 no-scrollbar max-w-full select-none"
+      className="flex items-center justify-between gap-2 py-1 select-none w-full min-w-0"
     >
-      {stages.map((stage) => {
-        const { isCompleted, isActive } = getStageStatus(stage.id)
+      {/* Workflow Stages Chevrons */}
+      <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
+        {stages.map((stage) => {
+          const { isCompleted, isActive } = getStageStatus(stage.id)
 
-        // Colors tailored to match the design in both Light Mode and Dark Mode:
-        // 🟢 Completed: Solid Emerald Green (#10b981), dark checkmark circle, bold dark text
-        // 🔵 Active: Highlighted glowing border (Emerald-Cyan gradient), dark surface in dark mode, stark white/emerald text
-        // ⚪ Inactive / Upcoming: Subtle border outline, dark surface in dark mode, clean typography
-        let outerBg = 'bg-slate-200/90 dark:bg-slate-700/60 group-hover:bg-slate-300 dark:group-hover:bg-slate-600/70'
-        let innerBg = 'bg-white dark:bg-[#192027] group-hover:bg-slate-50 dark:group-hover:bg-[#222a33]'
-        let textColor = 'text-slate-600 dark:text-slate-300 font-semibold group-hover:dark:text-white'
-        let subColor = 'text-slate-400 dark:text-slate-400'
-        let iconColor = 'text-slate-400 dark:text-slate-400'
+          // Colors tailored to match the design in both Light Mode and Dark Mode:
+          // 🟢 Completed: Solid Emerald Green (#10b981), dark checkmark circle, bold dark text
+          // 🔵 Active: Highlighted glowing border (Emerald-Cyan gradient), dark surface in dark mode, stark white/emerald text
+          // ⚪ Inactive / Upcoming: Subtle border outline, dark surface in dark mode, clean typography
+          let outerBg = 'bg-slate-200/90 dark:bg-slate-700/60 group-hover:bg-slate-300 dark:group-hover:bg-slate-600/70'
+          let innerBg = 'bg-white dark:bg-[#192027] group-hover:bg-slate-50 dark:group-hover:bg-[#222a33]'
+          let textColor = 'text-slate-600 dark:text-slate-300 font-semibold group-hover:dark:text-white'
+          let subColor = 'text-slate-400 dark:text-slate-400'
+          let iconColor = 'text-slate-400 dark:text-slate-400'
 
-        if (isCompleted) {
-          outerBg = 'bg-[#10b981]'
-          innerBg = 'bg-[#10b981]' // Solid Primary Green
-          textColor = 'text-white font-extrabold'
-          subColor = 'text-white/90 font-medium'
-          iconColor = 'text-white'
-        } else if (isActive) {
-          outerBg =
-            'bg-gradient-to-r from-[#10b981] via-[#06b6d4] to-[#10b981] dark:from-[#10b981] dark:via-[#22d3ee] dark:to-[#10b981]'
-          innerBg =
-            'bg-gradient-to-r from-emerald-100/95 via-cyan-50/90 to-emerald-100/95 dark:!bg-none dark:bg-[#132822]'
-          textColor = 'text-emerald-950 dark:text-emerald-200 font-extrabold'
-          subColor = 'text-emerald-800 dark:text-[#34d399] font-bold'
-          iconColor = 'text-[#10b981]'
-        }
+          if (isCompleted) {
+            outerBg = 'bg-[#10b981]'
+            innerBg = 'bg-[#10b981]' // Solid Primary Green
+            textColor = 'text-white font-extrabold'
+            subColor = 'text-white/90 font-medium'
+            iconColor = 'text-white'
+          } else if (isActive) {
+            outerBg =
+              'bg-gradient-to-r from-[#10b981] via-[#06b6d4] to-[#10b981] dark:from-[#10b981] dark:via-[#22d3ee] dark:to-[#10b981]'
+            innerBg =
+              'bg-gradient-to-r from-emerald-100/95 via-cyan-50/90 to-emerald-100/95 dark:!bg-none dark:bg-[#132822]'
+            textColor = 'text-emerald-950 dark:text-emerald-200 font-extrabold'
+            subColor = 'text-emerald-800 dark:text-[#34d399] font-bold'
+            iconColor = 'text-[#10b981]'
+          }
 
-        const targetUrl =
-          (typeof stage.route === 'function' ? stage.route(slug, prefix, effectiveSlug) : null) || prefix || '/fmcg'
+          const targetUrl =
+            (typeof stage.route === 'function' ? stage.route(slug, prefix, effectiveSlug) : null) || prefix || '/fmcg'
 
-        return (
-          <Link
-            key={stage.id}
-            to={targetUrl}
-            className={`group relative flex items-center transition-all duration-300 cursor-pointer ${
-              isActive ? 'scale-[1.02] z-10' : 'hover:scale-[1.01]'
-            }`}
-          >
-            {/* Outer Chevron Clip Path (Border layer) */}
-            <div
-              className={`p-[1.5px] transition-colors duration-200 ${outerBg} ${
-                isActive ? 'shadow-[0_0_12px_rgba(16,185,129,0.35)]' : ''
+          return (
+            <Link
+              key={stage.id}
+              to={targetUrl}
+              className={`group relative flex items-center transition-all duration-300 cursor-pointer ${
+                isActive ? 'scale-[1.02] z-10' : 'hover:scale-[1.01]'
               }`}
-              style={{
-                clipPath:
-                  'polygon(0% 0%, calc(100% - 13px) 0%, 100% 50%, calc(100% - 13px) 100%, 0% 100%, 13px 50%)',
-              }}
             >
-              {/* Inner Content Container */}
+              {/* Outer Chevron Clip Path (Border layer) */}
               <div
-                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 pl-4 sm:pl-5 py-1.5 transition-colors duration-200 ${innerBg}`}
+                className={`p-[1.5px] transition-colors duration-200 ${outerBg} ${
+                  isActive ? 'shadow-[0_0_12px_rgba(16,185,129,0.35)]' : ''
+                }`}
                 style={{
                   clipPath:
                     'polygon(0% 0%, calc(100% - 13px) 0%, 100% 50%, calc(100% - 13px) 100%, 0% 100%, 13px 50%)',
                 }}
               >
-                {/* Step Circle: Checkmark if completed, blinking dot badge if active, empty circle if upcoming */}
-                <span className="flex h-4 w-4 items-center justify-center shrink-0">
-                  {isCompleted ? (
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white dark:bg-slate-950 text-[#10b981] dark:text-emerald-400 shrink-0 shadow-xs">
-                      <Check size={11} strokeWidth={3.5} />
-                    </span>
-                  ) : isActive ? (
-                    <span className="relative flex h-4 w-4 items-center justify-center shrink-0">
-                      <span className="relative flex h-4 w-4 items-center justify-center rounded-full bg-[#10b981]/25 dark:bg-[#10b981]/35 border border-[#10b981]/50 dot-blink">
-                        <span className="h-2 w-2 rounded-full bg-[#10b981]" />
+                {/* Inner Content Container */}
+                <div
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 pl-4 sm:pl-5 py-1.5 transition-colors duration-200 ${innerBg}`}
+                  style={{
+                    clipPath:
+                      'polygon(0% 0%, calc(100% - 13px) 0%, 100% 50%, calc(100% - 13px) 100%, 0% 100%, 13px 50%)',
+                  }}
+                >
+                  {/* Step Circle: Checkmark if completed, blinking dot badge if active, empty circle if upcoming */}
+                  <span className="flex h-4 w-4 items-center justify-center shrink-0">
+                    {isCompleted ? (
+                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white dark:bg-slate-950 text-[#10b981] dark:text-emerald-400 shrink-0 shadow-xs">
+                        <Check size={11} strokeWidth={3.5} />
                       </span>
-                    </span>
-                  ) : (
-                    <span className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border-2 border-slate-300 dark:border-slate-600 bg-transparent shrink-0" />
-                  )}
-                </span>
+                    ) : isActive ? (
+                      <span className="relative flex h-4 w-4 items-center justify-center shrink-0">
+                        <span className="relative flex h-4 w-4 items-center justify-center rounded-full bg-[#10b981]/25 dark:bg-[#10b981]/35 border border-[#10b981]/50 dot-blink">
+                          <span className="h-2 w-2 rounded-full bg-[#10b981]" />
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border-2 border-slate-300 dark:border-slate-600 bg-transparent shrink-0" />
+                    )}
+                  </span>
 
-                {/* Step Title & Subtitle */}
-                <div className="flex flex-col min-w-0 leading-tight">
-                  <span className={`text-[10px] sm:text-[11.5px] truncate font-bold ${textColor}`}>
-                    {stage.title}
-                  </span>
-                  <span className={`text-[8.5px] sm:text-[9.5px] truncate ${subColor}`}>
-                    {stage.subtitle}
-                  </span>
+                  {/* Step Title & Subtitle */}
+                  <div className="flex flex-col min-w-0 leading-tight">
+                    <span className={`text-[10px] sm:text-[11.5px] truncate font-bold ${textColor}`}>
+                      {stage.title}
+                    </span>
+                    <span className={`text-[8.5px] sm:text-[9.5px] truncate ${subColor}`}>
+                      {stage.subtitle}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Link>
-        )
-      })}
+            </Link>
+          )
+        })}
+      </div>
 
-      {/* Optional In-line Button if enabled */}
-      {showNextButton && nextStepInfo && (
-        <HeaderNextButton className="ml-4 sm:ml-7" />
+      {/* Dynamic Next Step Action Button relocated further to the right */}
+      {nextStepInfo && (
+        <div className="ml-auto pl-4 sm:pl-8 shrink-0">
+          <HeaderNextButton />
+        </div>
       )}
     </nav>
   )

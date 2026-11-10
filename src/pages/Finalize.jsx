@@ -1,6 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
-import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, History, Lock, Sparkles, XCircle } from 'lucide-react'
+import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  FileDiff,
+  GitCompare,
+  History,
+  Layers,
+  Lock,
+  MinusCircle,
+  PlusCircle,
+  Sparkles,
+  X,
+  XCircle,
+} from 'lucide-react'
 import Layout from '../components/common/Layout'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import { EmptyState, ErrorState, Loading } from '../components/common/States'
@@ -46,10 +63,11 @@ export function formatModelVersion(label) {
   return str.replace(/\bKG(\d+)\b/gi, 'Version $1').replace(/\bKG\b/gi, 'Model')
 }
 
-const Stat = ({ label, v, tone }) => (
-  <div className="rounded-xl border border-line bg-surface2/30 p-3 text-center">
+const Stat = ({ label, v, tone, sub }) => (
+  <div className="rounded-xl border border-line bg-surface2/30 p-3 text-center transition-colors hover:bg-surface2/50">
     <div className={`text-2xl font-bold ${tone || ''}`}>{v}</div>
-    <div className="mt-0.5 text-[11px] text-muted">{label}</div>
+    <div className="mt-0.5 text-[11px] font-semibold text-ink">{label}</div>
+    {sub && <div className="text-[10px] text-muted font-medium mt-0.5">{sub}</div>}
   </div>
 )
 
@@ -191,13 +209,22 @@ function getEntityBusinessNuance(n, impactSummary) {
   }
 }
 
-function DiffLists({ d, impactSummary }) {
-  const hasNodesAdded = (d?.nodes_added || []).length > 0
-  const hasNodesModified = (d?.nodes_modified || []).length > 0
-  const hasNodesRemoved = (d?.nodes_removed || []).length > 0
-  const hasEdgesAdded = (d?.edges_added || []).length > 0
-  const hasEdgesRemoved = (d?.edges_removed || []).length > 0
-  const hasEdgesModified = (d?.edges_modified || []).length > 0
+function DiffLists({ d, impactSummary, displayTemplateName = 'Domain' }) {
+  const [filter, setFilter] = useState('all') // 'all' | 'missing_model' | 'missing_current' | 'modified' | 'relationships'
+
+  const nodesAdded = d?.nodes_added || []
+  const nodesModified = d?.nodes_modified || []
+  const nodesRemoved = d?.nodes_removed || []
+  const edgesAdded = d?.edges_added || []
+  const edgesRemoved = d?.edges_removed || []
+  const edgesModified = d?.edges_modified || []
+
+  const hasNodesAdded = nodesAdded.length > 0
+  const hasNodesModified = nodesModified.length > 0
+  const hasNodesRemoved = nodesRemoved.length > 0
+  const hasEdgesAdded = edgesAdded.length > 0
+  const hasEdgesRemoved = edgesRemoved.length > 0
+  const hasEdgesModified = edgesModified.length > 0
 
   const hasAnyChanges =
     hasNodesAdded ||
@@ -207,188 +234,508 @@ function DiffLists({ d, impactSummary }) {
     hasEdgesRemoved ||
     hasEdgesModified
 
-  if (!hasAnyChanges) return <p className="mt-4 text-sm text-muted">No differences.</p>
+  if (!hasAnyChanges) {
+    return (
+      <div className="mt-5 rounded-2xl border border-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/20 p-6 text-center space-y-2 select-none">
+        <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+          <Check size={20} strokeWidth={3} />
+        </div>
+        <h4 className="text-sm font-bold text-ink">Zero Differences Detected</h4>
+        <p className="text-xs text-muted max-w-md mx-auto">
+          Current &ldquo;{displayTemplateName}&rdquo; Template perfectly matches the reference Model Template with no missing or modified entities.
+        </p>
+      </div>
+    )
+  }
+
+  const missingFromModelCount = nodesAdded.length + edgesAdded.length
+  const missingFromCurrentCount = nodesRemoved.length + edgesRemoved.length
+  const totalRelationships = edgesAdded.length + edgesRemoved.length + edgesModified.length
+
+  const showMissingModel = filter === 'all' || filter === 'missing_model'
+  const showMissingCurrent = filter === 'all' || filter === 'missing_current'
+  const showModified = (filter === 'all' || filter === 'modified') && hasNodesModified
+  const showRelationships = filter === 'all' || filter === 'relationships' || filter === 'missing_model' || filter === 'missing_current'
 
   return (
-    <div className="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 select-none">
-      {/* Left Column: Entities Added, Modified (Business Value & Nuances), Removed */}
-      <div className="lg:col-span-8 space-y-5">
-        {/* ENTITIES ADDED */}
-        {hasNodesAdded && (
-          <div>
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted mb-2.5">
-              ENTITIES ADDED
-            </h4>
-            <div className="space-y-2">
-              {d.nodes_added.map((n, idx) => {
-                const name = typeof n === 'string' ? n : n?.name || n?.key || `Entity-${idx}`
-                const key = typeof n === 'string' ? n : n?.key || name
-                const color = typeof n === 'object' ? n?.color || '#f59e0b' : '#f59e0b'
-                const origin = typeof n === 'object' ? n?.origin || 'user' : 'user'
-                return (
-                  <div
-                    key={key}
-                    className="flex items-center gap-2 rounded-xl border border-line/80 bg-surface/60 px-4 py-2.5 text-sm shadow-2xs"
-                  >
-                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: color }} />
-                    <b className="text-ink font-bold">{name}</b>
-                    <span className="text-xs text-muted font-normal">({origin})</span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
+    <div className="mt-6 space-y-5 select-none">
+      {/* Template Audit Clarity Guide Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3.5 rounded-2xl bg-surface2/50 border border-line text-xs">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-bold text-ink flex items-center gap-1.5 shrink-0">
+            <FileDiff size={15} className="text-[#10b981]" />
+            <span>Template Audit Clarity:</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <b>Missing from Model Template:</b> Custom additions in Current
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-400 font-semibold text-[11px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+            <b>Missing from Current Template:</b> Baseline items omitted
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 font-semibold text-[11px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            <b>Modified:</b> Attributes changed
+          </span>
+        </div>
+      </div>
 
-        {/* ENTITIES MODIFIED (BUSINESS VALUE & NUANCES) */}
+      {/* Interactive Filter Pills */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setFilter('all')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+            filter === 'all'
+              ? 'bg-[#10b981] text-white border-[#10b981] shadow-sm'
+              : 'bg-surface2/70 border-line text-muted hover:text-ink hover:bg-surface2'
+          }`}
+        >
+          All Differences
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFilter('missing_model')}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+            filter === 'missing_model'
+              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+              : 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10'
+          }`}
+        >
+          <PlusCircle size={13} />
+          <span>Missing from Model Template ({missingFromModelCount})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFilter('missing_current')}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+            filter === 'missing_current'
+              ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+              : 'bg-rose-50/50 dark:bg-rose-950/30 border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10'
+          }`}
+        >
+          <MinusCircle size={13} />
+          <span>Missing from Current Template ({missingFromCurrentCount})</span>
+        </button>
+
         {hasNodesModified && (
-          <div>
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted mb-2.5">
-              ENTITIES MODIFIED (BUSINESS VALUE & NUANCES)
-            </h4>
-            <div className="space-y-3">
-              {d.nodes_modified.map((n, idx) => {
-                const name = typeof n === 'string' ? n : n?.name || n?.key || `Modified-${idx}`
-                const key = typeof n === 'string' ? n : n?.key || name
-                const fromName =
-                  n?.changes?.name?.from || (typeof n?.changes?.name === 'string' ? n.changes.name : null)
-                const attrAdded = Array.isArray(n?.attributes_added) ? n.attributes_added : []
-                const attrRem = Array.isArray(n?.attributes_removed) ? n.attributes_removed : []
-                const nuance = getEntityBusinessNuance(n, impactSummary)
-                const toneClass = badgeClasses[nuance.tone] || badgeClasses.slate
-
-                return (
-                  <div
-                    key={key}
-                    className="rounded-2xl border border-line/80 bg-surface/70 p-4 shadow-2xs space-y-2"
-                  >
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <b className="text-sm sm:text-base font-bold text-ink">{name}</b>
-                      <span className={`rounded-full px-3 py-0.5 text-xs font-semibold border ${toneClass}`}>
-                        {nuance.badge}
-                      </span>
-                    </div>
-
-                    {fromName && (
-                      <div className="text-xs text-muted italic">renamed from “{fromName}”</div>
-                    )}
-
-                    {attrAdded.length > 0 && (
-                      <div className="text-xs text-emerald-600 dark:text-emerald-400 font-mono leading-relaxed">
-                        + {attrAdded.join(', ')}
-                      </div>
-                    )}
-
-                    {attrRem.length > 0 && (
-                      <div className="text-xs text-rose-500 font-mono leading-relaxed">
-                        − {attrRem.join(', ')}
-                      </div>
-                    )}
-
-                    <div className="text-xs text-ink/85 leading-relaxed pt-1">
-                      <span className="font-bold text-ink">Business Impact:</span> {nuance.impact}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => setFilter('modified')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+              filter === 'modified'
+                ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                : 'bg-amber-50/50 dark:bg-amber-950/30 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10'
+            }`}
+          >
+            <GitCompare size={13} />
+            <span>Modified Entities ({nodesModified.length})</span>
+          </button>
         )}
 
-        {/* ENTITIES REMOVED */}
-        {hasNodesRemoved && (
-          <div>
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-rose-500 mb-2.5">
-              ENTITIES REMOVED
-            </h4>
-            <div className="space-y-2">
-              {d.nodes_removed.map((n, idx) => {
-                const name = typeof n === 'string' ? n : n?.name || n?.key || `Removed-${idx}`
-                const key = typeof n === 'string' ? n : n?.key || name
-                return (
-                  <div
-                    key={key}
-                    className="rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-2 text-sm text-rose-600 dark:text-rose-400 font-semibold"
-                  >
-                    − {name}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+        {totalRelationships > 0 && (
+          <button
+            type="button"
+            onClick={() => setFilter('relationships')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+              filter === 'relationships'
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                : 'bg-indigo-50/50 dark:bg-indigo-950/30 border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-500/10'
+            }`}
+          >
+            <Layers size={13} />
+            <span>Relationships ({totalRelationships})</span>
+          </button>
         )}
       </div>
 
-      {/* Right Column: Relationships Added & Removed */}
-      <div className="lg:col-span-4 space-y-5">
-        {hasEdgesAdded && (
-          <div>
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted mb-2.5">
-              RELATIONSHIPS ADDED
-            </h4>
-            <div className="space-y-2">
-              {d.edges_added.map((e, i) => (
-                <div
-                  key={`ea-${i}`}
-                  className="rounded-xl border border-line/80 bg-surface/60 p-2.5 px-3.5 text-xs font-mono text-ink flex items-center flex-wrap gap-1.5 shadow-2xs"
-                >
-                  <span className="truncate max-w-[130px]" title={e?.source}>
-                    {e?.source}
+      {/* Main Differences Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Entities (Added, Removed, Modified) */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* SECTION 1: ENTITIES MISSING FROM MODEL TEMPLATE (ADDED IN CURRENT) */}
+          {hasNodesAdded && showMissingModel && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-line pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="grid h-6 w-6 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">
+                    +
                   </span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">
-                    —[{e?.label || 'includes'}]→
-                  </span>
-                  <span className="truncate max-w-[130px]" title={e?.target}>
-                    {e?.target}
-                  </span>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink">
+                      Entities Added to Current Template
+                    </h4>
+                    <p className="text-[11px] text-muted">
+                      Custom additions present in Current Template · Not part of baseline Model Template
+                    </p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+                <span className="rounded-full bg-emerald-500/15 border border-emerald-500/35 px-3 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 shrink-0">
+                  Missing from Model Template
+                </span>
+              </div>
 
-        {hasEdgesRemoved && (
-          <div>
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-rose-500 mb-2.5">
-              RELATIONSHIPS REMOVED
-            </h4>
-            <div className="space-y-2">
-              {d.edges_removed.map((e, i) => (
-                <div
-                  key={`er-${i}`}
-                  className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-2.5 px-3.5 text-xs font-mono text-rose-600 dark:text-rose-400 flex items-center flex-wrap gap-1.5 shadow-2xs"
-                >
-                  <span>{e?.source}</span>
-                  <span className="font-semibold shrink-0">—[{e?.label || 'removed'}]→</span>
-                  <span>{e?.target}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+              <div className="space-y-3">
+                {nodesAdded.map((n, idx) => {
+                  const name = typeof n === 'string' ? n : n?.name || n?.key || `Entity-${idx}`
+                  const key = typeof n === 'string' ? n : n?.key || name
+                  const color = typeof n === 'object' ? n?.color || '#10b981' : '#10b981'
+                  const origin = typeof n === 'object' ? n?.origin || 'custom' : 'custom'
+                  const def = typeof n === 'object' ? n?.definition : null
 
-        {hasEdgesModified && (
-          <div>
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted mb-2.5">
-              RELATIONSHIPS MODIFIED
-            </h4>
-            <div className="space-y-2">
-              {d.edges_modified.map((e, i) => (
-                <div
-                  key={`em-${i}`}
-                  className="rounded-xl border border-line/80 bg-surface/60 p-2.5 px-3 text-xs font-mono text-ink flex items-center flex-wrap gap-1 shadow-2xs"
-                >
-                  <span>{e?.source}</span>
-                  <span className="text-amber-500 font-semibold shrink-0">→</span>
-                  <span>{e?.target}:</span>
-                  <span className="text-muted">
-                    {e?.from} ⇒ {e?.to}
-                  </span>
-                </div>
-              ))}
+                  return (
+                    <div
+                      key={key}
+                      className="rounded-2xl border border-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/20 p-4 shadow-2xs space-y-2.5 transition-all hover:border-emerald-500/50"
+                    >
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="h-3 w-3 rounded-full shrink-0 shadow-xs" style={{ background: color }} />
+                          <b className="text-sm sm:text-base font-bold text-ink">{name}</b>
+                          <span className="text-xs text-muted font-normal">({origin})</span>
+                        </div>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                          <PlusCircle size={12} className="shrink-0" />
+                          <span>Missing from Model Template</span>
+                        </span>
+                      </div>
+
+                      {/* Explicit Template Comparison Table */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                        <div className="flex items-center justify-between rounded-xl bg-surface2/60 border border-line/70 px-3 py-1.5">
+                          <span className="text-muted font-medium">Model &ldquo;{displayTemplateName}&rdquo; Template:</span>
+                          <span className="font-bold text-rose-500 flex items-center gap-1">
+                            <X size={13} strokeWidth={3} /> Missing
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between rounded-xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-500/30 px-3 py-1.5">
+                          <span className="text-emerald-900 dark:text-emerald-300 font-medium">Current &ldquo;{displayTemplateName}&rdquo; Template:</span>
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <Check size={13} strokeWidth={3} /> Present (Active)
+                          </span>
+                        </div>
+                      </div>
+
+                      {def && (
+                        <p className="text-xs text-muted leading-relaxed pt-0.5 italic">
+                          &ldquo;{def}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* SECTION 2: ENTITIES MISSING FROM CURRENT TEMPLATE (REMOVED FROM BASELINE) */}
+          {hasNodesRemoved && showMissingCurrent && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-line pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="grid h-6 w-6 place-items-center rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 font-extrabold text-sm">
+                    −
+                  </span>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                      Entities Omitted in Current Template
+                    </h4>
+                    <p className="text-[11px] text-muted">
+                      Standard reference entities present in Model Template · Excluded from customized Digital Twin
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-full bg-rose-500/15 border border-rose-500/35 px-3 py-0.5 text-xs font-bold text-rose-600 dark:text-rose-400 shrink-0">
+                  Missing from Current Template
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {nodesRemoved.map((n, idx) => {
+                  const name = typeof n === 'string' ? n : n?.name || n?.key || `Removed-${idx}`
+                  const key = typeof n === 'string' ? n : n?.key || name
+                  const color = typeof n === 'object' ? n?.color || '#94a3b8' : '#94a3b8'
+                  const def = typeof n === 'object' ? n?.definition : null
+
+                  return (
+                    <div
+                      key={key}
+                      className="rounded-2xl border border-rose-500/30 bg-rose-50/20 dark:bg-rose-950/20 p-4 shadow-2xs space-y-2.5 transition-all hover:border-rose-500/50"
+                    >
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="h-3 w-3 rounded-full shrink-0 shadow-xs" style={{ background: color }} />
+                          <b className="text-sm sm:text-base font-bold text-ink line-through decoration-rose-400/80">
+                            {name}
+                          </b>
+                          <span className="text-xs text-muted font-normal">(baseline model)</span>
+                        </div>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 border border-rose-500/40 px-2.5 py-0.5 text-xs font-bold text-rose-600 dark:text-rose-400">
+                          <MinusCircle size={12} className="shrink-0" />
+                          <span>Missing from Current Template</span>
+                        </span>
+                      </div>
+
+                      {/* Explicit Template Comparison Table */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                        <div className="flex items-center justify-between rounded-xl bg-surface2/60 border border-line/70 px-3 py-1.5">
+                          <span className="text-muted font-medium">Model &ldquo;{displayTemplateName}&rdquo; Template:</span>
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <Check size={13} strokeWidth={3} /> Present (Reference)
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between rounded-xl bg-rose-50/60 dark:bg-rose-950/40 border border-rose-500/30 px-3 py-1.5">
+                          <span className="text-rose-900 dark:text-rose-300 font-medium">Current &ldquo;{displayTemplateName}&rdquo; Template:</span>
+                          <span className="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                            <X size={13} strokeWidth={3} /> Missing (Omitted)
+                          </span>
+                        </div>
+                      </div>
+
+                      {def && (
+                        <p className="text-xs text-muted leading-relaxed pt-0.5 italic">
+                          &ldquo;{def}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 3: ENTITIES MODIFIED (BUSINESS VALUE & NUANCES) */}
+          {hasNodesModified && showModified && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-line pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="grid h-6 w-6 place-items-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 font-extrabold text-sm">
+                    ~
+                  </span>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink">
+                      Entities Modified & Enriched
+                    </h4>
+                    <p className="text-[11px] text-muted">
+                      Entities present in both templates with attribute-level enhancements and custom business impact
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-full bg-amber-500/15 border border-amber-500/35 px-3 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-300 shrink-0">
+                  Modified in Current Template
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {nodesModified.map((n, idx) => {
+                  const name = typeof n === 'string' ? n : n?.name || n?.key || `Modified-${idx}`
+                  const key = typeof n === 'string' ? n : n?.key || name
+                  const fromName =
+                    n?.changes?.name?.from || (typeof n?.changes?.name === 'string' ? n.changes.name : null)
+                  const attrAdded = Array.isArray(n?.attributes_added) ? n.attributes_added : []
+                  const attrRem = Array.isArray(n?.attributes_removed) ? n.attributes_removed : []
+                  const nuance = getEntityBusinessNuance(n, impactSummary)
+                  const toneClass = badgeClasses[nuance.tone] || badgeClasses.slate
+
+                  return (
+                    <div
+                      key={key}
+                      className="rounded-2xl border border-line/80 bg-surface/70 p-4 shadow-2xs space-y-3 transition-all hover:border-amber-500/40"
+                    >
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <b className="text-sm sm:text-base font-bold text-ink">{name}</b>
+                          <span className="rounded-md bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                            Present in Both Templates
+                          </span>
+                        </div>
+                        <span className={`rounded-full px-3 py-0.5 text-xs font-semibold border ${toneClass}`}>
+                          {nuance.badge}
+                        </span>
+                      </div>
+
+                      {fromName && (
+                        <div className="text-xs text-muted italic">
+                          Renamed from &ldquo;{fromName}&rdquo; (Model Template) ⇒ &ldquo;{name}&rdquo; (Current Template)
+                        </div>
+                      )}
+
+                      {/* Attributes Added in Current -> Missing from Model */}
+                      {attrAdded.length > 0 && (
+                        <div className="rounded-xl bg-emerald-50/30 dark:bg-emerald-950/20 border border-emerald-500/25 p-3 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs flex-wrap gap-1">
+                            <span className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                              <PlusCircle size={13} />
+                              <span>Added Attributes in Current Template</span>
+                            </span>
+                            <span className="font-bold text-emerald-700 dark:text-emerald-300 text-[11px] px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30">
+                              Missing from Model Template
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 pt-0.5">
+                            {attrAdded.map((attr, aIdx) => (
+                              <span
+                                key={aIdx}
+                                className="font-mono text-xs font-semibold px-2.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                              >
+                                + {attr}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Attributes Removed in Current -> Missing from Current */}
+                      {attrRem.length > 0 && (
+                        <div className="rounded-xl bg-rose-50/30 dark:bg-rose-950/20 border border-rose-500/25 p-3 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs flex-wrap gap-1">
+                            <span className="font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                              <MinusCircle size={13} />
+                              <span>Removed Attributes in Current Template</span>
+                            </span>
+                            <span className="font-bold text-rose-600 dark:text-rose-400 text-[11px] px-2 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30">
+                              Missing from Current Template
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 pt-0.5">
+                            {attrRem.map((attr, aIdx) => (
+                              <span
+                                key={aIdx}
+                                className="font-mono text-xs font-semibold px-2.5 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 line-through"
+                              >
+                                − {attr}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="text-xs text-ink/85 leading-relaxed pt-1 border-t border-line/40">
+                        <span className="font-bold text-ink">Business Impact:</span> {nuance.impact}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Relationships Added, Removed, Modified */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* RELATIONSHIPS ADDED */}
+          {hasEdgesAdded && showRelationships && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-line pb-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-ink flex items-center gap-1.5">
+                  <span className="text-emerald-500 font-bold">+</span>
+                  <span>Links Added ({edgesAdded.length})</span>
+                </h4>
+                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md">
+                  Missing from Model Template
+                </span>
+              </div>
+              <div className="space-y-2">
+                {edgesAdded.map((e, i) => (
+                  <div
+                    key={`ea-${i}`}
+                    className="rounded-xl border border-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/20 p-3 text-xs shadow-2xs space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between gap-1 text-[11px]">
+                      <span className="font-bold text-emerald-700 dark:text-emerald-400">Current Template Active</span>
+                      <span className="text-rose-500 font-semibold">Missing from Model</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-mono text-ink text-xs font-semibold flex-wrap">
+                      <span className="truncate max-w-[120px]" title={e?.source}>
+                        {e?.source}
+                      </span>
+                      <span className="text-emerald-600 dark:text-emerald-400 shrink-0">
+                        —[{e?.label || 'includes'}]→
+                      </span>
+                      <span className="truncate max-w-[120px]" title={e?.target}>
+                        {e?.target}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* RELATIONSHIPS REMOVED */}
+          {hasEdgesRemoved && showRelationships && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-line pb-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                  <span className="text-rose-500 font-bold">−</span>
+                  <span>Links Removed ({edgesRemoved.length})</span>
+                </h4>
+                <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-md">
+                  Missing from Current Template
+                </span>
+              </div>
+              <div className="space-y-2">
+                {edgesRemoved.map((e, i) => (
+                  <div
+                    key={`er-${i}`}
+                    className="rounded-xl border border-rose-500/30 bg-rose-50/20 dark:bg-rose-950/20 p-3 text-xs shadow-2xs space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between gap-1 text-[11px]">
+                      <span className="text-muted font-medium">Model Template Standard</span>
+                      <span className="text-rose-600 dark:text-rose-400 font-bold">Missing from Current</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-mono text-rose-600 dark:text-rose-400 text-xs font-semibold flex-wrap line-through">
+                      <span className="truncate max-w-[120px]">{e?.source}</span>
+                      <span className="shrink-0">—[{e?.label || 'removed'}]→</span>
+                      <span className="truncate max-w-[120px]">{e?.target}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* RELATIONSHIPS MODIFIED */}
+          {hasEdgesModified && (filter === 'all' || filter === 'relationships' || filter === 'modified') && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-line pb-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-ink flex items-center gap-1.5">
+                  <span className="text-amber-500 font-bold">~</span>
+                  <span>Links Relabelled ({edgesModified.length})</span>
+                </h4>
+                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-md">
+                  Modified in Current Template
+                </span>
+              </div>
+              <div className="space-y-2">
+                {edgesModified.map((e, i) => (
+                  <div
+                    key={`em-${i}`}
+                    className="rounded-xl border border-line/80 bg-surface/60 p-3 text-xs font-mono text-ink shadow-2xs space-y-1.5"
+                  >
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-bold">{e?.source}</span>
+                      <span className="text-muted">→</span>
+                      <span className="font-bold">{e?.target}:</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <span className="rounded bg-surface2 px-1.5 py-0.5 text-muted line-through" title="In Model Template">
+                        {e?.from}
+                      </span>
+                      <span className="text-emerald-600 font-bold">⇒</span>
+                      <span className="rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold px-1.5 py-0.5" title="In Current Template">
+                        {e?.to}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -515,11 +862,11 @@ export default function Finalize() {
           className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-muted hover:text-ink transition font-medium cursor-pointer"
         >
           <ArrowLeft size={14} className="text-brand" />
-          <span>Back to Operational Model & Chatbot</span>
+          <span>Back to Knowledge Graph & Chatbot</span>
         </Link>
         <h1 className="mt-2 text-xl sm:text-2xl font-bold text-ink">Enterprise Digital Twin Finalization</h1>
         <p className="mt-1 text-xs sm:text-sm text-muted">
-          Step 4: Review, validate and finalize your customized {resolvedDomainName} Digital Twin.
+          Step 4: Review, validate and finalize your customized {domainType} Digital Twin.
         </p>
       </div>
 
@@ -549,15 +896,11 @@ export default function Finalize() {
                 <div className="flex flex-col">
                   <h2 className="flex items-center gap-1.5 text-sm sm:text-base font-semibold text-ink">
                     <Sparkles size={16} className="text-emerald-500 fill-emerald-500/20" />
-                    <span>{displayTemplateName}</span>
+                    <span>Digital Twin Graph Preview · Current &ldquo;{displayTemplateName}&rdquo; Template</span>
                   </h2>
                   <span className="text-xs text-muted">
                     {d?.graph?.nodes?.length || 0} entities · {d?.graph?.edges?.length || 0} relationships
                   </span>
-                </div>
-                <div className="flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs font-medium text-ink shadow-sm">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>{displayTemplateName} Radial Spine Active</span>
                 </div>
               </div>
               <div className="h-[520px] min-h-[420px] w-full relative bg-surface">
@@ -690,7 +1033,6 @@ export default function Finalize() {
                   >
                     <Sparkles size={16} />
                     <span>Finalise as Digital Twin</span>
-                    <span>🌟</span>
                   </button>
                 )}
               </div>
@@ -723,38 +1065,44 @@ export default function Finalize() {
                     <>
                       <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
                         <Stat
-                          label="entities added"
+                          label="Entities Added"
+                          sub="Missing from Model"
                           v={activeDiff?.counts?.nodes_added || 0}
                           tone="text-emerald-600 dark:text-emerald-400 font-bold text-2xl"
                         />
                         <Stat
-                          label="entities modified"
+                          label="Entities Modified"
+                          sub="Attributes Changed"
                           v={activeDiff?.counts?.nodes_modified || 0}
                           tone="text-amber-500 font-bold text-2xl"
                         />
                         <Stat
-                          label="entities removed"
+                          label="Entities Removed"
+                          sub="Missing from Current"
                           v={activeDiff?.counts?.nodes_removed || 0}
                           tone="text-rose-500 font-bold text-2xl"
                         />
                         <Stat
-                          label="links added"
+                          label="Links Added"
+                          sub="Missing from Model"
                           v={activeDiff?.counts?.edges_added || 0}
                           tone="text-emerald-600 dark:text-emerald-400 font-bold text-2xl"
                         />
                         <Stat
-                          label="links relabelled"
+                          label="Links Relabelled"
+                          sub="Modified in Current"
                           v={activeDiff?.counts?.edges_modified || 0}
                           tone="text-slate-600 dark:text-slate-300 font-bold text-2xl"
                         />
                         <Stat
-                          label="links removed"
+                          label="Links Removed"
+                          sub="Missing from Current"
                           v={activeDiff?.counts?.edges_removed || 0}
                           tone="text-rose-500 font-bold text-2xl"
                         />
                       </div>
                       <ErrorBoundary title="Diff Comparison Error">
-                        <DiffLists d={activeDiff} impactSummary={impactSummary} />
+                        <DiffLists d={activeDiff} impactSummary={impactSummary} displayTemplateName={displayTemplateName} />
                       </ErrorBoundary>
                     </>
                   )

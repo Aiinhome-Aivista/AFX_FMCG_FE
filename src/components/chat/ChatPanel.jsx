@@ -359,7 +359,7 @@ export default function ChatPanel({
         </div>
       </div>
 
-      {/* Nuances Captured Banner: In the conversation box, the Next button is always for Upload Data */}
+      {/* Nuances Captured Banner: In the conversation box, the Next button is for Upload Data */}
       {(canUpload || isKg2Active || userChatCount >= 1) ? (
         <div className="mx-3.5 my-2 flex items-center justify-between gap-2 rounded-xl border border-emerald-500/35 bg-emerald-50/70 dark:bg-emerald-950/30 px-3 py-2 shadow-2xs animate-in fade-in">
           <div className="flex items-center gap-1.5 min-w-0">

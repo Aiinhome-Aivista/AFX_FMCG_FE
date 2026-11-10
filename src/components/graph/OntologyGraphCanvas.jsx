@@ -779,15 +779,15 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
               const isAddedDiscrepancy = gapAnalysis && (
                 discrepancies?.addedKeys?.has(n.id) ||
                 discrepancies?.addedKeys?.has(n.key) ||
-                n.change_state === 'added' ||
-                (n.added_in_version && n.added_in_version >= 2) ||
                 n.kind === 'datasource' ||
-                n.isDiscrepancy
+                n.origin === 'telemetry' ||
+                (n.added_in_version && n.added_in_version >= 2 && n.origin !== 'chat') ||
+                (n.isDiscrepancy && !n.isMissing)
               )
               const isMissingDiscrepancy = gapAnalysis && (
                 discrepancies?.missingKeys?.has(n.id) ||
                 discrepancies?.missingKeys?.has(n.key) ||
-                n.isMissing
+                Boolean(n.isMissing)
               )
               const isDiscrepancy = isAddedDiscrepancy || isMissingDiscrepancy
 
@@ -868,9 +868,11 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                     strokeWidth={strokeW}
                     strokeDasharray={isMissingDiscrepancy ? '6 3' : isFound ? '5 3' : undefined}
                     style={{
-                      fill: themeColors.card,
+                      fill: gapAnalysis && isDiscrepancy
+                        ? (isDark ? 'rgba(239, 68, 68, 0.12)' : 'rgba(254, 242, 242, 0.95)')
+                        : themeColors.card,
                       filter: dropShadow,
-                      transition: 'stroke 0.2s, stroke-width 0.2s',
+                      transition: 'stroke 0.2s, stroke-width 0.2s, fill 0.2s',
                     }}
                   />
                   {/* Colored indicator dot */}
@@ -882,10 +884,10 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                   />
                   {/* Status badge: Red for discrepancies in Gap Analysis, or regular status */}
                   {gapAnalysis && isDiscrepancy && (
-                    <g transform={`translate(${n.x + n.w / 2 - 40}, ${n.y - n.h / 2 - 8})`}>
-                      <rect width={isMissingDiscrepancy ? 54 : 74} height={16} rx={5} fill="#EF4444" />
-                      <text x={isMissingDiscrepancy ? 27 : 37} y={11.5} textAnchor="middle" fill="#FFFFFF" fontSize="8" fontWeight="bold" fontFamily="system-ui">
-                        {isMissingDiscrepancy ? 'MISSING' : 'DISCREPANCY'}
+                    <g transform={`translate(${n.x + n.w / 2 - (isMissingDiscrepancy ? 45 : 55)}, ${n.y - n.h / 2 - 8})`}>
+                      <rect width={isMissingDiscrepancy ? 54 : 70} height={16} rx={5} fill="#EF4444" />
+                      <text x={isMissingDiscrepancy ? 27 : 35} y={11.5} textAnchor="middle" fill="#FFFFFF" fontSize="8" fontWeight="bold" fontFamily="system-ui">
+                        {isMissingDiscrepancy ? 'MISSING' : 'EXTRA NODE'}
                       </text>
                     </g>
                   )}
