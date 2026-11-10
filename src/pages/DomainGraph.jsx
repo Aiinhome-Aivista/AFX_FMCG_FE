@@ -516,7 +516,7 @@ export default function DomainGraph() {
         id: 'gap-analysis-' + Date.now(),
         role: 'assistant',
         kind: 'gap_analysis',
-        content: `Comparing telemetry data (“${targetFileName}”) with operational baseline.\n\n- Discrepancies (RED): ${mCount} missing element(s) and ${nCount} new telemetry node(s)\n- Matched Elements: ${matchCount} verified entity(ies)\n\nAll discrepancies are highlighted in RED on your Knowledge Graph. Let's review these gaps so we can finalize your Digital Twin.`,
+        content: `Comparing telemetry data (“${targetFileName}”) with operational baseline.\n\n- Discrepancies (RED): ${mCount} missing element(s) and ${nCount} new telemetry node(s)\n- Matched Elements: ${matchCount} verified entity(ies)\n\nAll discrepancies are highlighted in RED on your domain model. Let's review these gaps so we can finalize your Digital Twin.`,
         created_at: new Date().toISOString(),
       }
 

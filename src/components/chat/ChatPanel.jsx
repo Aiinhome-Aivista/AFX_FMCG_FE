@@ -16,6 +16,19 @@ const KIND_LABEL = {
   gap_analysis: 'Reconciliation Evolution',
 }
 
+export function sanitizeChatText(text) {
+  if (!text || typeof text !== 'string') return text
+  return text
+    .replace(/verified KG1 entities/gi, 'verified entities')
+    .replace(/KG1 entities/gi, 'baseline entities')
+    .replace(/\bverified KG\d* entities\b/gi, 'verified entities')
+    .replace(/\bKG1\b/g, 'baseline model')
+    .replace(/\bKG2\b/g, 'operational model')
+    .replace(/\bKG0\b/g, 'template model')
+    .replace(/\bKG\s*(\d+)\b/gi, 'version $1')
+    .replace(/\bKnowledge Graph\b/gi, 'domain model')
+}
+
 export default function ChatPanel({
   slug,
   domainName,
@@ -463,7 +476,7 @@ export default function ChatPanel({
                     )}
                   </span>
                 )}
-                <span className="whitespace-pre-wrap">{m.content}</span>
+                <span className="whitespace-pre-wrap">{sanitizeChatText(m.content)}</span>
                 {m.kind === 'gap_analysis' && (
                   <div className="mt-3 pt-2.5 border-t border-emerald-500/20 flex flex-wrap items-center gap-2">
                     {onOpenUpload && (
