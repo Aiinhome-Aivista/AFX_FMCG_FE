@@ -89,6 +89,14 @@ export function useChevronTrackerState() {
       ))
     : false
 
+  const isConversationStarted = Boolean(
+    workflowDetail?.conversationStarted ||
+    (currentSlug && typeof sessionStorage !== 'undefined' && (
+      sessionStorage.getItem(`afx_conv_started_${currentSlug}`) === 'true' ||
+      sessionStorage.getItem(`afx_conv_started_${slug}`) === 'true'
+    ))
+  )
+
   const isKg2Active = Boolean(
     !isExplicitKg1 && (
       isExplicitKg2 ||
@@ -144,21 +152,8 @@ export function useChevronTrackerState() {
       }
     }
 
-    // In Baseline (Core Nuances) stage: Only show "Next: Upload Data" after at least 3 chats or when upload is unlocked
-    const canUploadNow = Boolean(
-      workflowDetail?.canUpload ||
-      workflowDetail?.hasUploadedFiles ||
-      isKg2Active
-    )
-
-    if (!canUploadNow) {
-      return null
-    }
-
-    return {
-      label: 'Next: Upload Data',
-      route: `${prefix}/${currentSlug}?stage=kg1&view=upload`,
-    }
+    // Do not show "Next: Upload Data" in the navigation bar
+    return null
   }, [isIndustryStep, isFinalize, isDomainSelected, isKg2Active, isUploadView, workflowDetail, prefix, currentSlug, effectiveSlug])
 
   return {
@@ -173,6 +168,7 @@ export function useChevronTrackerState() {
     isKg2Active,
     isUploadView,
     isUploadOrKg2,
+    isConversationStarted,
     workflowDetail,
     nextStepInfo,
   }
@@ -211,6 +207,7 @@ export default function ChevronTracker({ showNextButton = false }) {
     isDomainSelected,
     isFinalize,
     isUploadOrKg2,
+    isConversationStarted,
     workflowDetail,
     nextStepInfo,
   } = useChevronTrackerState()
@@ -298,13 +295,13 @@ export default function ChevronTracker({ showNextButton = false }) {
 
     // 4-Stage Domain Workflow (matching user screenshot)
     if (stageId === 1) {
-      // Step 1: Domain
-      if (!isDomainSelected) return { isCompleted: false, isActive: true }
+      // Step 1: Domain (Prompts & Overview)
+      if (!isDomainSelected || !isConversationStarted) return { isCompleted: false, isActive: true }
       return { isCompleted: true, isActive: false }
     }
     if (stageId === 2) {
-      // Step 2: Core Nuances
-      if (!isDomainSelected) return { isCompleted: false, isActive: false }
+      // Step 2: Core Nuances (Process Discovery)
+      if (!isDomainSelected || !isConversationStarted) return { isCompleted: false, isActive: false }
       if (isFinalize || isUploadOrKg2) return { isCompleted: true, isActive: false }
       return { isCompleted: false, isActive: true }
     }
@@ -352,9 +349,9 @@ export default function ChevronTracker({ showNextButton = false }) {
           outerBg =
             'bg-gradient-to-r from-[#10b981] via-[#06b6d4] to-[#10b981] dark:from-[#10b981] dark:via-[#22d3ee] dark:to-[#10b981]'
           innerBg =
-            'bg-gradient-to-r from-emerald-50/90 via-cyan-50/70 to-emerald-50/90 dark:!bg-none dark:bg-[#192027]'
-          textColor = 'text-emerald-950 dark:text-white font-extrabold'
-          subColor = 'text-emerald-700 dark:text-[#34d399] font-bold'
+            'bg-gradient-to-r from-emerald-100/95 via-cyan-50/90 to-emerald-100/95 dark:!bg-none dark:bg-[#132822]'
+          textColor = 'text-emerald-950 dark:text-emerald-200 font-extrabold'
+          subColor = 'text-emerald-800 dark:text-[#34d399] font-bold'
           iconColor = 'text-[#10b981]'
         }
 
@@ -365,8 +362,8 @@ export default function ChevronTracker({ showNextButton = false }) {
           <Link
             key={stage.id}
             to={targetUrl}
-            className={`group relative flex items-center transition-all duration-200 cursor-pointer ${
-              isActive ? 'scale-[1.02] z-10' : 'hover:scale-[1.01]'
+            className={`group relative flex items-center transition-all duration-300 cursor-pointer ${
+              isActive ? 'scale-[1.02] z-10 stage-dim-dip' : 'hover:scale-[1.01]'
             }`}
           >
             {/* Outer Chevron Clip Path (Border layer) */}
@@ -404,7 +401,9 @@ export default function ChevronTracker({ showNextButton = false }) {
                     </span>
                   ) : (
                     <span
-                      className={`text-[9px] sm:text-[10px] font-bold ${iconColor} border border-current rounded-full h-3.5 sm:h-4 w-3.5 sm:w-4 flex items-center justify-center`}
+                      className={`text-[9px] sm:text-[10px] font-bold ${iconColor} border border-current rounded-full h-3.5 sm:h-4 w-3.5 sm:w-4 flex items-center justify-center ${
+                        isActive ? 'bg-[#10b981]/20 ring-2 ring-[#10b981]/40' : ''
+                      }`}
                     >
                       {stage.id}
                     </span>

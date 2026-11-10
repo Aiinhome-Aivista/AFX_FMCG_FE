@@ -90,7 +90,17 @@ export default function ChatPanel({
     activeSnap.messages?.some((m) => m.kind === 'gap_analysis')
   )
 
-  const canUpload = userChatCount >= 3 || hasUploadedFiles || isKg2Active
+  const canUpload = userChatCount >= 1 || hasUploadedFiles || isKg2Active
+
+  const [isAwaitingDecision, setIsAwaitingDecision] = useState(() => {
+    return Boolean(activeSnap?.awaiting_session_decision || (userChatCount >= 1 && !activeSnap?.open_question))
+  })
+
+  useEffect(() => {
+    if (activeSnap?.awaiting_session_decision) {
+      setIsAwaitingDecision(true)
+    }
+  }, [activeSnap?.awaiting_session_decision])
 
   useEffect(() => {
     if (slug) {
@@ -132,12 +142,39 @@ export default function ChatPanel({
   }).catch(() => {})
 
   const handleDecision = (action) => {
-    run(
+    return run(
       () => chat.decision(slug, action),
       (r) => {
         merge(r)
       }
     ).catch(() => {})
+  }
+
+  const handleOpenUploadClick = () => {
+    if (onOpenUpload) {
+      onOpenUpload()
+    } else {
+      const url = new URL(window.location.href)
+      url.searchParams.set('view', 'upload')
+      url.searchParams.delete('stage')
+      window.location.href = url.toString()
+    }
+  }
+
+  const handleContinueExploring = async () => {
+    setIsAwaitingDecision(false)
+    if (activeSnap?.awaiting_session_decision) {
+      await handleDecision('continue')
+    }
+  }
+
+  const handleProceedToNext = async () => {
+    try {
+      if (activeSnap?.awaiting_session_decision) {
+        await handleDecision('proceed')
+      }
+    } catch {}
+    handleOpenUploadClick()
   }
 
   const send = async (e) => {
@@ -157,6 +194,7 @@ export default function ChatPanel({
       } else {
         await run(() => chat.message(slug, msg, askNode), merge)
       }
+      setIsAwaitingDecision(true)
     } catch (err) {
       console.error('Chat error:', err)
     } finally {
@@ -170,6 +208,7 @@ export default function ChatPanel({
     onAnsweringChange?.(true)
     try {
       await run(() => chat.answer(slug, 'skip'), merge)
+      setIsAwaitingDecision(true)
     } catch (err) {
       console.error('Skip error:', err)
     } finally {
@@ -178,8 +217,39 @@ export default function ChatPanel({
   }
 
 
-  // Welcome state when conversation hasn't started yet
-  if (!activeSnap.conversation_id) {
+  const [hasStartedConversation, setHasStartedConversation] = useState(() => {
+    try {
+      return sessionStorage.getItem(`afx_conv_started_${slug}`) === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    try {
+      setHasStartedConversation(sessionStorage.getItem(`afx_conv_started_${slug}`) === 'true')
+    } catch {
+      setHasStartedConversation(false)
+    }
+  }, [slug])
+
+  const handleStart = () => {
+    try {
+      sessionStorage.setItem(`afx_conv_started_${slug}`, 'true')
+    } catch {}
+    setHasStartedConversation(true)
+    window.dispatchEvent(
+      new CustomEvent('afx-workflow-state', {
+        detail: { slug, conversationStarted: true },
+      })
+    )
+    if (!activeSnap.conversation_id) {
+      start()
+    }
+  }
+
+  // Welcome state on initial screen before user starts a conversation
+  if (!hasStartedConversation || !activeSnap.conversation_id) {
     return (
       <div className="relative flex h-full flex-col items-center justify-center overflow-hidden p-6 sm:p-8 text-center bg-gradient-to-b from-surface via-surface to-surface2">
         {/* Ambient glow */}
@@ -201,7 +271,7 @@ export default function ChatPanel({
 
           <div className="mt-6 flex flex-col gap-2 w-full text-left">
             <button
-              onClick={start}
+              onClick={handleStart}
               disabled={busy || locked}
               className="group flex items-center justify-between rounded-xl border border-brand/30 bg-brand/10 p-3 text-xs font-semibold text-brand transition hover:bg-brand hover:text-white shadow-2xs cursor-pointer"
             >
@@ -214,9 +284,7 @@ export default function ChatPanel({
 
             {askNode && (
               <button
-                onClick={() => {
-                  start()
-                }}
+                onClick={handleStart}
                 className="group flex items-center justify-between rounded-xl border border-line bg-surface p-3 text-xs text-ink transition hover:border-brand/40 hover:bg-surface2 cursor-pointer"
               >
                 <div className="flex items-center gap-2 truncate">
@@ -243,20 +311,21 @@ export default function ChatPanel({
       <div className="border-b border-line/70 px-4 py-2.5 bg-surface2/30">
         <div className="flex items-center justify-between text-xs text-muted">
           <div className="flex items-center gap-1.5 font-medium">
-            <Sparkles size={13} className={isComplete ? 'text-emerald-500' : 'text-brand'} />
             {isComplete ? (
-              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+                <Sparkles size={13} className="text-emerald-500" />
                 Domain Discovery Complete
                 <span className="ml-1 text-muted font-normal text-[11px]">
                   ({answeredCount} {answeredCount === 1 ? 'question' : 'questions'} explored)
                 </span>
               </span>
-            ) : activeSnap.awaiting_session_decision ? (
-              <span className="text-amber-600 dark:text-amber-400 font-semibold">
+            ) : isAwaitingDecision ? (
+              <span className="text-[#c2410c] dark:text-amber-400 font-bold text-xs sm:text-[13px]">
                 Session Check: Continue or Proceed?
               </span>
             ) : q ? (
-              <>
+              <div className="flex items-center gap-1.5 font-medium">
+                <Sparkles size={13} className="text-brand" />
                 <span className="text-ink">Domain Discovery:</span>
                 <span className="text-brand font-semibold">
                   Question #{answeredCount + 1}
@@ -264,7 +333,7 @@ export default function ChatPanel({
                 <span className="text-muted text-[11px] font-normal">
                   (Context-driven)
                 </span>
-              </>
+              </div>
             ) : (
               <span className="text-ink font-semibold">Domain Discovery Active</span>
             )}
@@ -278,37 +347,35 @@ export default function ChatPanel({
         </div>
 
         {/* Micro progress bar */}
-        <div className="mt-2 h-1.5 w-full rounded-full bg-surface2 overflow-hidden">
+        <div className="mt-2 h-1.5 w-full rounded-full bg-slate-100 dark:bg-surface2 overflow-hidden">
           <div
-            className={`h-full transition-all duration-500 ${
+            className={`h-full rounded-full transition-all duration-500 ${
               isComplete
-                ? 'w-full bg-emerald-500'
-                : 'bg-gradient-to-r from-brand to-cyan-400'
+                ? 'w-full bg-[#10b981]'
+                : 'bg-gradient-to-r from-[#10b981] via-[#06b6d4] to-[#6366f1]'
             }`}
-            style={{ width: isComplete ? '100%' : `${Math.min(95, Math.max(20, (answeredCount + 1) * 20))}%` }}
+            style={{ width: isComplete ? '100%' : `${Math.min(95, Math.max(35, (answeredCount + 1) * 25))}%` }}
           />
         </div>
       </div>
 
       {/* Nuances Captured Banner: In the conversation box, the Next button is always for Upload Data */}
-      {(canUpload || isKg2Active) ? (
-        <div className="mx-3.5 my-2 flex items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-50/60 dark:bg-emerald-950/30 px-3.5 py-2 shadow-2xs animate-in fade-in">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 size={16} className="text-[#10b981] shrink-0" />
-            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-              Nuances Captured · Baseline Ready
+      {(canUpload || isKg2Active || userChatCount >= 1) ? (
+        <div className="mx-3.5 my-2 flex items-center justify-between gap-2 rounded-xl border border-emerald-500/35 bg-emerald-50/70 dark:bg-emerald-950/30 px-3 py-2 shadow-2xs animate-in fade-in">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <CheckCircle2 size={14} className="text-[#10b981] shrink-0" />
+            <span className="text-[11px] sm:text-xs font-bold text-emerald-800 dark:text-emerald-300 whitespace-nowrap">
+              Nuances Captured · Model Ready
             </span>
           </div>
-          {onOpenUpload && (
-            <button
-              type="button"
-              onClick={onOpenUpload}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white dark:text-black font-bold px-3 py-1.5 text-xs shadow-sm transition active:scale-95 cursor-pointer"
-            >
-              <span>Next: Upload Data</span>
-              <ArrowRight size={13} strokeWidth={2.5} />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleOpenUploadClick}
+            className="inline-flex items-center gap-1 rounded-lg bg-[#10b981] hover:bg-[#059669] text-white font-bold px-2.5 py-1 text-[11px] sm:text-xs shadow-sm transition active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
+          >
+            <span>Next: Upload Data</span>
+            <ArrowRight size={12} strokeWidth={2.5} />
+          </button>
         </div>
       ) : (
         <div className="mx-3.5 my-2 flex items-center justify-between rounded-xl border border-line/60 bg-surface2/50 px-3.5 py-2 text-xs text-muted select-none">
@@ -318,25 +385,8 @@ export default function ChatPanel({
               Capturing Core Nuances
             </span>
             <span className="text-[11px] text-muted font-normal">
-              ({userChatCount}/3 chats to unlock file upload)
+              (Initial Process Discovery)
             </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`h-1.5 w-4 rounded-full transition-colors ${
-                userChatCount >= 1 ? 'bg-brand' : 'bg-line dark:bg-surface'
-              }`}
-            />
-            <span
-              className={`h-1.5 w-4 rounded-full transition-colors ${
-                userChatCount >= 2 ? 'bg-brand' : 'bg-line dark:bg-surface'
-              }`}
-            />
-            <span
-              className={`h-1.5 w-4 rounded-full transition-colors ${
-                userChatCount >= 3 ? 'bg-brand' : 'bg-line dark:bg-surface'
-              }`}
-            />
           </div>
         </div>
       )}
@@ -375,37 +425,39 @@ export default function ChatPanel({
           )
 
           return (
-            <div key={m.id} className={`flex gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`}>
+            <div key={m.id || idx} className={`flex gap-2.5 ${isUser ? 'flex-row-reverse' : ''} items-start`}>
               <span
-                className={`grid h-7 w-7 shrink-0 place-items-center rounded-xl text-xs font-semibold shadow-2xs ${isUser
-                  ? 'bg-brand text-brand-ink shadow-brand/20 font-bold'
-                  : 'bg-surface2 text-brand border border-line'
-                  }`}
+                className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-semibold shadow-2xs ${
+                  isUser
+                    ? 'bg-[#10b981] text-white shadow-emerald-500/20 font-bold'
+                    : 'bg-emerald-50 dark:bg-emerald-950/60 text-[#10b981] border border-emerald-200 dark:border-emerald-800/60'
+                }`}
               >
                 {isUser ? <User size={14} /> : <Bot size={14} />}
               </span>
 
               <div
-                className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed shadow-2xs ${isUser
-                  ? 'bg-brand text-brand-ink font-medium rounded-tr-sm'
-                  : isDecisionMsg
-                    ? 'border-2 border-brand/50 bg-brand/10 text-ink rounded-tl-sm'
-                    : m.kind === 'gap_analysis'
-                      ? 'border border-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/20 text-ink rounded-tl-sm'
-                      : m.kind === 'question'
-                        ? 'border border-brand/40 bg-brand/5 rounded-tl-sm text-ink'
-                        : 'border border-line/70 bg-surface2/70 text-ink rounded-tl-sm'
-                  }`}
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs sm:text-[13px] leading-relaxed shadow-2xs ${
+                  isUser
+                    ? 'bg-[#10b981] text-white font-normal rounded-tr-xs'
+                    : isDecisionMsg
+                      ? 'border border-amber-500/40 bg-amber-500/10 text-ink rounded-tl-xs'
+                      : m.kind === 'gap_analysis'
+                        ? 'border border-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/20 text-ink rounded-tl-xs'
+                        : m.kind === 'question'
+                          ? 'border border-emerald-500/40 bg-emerald-50/30 dark:bg-emerald-950/20 rounded-tl-xs text-ink'
+                          : 'border border-slate-200/70 dark:border-line/70 bg-slate-50/80 dark:bg-surface2/70 text-ink rounded-tl-xs'
+                }`}
               >
                 {KIND_LABEL[m.kind] && !isUser && (
-                  <span className="mb-1 flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-brand">
+                  <span className="mb-1 flex items-center justify-between gap-2 text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                     <span>
                       {KIND_LABEL[m.kind]}
                       {m.meta?.followup ? ' · Follow-up' : ''}
                     </span>
                     {isProcessing && (
-                      <span className="inline-flex items-center gap-1.5 text-brand font-semibold text-[11px] normal-case">
-                        <span className="h-3 w-3 rounded-full border-2 border-brand/30 border-t-brand animate-spin shrink-0" />
+                      <span className="inline-flex items-center gap-1.5 text-emerald-600 font-semibold text-[11px] normal-case">
+                        <span className="h-3 w-3 rounded-full border-2 border-emerald-500/30 border-t-emerald-500 animate-spin shrink-0" />
                         <span>Processing…</span>
                       </span>
                     )}
@@ -453,6 +505,30 @@ export default function ChatPanel({
       <div className="border-t border-line/70 p-3 bg-surface/95">
         {locked ? (
           <p className="text-center text-xs text-muted py-2">{disabledReason}</p>
+        ) : isAwaitingDecision ? (
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-[#fff7ed] dark:bg-amber-950/40 border border-orange-200/90 dark:border-amber-800/50 p-2.5 sm:px-3 sm:py-2 shadow-2xs animate-in fade-in">
+            <span className="text-[11px] sm:text-xs font-bold text-amber-800 dark:text-amber-300 leading-tight whitespace-nowrap">
+              Ready to proceed, or continue exploring?
+            </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={handleContinueExploring}
+                className="rounded-lg border border-slate-200 dark:border-line bg-white dark:bg-surface2 px-2.5 py-1 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-surface shadow-2xs transition cursor-pointer disabled:opacity-50 whitespace-nowrap"
+              >
+                Continue
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={handleProceedToNext}
+                className="rounded-lg bg-[#10b981] hover:bg-[#059669] px-3 py-1 text-[11px] sm:text-xs font-bold text-white shadow-2xs transition active:scale-95 cursor-pointer disabled:opacity-50 whitespace-nowrap"
+              >
+                Proceed
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="space-y-2">
             {/* Context chip if a node is selected */}
@@ -471,33 +547,6 @@ export default function ChatPanel({
                     View specs →
                   </button>
                 )}
-              </div>
-            )}
-
-            {/* Session decision quick banner if awaiting decision */}
-            {activeSnap.awaiting_session_decision && !isComplete && (
-              <div className="flex items-center justify-between gap-2 rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-2 text-xs">
-                <span className="font-semibold text-amber-600 dark:text-amber-400">
-                  Ready to proceed, or continue exploring?
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => handleDecision('continue')}
-                    className="rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-ink hover:text-brand transition cursor-pointer disabled:opacity-50"
-                  >
-                    Continue
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => handleDecision('proceed')}
-                    className="rounded-lg bg-brand px-2.5 py-1 text-xs font-semibold text-brand-ink hover:bg-[#6ee7b7] transition cursor-pointer shadow-2xs disabled:opacity-50"
-                  >
-                    Proceed
-                  </button>
-                </div>
               </div>
             )}
 

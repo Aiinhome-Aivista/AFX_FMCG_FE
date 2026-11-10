@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   AlertTriangle,
+  ArrowDown,
   ArrowRight,
   CheckCircle2,
   ChevronRight,
@@ -10,13 +11,12 @@ import {
   Layers,
   Network,
   RotateCcw,
-  Search,
   Sparkles,
   Workflow,
-  X,
   FileText,
   Sliders,
   Compass,
+  X,
 } from 'lucide-react'
 import Layout from '../components/common/Layout'
 import { ErrorState, Loading } from '../components/common/States'
@@ -24,6 +24,7 @@ import useAsync from '../components/common/useAsync'
 import { useTheme } from '../context/ThemeContext'
 import { domains, ontology } from '../api'
 import OntologyGraphCanvas from '../components/graph/OntologyGraphCanvas'
+import FlowCards, { NarrativeFlow } from '../components/graph/FlowCards'
 import {
   DOMMETA,
   ORDER,
@@ -246,47 +247,6 @@ export default function FmcgLanding() {
               </button>
             )
           })}
-        </div>
-
-        {/* Toolbar: Search, Neighbour Toggle & View Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-          <div className="text-xs text-muted flex items-center gap-2">
-            <span className="inline-block h-2 w-2 rounded-full bg-brand" />
-            <span className="font-medium text-ink/80">9 FMCG Value Chain Domains + Master-Data Spine</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 ml-auto">
-            {/* Search Input */}
-            <div className="relative">
-              <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-              <input
-                type="search"
-                placeholder="Find entity, attribute or relationship…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 w-60 sm:w-72 rounded-xl border border-line bg-surface pl-9 pr-8 text-xs text-ink placeholder:text-muted focus:border-brand focus:outline-none shadow-sm"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
-                >
-                  <X size={13} />
-                </button>
-              )}
-            </div>
-
-            {/* Cross-domain neighbours toggle */}
-            <label className="flex items-center gap-2 text-xs text-muted cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={showNeighbours}
-                onChange={(e) => setShowNeighbours(e.target.checked)}
-                className="rounded border-line text-brand focus:ring-brand h-4 w-4"
-              />
-              <span className="font-medium">Show cross-domain neighbours</span>
-            </label>
-          </div>
         </div>
       </div>
 
@@ -588,68 +548,30 @@ export default function FmcgLanding() {
           END-TO-END OPERATIONAL CYCLES (BOTTOM SECTION)
          ========================================================================= */}
       {activeFlows.length > 0 && (
-        <details className="mt-5 rounded-2xl border border-line bg-surface shadow-card overflow-hidden group" open>
-          <summary className="cursor-pointer px-5 py-4 text-sm sm:text-base font-bold text-ink flex items-center justify-between select-none hover:bg-surface2 transition">
-            <div className="flex items-center gap-2.5">
-              <span className="grid h-6 w-6 place-items-center rounded-md bg-brand/10 text-brand text-xs font-bold transition-transform group-open:rotate-90">
-                ▸
-              </span>
-              <span className="text-brand">End-to-End Operational Cycles (§3 of the FMCG Canon)</span>
-              <span className="text-xs text-muted font-normal hidden sm:inline">
-                — Click any cycle to trace and animate its path across the graph
-              </span>
-            </div>
-            {activeFlowIdx >= 0 && (
-              <button
-                onClick={(e) => {
-                  e.preventDefault()
-                  setActiveFlowIdx(-1)
-                }}
-                className="text-xs font-semibold text-brand hover:underline px-2.5 py-1 rounded-md hover:bg-brand/10"
-              >
-                Clear Selection
-              </button>
-            )}
-          </summary>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 sm:p-5 pt-0 bg-surface">
-            {activeFlows.map((flow, idx) => {
-              const isSelected = activeFlowIdx === idx
-
-              return (
-                <div
-                  key={idx}
-                  onClick={() => handleFlowToggle(idx)}
-                  className={`rounded-xl p-3.5 border transition cursor-pointer flex flex-col justify-between ${isSelected
-                      ? 'border-brand bg-brand/10 shadow-md ring-2 ring-brand/30'
-                      : 'border-line bg-surface2/40 hover:border-brand/40 hover:bg-surface2'
-                    }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <b className={`text-xs font-bold ${isSelected ? 'text-brand' : 'text-ink'}`}>
-                        {flow.t}
-                      </b>
-                      <span className="text-[10px] text-muted font-mono">
-                        {(flow.ids || []).length} steps
-                      </span>
-                    </div>
-                    <p className="font-mono text-[11px] leading-relaxed text-muted line-clamp-3">
-                      {flow.x}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 pt-2.5 border-t border-line/50 flex items-center justify-between text-[11px]">
-                    <span className="text-muted">
-                      {isSelected ? '● Highlighting path' : 'Click to trace on graph'}
-                    </span>
-                    <ArrowRight size={12} className={isSelected ? 'text-brand' : 'text-muted'} />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </details>
+        <FlowCards
+          flows={activeFlows}
+          activeKey={activeFlowIdx >= 0 ? activeFlowIdx : null}
+          onToggle={handleFlowToggle}
+          detail={
+            activeFlowIdx >= 0 && activeFlows[activeFlowIdx]
+              ? {
+                  title: activeFlows[activeFlowIdx].t || activeFlows[activeFlowIdx].title,
+                  narrative: activeFlows[activeFlowIdx].x || activeFlows[activeFlowIdx].narrative,
+                  steps: activeFlows[activeFlowIdx].ids?.map((nodeId, sIdx) => {
+                    const node = nodesById[nodeId]
+                    return {
+                      order: sIdx + 1,
+                      node_key: nodeId,
+                      name: node?.name || node?.label || nodeId,
+                      group_name: node?.d || node?.domain || 'Master Spine',
+                    }
+                  }),
+                }
+              : null
+          }
+          selectedKey={selectedNodeId}
+          onStepSelect={handleSelectNode}
+        />
       )}
 
       {/* =========================================================================
