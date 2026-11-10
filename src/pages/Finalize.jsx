@@ -603,9 +603,9 @@ export default function Finalize() {
                       </span>
                     )}
                   </div>
-                  {(d?.validation?.errors || []).length === 0 && (d?.validation?.warnings || []).length === 0 ? (
+                  {(d?.validation?.errors || []).length === 0 ? (
                     <p className="mt-1.5 text-xs text-muted leading-relaxed">
-                      Ontology verified against {resolvedDomainName} domain schema and business rules. Ready for enterprise governance.
+                      Ontology verified against {domainType} domain schema and business rules. Ready for enterprise governance.
                     </p>
                   ) : (
                     <ul className="mt-2 space-y-1.5 text-xs">
@@ -613,12 +613,6 @@ export default function Finalize() {
                         <li key={`err-${i}`} className="flex items-start gap-1.5 text-rose-500">
                           <XCircle size={13} className="mt-0.5 shrink-0" />
                           <span>{e?.message || 'Error'}</span>
-                        </li>
-                      ))}
-                      {(d?.validation?.warnings || []).map((w, i) => (
-                        <li key={`warn-${i}`} className="flex items-start gap-1.5 text-amber-500">
-                          <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-                          <span>{w?.message || 'Warning'}</span>
                         </li>
                       ))}
                     </ul>
@@ -641,11 +635,11 @@ export default function Finalize() {
                 <div className="rounded-xl border border-line bg-surface2/25 p-3.5 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-muted">Ontology Version:</span>
-                    <span className="font-bold text-ink">{formatModelVersion(d?.version?.label)}</span>
+                    <span className="font-bold text-ink">{resolvedDomainName}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted">Domain:</span>
-                    <span className="font-bold text-ink">{resolvedDomainName}</span>
+                    <span className="font-bold text-ink">{domainType}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted">Status:</span>
