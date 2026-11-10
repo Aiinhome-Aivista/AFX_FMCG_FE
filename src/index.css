@@ -239,6 +239,24 @@ body {
   animation: stageDimDip 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Blinking active stage circle dot */
+@keyframes dotBlink {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.9);
+  }
+  50% {
+    opacity: 0.25;
+    transform: scale(0.75);
+    box-shadow: 0 0 2px rgba(16, 185, 129, 0.2);
+  }
+}
+
+.dot-blink {
+  animation: dotBlink 1.2s ease-in-out infinite;
+}
+
 /* Premium AI SaaS Login Styling */
 .auth-bg-gradient {
   background: radial-gradient(circle at 15% 20%, rgba(16, 185, 129, 0.15) 0%, transparent 45%),

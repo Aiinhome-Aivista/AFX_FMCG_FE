@@ -384,45 +384,27 @@ export default function ChevronTracker({ showNextButton = false }) {
                     'polygon(0% 0%, calc(100% - 13px) 0%, 100% 50%, calc(100% - 13px) 100%, 0% 100%, 13px 50%)',
                 }}
               >
-                {/* Step Circle: Checkmark if completed, number if upcoming/active */}
-                <span className="flex h-4 sm:h-5 w-4 sm:w-5 items-center justify-center rounded-full shrink-0">
+                {/* Step Circle: Checkmark if completed, blinking dot if active, subtle dot if upcoming */}
+                <span className="flex h-3.5 sm:h-4 w-3.5 sm:w-4 items-center justify-center shrink-0">
                   {isCompleted ? (
-                    <span className="flex h-3.5 sm:h-4 w-3.5 sm:w-4 items-center justify-center rounded-full bg-white dark:bg-slate-950 text-[#10b981] dark:text-white">
+                    <span className="flex h-3.5 sm:h-4 w-3.5 sm:w-4 items-center justify-center rounded-full bg-white dark:bg-slate-950 text-[#10b981] dark:text-white shrink-0">
                       <Check size={10} strokeWidth={3.5} />
                     </span>
                   ) : isActive ? (
-                    <span className="relative flex h-3.5 sm:h-4 w-3.5 sm:w-4 items-center justify-center">
+                    <span className="relative flex h-2.5 sm:h-3 w-2.5 sm:w-3 items-center justify-center shrink-0">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-75" />
-                      <span
-                        className={`relative text-[9px] sm:text-[10px] font-bold ${iconColor} border border-[#10b981] bg-white dark:bg-[#192027] rounded-full h-full w-full flex items-center justify-center`}
-                      >
-                        {stage.id}
-                      </span>
+                      <span className="relative inline-flex rounded-full h-2.5 sm:h-3 w-2.5 sm:w-3 bg-[#10b981] dot-blink" />
                     </span>
                   ) : (
-                    <span
-                      className={`text-[9px] sm:text-[10px] font-bold ${iconColor} border border-current rounded-full h-3.5 sm:h-4 w-3.5 sm:w-4 flex items-center justify-center ${
-                        isActive ? 'bg-[#10b981]/20 ring-2 ring-[#10b981]/40' : ''
-                      }`}
-                    >
-                      {stage.id}
-                    </span>
+                    <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full border-2 border-slate-300 dark:border-slate-600 bg-transparent shrink-0" />
                   )}
                 </span>
 
                 {/* Step Title & Subtitle */}
                 <div className="flex flex-col min-w-0 leading-tight">
-                  <div className="flex items-center gap-1">
-                    <span className={`text-[10px] sm:text-[11.5px] truncate font-bold ${textColor}`}>
-                      {stage.title}
-                    </span>
-                    {isActive && (
-                      <span className="relative flex h-1.5 w-1.5 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-80" />
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#10b981]" />
-                      </span>
-                    )}
-                  </div>
+                  <span className={`text-[10px] sm:text-[11.5px] truncate font-bold ${textColor}`}>
+                    {stage.title}
+                  </span>
                   <span className={`text-[8.5px] sm:text-[9.5px] truncate ${subColor}`}>
                     {stage.subtitle}
                   </span>
