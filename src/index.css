@@ -223,6 +223,22 @@ body {
   box-shadow: 0 0 24px rgba(16, 185, 129, 0.1);
 }
 
+/* Active Stage Dim-Dip Glowing Pulse ("light besi kom") */
+@keyframes stageDimDip {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.65)) brightness(1.08);
+  }
+  50% {
+    opacity: 0.7;
+    filter: drop-shadow(0 0 2px rgba(16, 185, 129, 0.18)) brightness(0.9);
+  }
+}
+
+.stage-dim-dip {
+  animation: stageDimDip 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 /* Premium AI SaaS Login Styling */
 .auth-bg-gradient {
   background: radial-gradient(circle at 15% 20%, rgba(16, 185, 129, 0.15) 0%, transparent 45%),
