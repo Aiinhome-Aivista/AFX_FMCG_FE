@@ -155,23 +155,8 @@ export function useChevronTrackerState() {
       }
     }
 
-    // In Baseline (Core Nuances) stage: Only show "Next: Upload Data" after conversation has started AND upload is unlocked
-    const canUploadNow = Boolean(
-      isConversationStarted && (
-        workflowDetail?.canUpload ||
-        workflowDetail?.hasUploadedFiles ||
-        isKg2Active
-      )
-    )
-
-    if (!canUploadNow) {
-      return null
-    }
-
-    return {
-      label: 'Next: Upload Data',
-      route: `${prefix}/${currentSlug}?stage=kg1&view=upload`,
-    }
+    // Do not show "Next: Upload Data" in the navigation bar
+    return null
   }, [isIndustryStep, isFinalize, isDomainSelected, isKg2Active, isUploadView, workflowDetail, prefix, currentSlug, effectiveSlug])
 
   return {
