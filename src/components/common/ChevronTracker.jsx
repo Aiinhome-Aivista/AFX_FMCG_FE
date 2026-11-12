@@ -101,9 +101,9 @@ export function useChevronTrackerState() {
   )
 
   // Calculate dynamic next step action button right to Review chevron for new users
-  // Strictly null if no sub-domain is selected yet (cannot proceed to KG1 or subsequent steps)
+  // Strictly null if no sub-domain is selected yet OR conversation has not started yet
   const nextStepInfo = useMemo(() => {
-    if (!isDomainSelected || !slug) {
+    if (!isDomainSelected || !slug || !isConversationStarted) {
       return null
     }
 
@@ -142,7 +142,7 @@ export function useChevronTrackerState() {
       label: 'Next: Business Telemetry',
       route: `${prefix}/${slug}?stage=kg1&view=upload`,
     }
-  }, [isDomainSelected, isFinalize, isKg2Active, isUploadView, workflowDetail, prefix, slug])
+  }, [isDomainSelected, isFinalize, isKg2Active, isUploadView, isConversationStarted, workflowDetail, prefix, slug])
 
   return {
     path,
@@ -256,24 +256,24 @@ export default function ChevronTracker({ showNextButton = false }) {
         id: 3,
         title: 'Business Telemetry',
         subtitle: 'Gap Analysis',
-        targetUrl: isDomainSelected && slug
+        targetUrl: isDomainSelected && slug && isConversationStarted
           ? workflowDetail?.isKg2
             ? `${prefix}/${slug}?stage=kg2&view=graph`
             : workflowDetail?.canUpload || workflowDetail?.hasUploadedFiles
             ? `${prefix}/${slug}?stage=kg1&view=upload`
             : `${prefix}/${slug}?stage=kg1&view=graph`
           : null,
-        disabled: !isDomainSelected,
+        disabled: !isDomainSelected || !isConversationStarted,
       },
       {
         id: 4,
         title: 'Review',
         subtitle: 'Digital Twin',
-        targetUrl: isDomainSelected && slug ? `${prefix}/${slug}/finalize` : null,
-        disabled: !isDomainSelected,
+        targetUrl: isDomainSelected && slug && isConversationStarted ? `${prefix}/${slug}/finalize` : null,
+        disabled: !isDomainSelected || !isConversationStarted,
       },
     ]
-  }, [isIndustryStep, isDomainSelected, prefix, slug, workflowDetail])
+  }, [isIndustryStep, isDomainSelected, isConversationStarted, prefix, slug, workflowDetail])
 
   // Calculate status for each stage
   const getStageStatus = (stageId) => {

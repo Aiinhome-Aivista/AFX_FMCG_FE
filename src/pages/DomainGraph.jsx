@@ -143,6 +143,35 @@ export default function DomainGraph() {
     (slug && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(`afx_last_uploaded_${slug}`))
   )
 
+  const [isConvStartedState, setIsConvStartedState] = useState(() => {
+    try {
+      return Boolean(
+        (slug && sessionStorage.getItem(`afx_conv_started_${slug}`) === 'true') ||
+        snap?.conversation_id ||
+        (Array.isArray(snap?.messages) && snap.messages.length > 0)
+      )
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    const handleWorkflowState = (e) => {
+      if (e?.detail?.slug === slug && typeof e.detail.conversationStarted === 'boolean') {
+        setIsConvStartedState(e.detail.conversationStarted)
+      }
+    }
+    window.addEventListener('afx-workflow-state', handleWorkflowState)
+    return () => window.removeEventListener('afx-workflow-state', handleWorkflowState)
+  }, [slug])
+
+  const isConversationStarted = Boolean(
+    isConvStartedState ||
+    (slug && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(`afx_conv_started_${slug}`) === 'true') ||
+    snap?.conversation_id ||
+    (Array.isArray(snap?.messages) && snap.messages.length > 0)
+  )
+
   const userChatCount = useMemo(() => {
     if (!snap?.messages) return 0
     return snap.messages.filter((m) => m.role === 'user').length
@@ -151,9 +180,10 @@ export default function DomainGraph() {
   const totalNuanceChats = Math.max(userChatCount, answeredCount)
 
   const canUpload = useMemo(() => {
+    if (!isConversationStarted) return false
     if (Boolean(hasUploadedFiles) || isKg2Active) return true
     return totalNuanceChats >= 3
-  }, [hasUploadedFiles, isKg2Active, totalNuanceChats])
+  }, [isConversationStarted, hasUploadedFiles, isKg2Active, totalNuanceChats])
 
   useEffect(() => {
     if (slug) {
@@ -966,8 +996,8 @@ export default function DomainGraph() {
             </span>
           )}
 
-          {/* Red Gap Analysis button at the very end of the line - ONLY visible once a CSV or data file has been uploaded */}
-          {hasUploadedFiles && (
+          {/* Red Gap Analysis button at the very end of the line - ONLY visible once conversation started AND a data file has been uploaded */}
+          {hasUploadedFiles && isConversationStarted && (
             <div className="flex items-center gap-2.5 ml-auto">
               <button
                 type="button"
