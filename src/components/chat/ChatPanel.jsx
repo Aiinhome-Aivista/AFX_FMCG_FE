@@ -402,7 +402,7 @@ export default function ChatPanel({
   return (
     <div className="flex h-full flex-col bg-surface/90 text-ink">
       {/* Sub-Header: Progress and status */}
-      <div className="border-b border-line/70 px-4 py-2.5 bg-surface2/30">
+      <div className="border-b border-line/70 px-4 py-2 bg-surface2/30 shrink-0">
         <div className="flex items-center justify-between text-xs text-muted">
           <div className="flex items-center gap-1.5 font-medium">
             {isKg2Active ? (
@@ -493,7 +493,7 @@ export default function ChatPanel({
 
       {/* Nuances / Gap Analysis Telemetry Banner */}
       {(canUpload || isKg2Active || userChatCount >= 1) ? (
-        <div className="mx-3.5 my-2 flex items-center justify-between gap-2 rounded-xl border border-emerald-500/35 bg-emerald-50/70 dark:bg-emerald-950/30 px-3 py-2 shadow-2xs animate-in fade-in">
+        <div className="mx-3.5 my-1.5 flex items-center justify-between gap-2 rounded-xl border border-emerald-500/35 bg-emerald-50/70 dark:bg-emerald-950/30 px-3 py-2 shadow-2xs animate-in fade-in shrink-0">
           <div className="flex items-center gap-1.5 min-w-0">
             <CheckCircle2 size={14} className="text-[#10b981] shrink-0" />
             <span className="text-[11px] sm:text-xs font-bold text-emerald-800 dark:text-emerald-300 truncate">
@@ -531,7 +531,7 @@ export default function ChatPanel({
           )}
         </div>
       ) : (
-        <div className="mx-3.5 my-2 flex items-center justify-between rounded-xl border border-line/60 bg-surface2/50 px-3.5 py-2 text-xs text-muted select-none">
+        <div className="mx-3.5 my-1.5 flex items-center justify-between rounded-xl border border-line/60 bg-surface2/50 px-3.5 py-2 text-xs text-muted select-none shrink-0">
           <div className="flex items-center gap-2">
             <Sparkles size={14} className="text-brand shrink-0" />
             <span className="font-semibold text-ink/80">
@@ -546,7 +546,7 @@ export default function ChatPanel({
 
       {/* Interactive Bot Processing Banner for File Parsing */}
       {isProcessingFiles && (
-        <div className="mx-3.5 my-2 flex items-start gap-2.5 rounded-xl border border-[#10b981]/40 bg-[#10b981]/10 p-2.5 shadow-sm backdrop-blur-xs animate-in fade-in duration-300">
+        <div className="mx-3.5 my-1.5 flex items-start gap-2.5 rounded-xl border border-[#10b981]/40 bg-[#10b981]/10 p-2.5 shadow-sm backdrop-blur-xs animate-in fade-in duration-300 shrink-0">
           <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#10b981] text-white dark:text-black shadow-2xs">
             <Sparkles size={14} className="animate-spin" />
           </div>
@@ -567,7 +567,7 @@ export default function ChatPanel({
       )}
 
       {/* Messages Thread */}
-      <div className="scroll-thin flex-1 space-y-3.5 overflow-y-auto p-4" role="log" aria-live="polite">
+      <div className="scroll-thin flex-1 space-y-3.5 overflow-y-auto p-4 min-h-0" role="log" aria-live="polite">
         {activeSnap.messages.map((m, idx) => {
           const isUser = m.role === 'user'
           const isDecisionMsg = m.kind === 'decision' || m.meta?.awaiting_session_decision
@@ -655,7 +655,7 @@ export default function ChatPanel({
       </div>
 
       {/* Bottom Controls & Input */}
-      <div className="border-t border-line/70 p-3 bg-surface/95">
+      <div className="border-t border-line/70 p-3 bg-surface/95 shrink-0">
         {locked ? (
           <p className="text-center text-xs text-muted py-2">{disabledReason}</p>
         ) : isKg2Frozen ? (

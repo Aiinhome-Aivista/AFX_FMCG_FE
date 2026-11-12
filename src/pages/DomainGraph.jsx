@@ -910,10 +910,10 @@ export default function DomainGraph() {
   }, [snap, flows.data, base, aiGraph])
 
   return (
-    <Layout wide>
+    <Layout wide fullHeight>
       {/* Top Header Navigation: When a domain is selected */}
       {slug ? (
-        <div className="mb-3 flex flex-wrap items-center gap-2.5 select-none">
+        <div className="mb-5 flex flex-wrap items-center gap-3 select-none shrink-0">
           <Link
             to={location.pathname.startsWith('/finance') ? '/finance' : '/fmcg'}
             className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-4 py-1.5 text-xs sm:text-[13px] font-semibold text-muted hover:text-ink hover:border-brand/40 hover:bg-surface2 transition shadow-2xs"
@@ -1006,7 +1006,7 @@ export default function DomainGraph() {
           )}
         </div>
       ) : (
-        <div className="mb-4 flex flex-col gap-2.5 rounded-2xl border border-line bg-surface/70 p-3 sm:p-3.5 backdrop-blur shadow-2xs">
+        <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-line bg-surface/70 p-3.5 sm:p-4 backdrop-blur shadow-2xs shrink-0">
           <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 select-none">
             <Link
               to={location.pathname.startsWith('/finance') ? '/finance' : '/fmcg'}
@@ -1054,8 +1054,8 @@ export default function DomainGraph() {
 
       {/* Dedicated Data Gap Analysis Evolution Banner */}
       {isKg2Active && (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface/80 p-3 sm:p-3.5 backdrop-blur shadow-2xs select-none animate-in fade-in duration-200">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface/80 p-3.5 sm:p-4 backdrop-blur shadow-2xs select-none animate-in fade-in duration-200 shrink-0">
+          <div className="flex flex-wrap items-center gap-2.5">
             <span className="flex items-center gap-1.5 text-xs font-bold text-ink">
               <span className="h-2.5 w-2.5 rounded-full bg-[#ef4444] inline-block animate-pulse" />
               Data Gap Analysis Evolution:
@@ -1070,11 +1070,15 @@ export default function DomainGraph() {
         </div>
       )}
 
-      {/* Main Grid: Left Graph Canvas OR Multi-File Upload Zone | Right Chatbot */}
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_440px]">
+      {/* Main Grid: Left Graph Canvas OR Multi-File Upload Zone | Right Chatbot (Fills total viewport height) */}
+      <div
+        className={`grid gap-5 lg:grid-cols-[minmax(0,1fr)_440px] lg:grid-rows-[1fr] ${
+          isKg2Active ? 'lg:h-[calc(100vh-14rem)]' : 'lg:h-[calc(100vh-10.5rem)]'
+        } min-h-[580px] shrink-0`}
+      >
         {activeLeftView === 'graph' ? (
           /* Knowledge Graph Dynamic Canvas */
-          <div className="card relative h-[68vh] min-h-[460px] overflow-hidden p-0 border border-line">
+          <div className="card relative h-[600px] lg:h-full min-h-0 overflow-hidden p-0 border border-line flex flex-col">
             {/* Top-left canvas badge matching reference picture */}
             
 
@@ -1106,12 +1110,12 @@ export default function DomainGraph() {
               domainMeta={domain}
               gapAnalysis={isKg2Active && gapAnalysisMode}
               discrepancies={isKg2Active && gapAnalysisMode ? discrepancies : null}
-              className="w-full h-full"
+              className="w-full h-full flex-1 min-h-0 !border-0 !rounded-none !shadow-none"
             />
           </div>
         ) : (
           /* Drag-and-Drop Multi-File Upload Zone */
-          <div className="card relative h-[68vh] min-h-[460px] flex flex-col overflow-hidden p-0 border border-line bg-surface shadow-card">
+          <div className="card relative h-[600px] lg:h-full min-h-0 flex flex-col overflow-hidden p-0 border border-line bg-surface shadow-card">
             <UploadZone
               slug={slug}
               domain={domain}
@@ -1129,9 +1133,9 @@ export default function DomainGraph() {
         )}
 
         {/* Right Column: AI Chatbot (with quick toggle for Node Specs) */}
-        <div className="card flex h-[68vh] min-h-[460px] flex-col overflow-hidden shadow-card">
+        <div className="card flex h-[600px] lg:h-full min-h-0 flex-col overflow-hidden shadow-card">
           {/* Header Bar with Toggle (Image 1 Style) */}
-          <div className="flex items-center justify-between border-b border-line bg-surface2/60 px-3.5 py-2.5 select-none">
+          <div className="flex items-center justify-between border-b border-line bg-surface2/60 px-3.5 py-2 select-none shrink-0">
             <div className="flex items-center gap-1.5 rounded-xl bg-surface p-1 border border-line/60">
               <button
                 type="button"
@@ -1168,7 +1172,7 @@ export default function DomainGraph() {
           </div>
 
           {/* Panel Body */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
             {activeRightTab === 'chat' ? (
               <ChatPanel
                 slug={slug}
@@ -1239,6 +1243,8 @@ export default function DomainGraph() {
       {/* <p className="mt-2 text-xs text-muted">
         Solid arrows are relationships within the ontology; dashed arrows cross into other domains. Click an entity to highlight its connections; drag to pan, scroll to zoom.
       </p> */}
+
+
 
       {/* Operational flows & Block selector */}
       {flows.data && (

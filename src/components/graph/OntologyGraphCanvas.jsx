@@ -374,7 +374,9 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
       className={`select-none transition-all duration-200 ${
         isFullscreen
           ? 'fixed inset-0 z-[9999] h-screen w-screen overflow-hidden rounded-none border-0 shadow-none'
-          : 'relative h-[74vh] min-h-[500px] w-full overflow-hidden rounded-2xl border border-line shadow-card'
+          : className?.includes('h-')
+            ? 'relative w-full overflow-hidden'
+            : 'relative h-[74vh] min-h-[500px] w-full overflow-hidden rounded-2xl border border-line shadow-card'
       } ${isPanning ? 'cursor-grabbing' : 'cursor-grab'} ${className}`}
       style={{ backgroundColor: themeColors.bg }}
       onPointerDown={onPointerDown}

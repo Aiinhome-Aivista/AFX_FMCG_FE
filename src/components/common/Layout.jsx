@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import ChevronTracker from './ChevronTracker'
 
-export default function Layout({ children, wide }) {
+export default function Layout({ children, wide, fullHeight = false }) {
   const { user, logout } = useAuth()
   const { theme, toggle } = useTheme()
   const nav = useNavigate()
@@ -14,9 +14,9 @@ export default function Layout({ children, wide }) {
   const subTitle = isFinance ? 'FMCG KG' : 'FMCG KG'
 
   return (
-    <div className="flex min-h-full flex-col bg-bg text-ink">
-      <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-[1800px] items-center justify-between gap-3 px-3 sm:px-6">
+    <div className="flex min-h-screen flex-col bg-bg text-ink">
+      <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur shrink-0">
+        <div className="mx-auto flex h-16 max-w-[1800px] items-center justify-between gap-4 px-4 sm:px-6">
           {/* Left Side: Brand Logo & Name + Workflow Arrow Steps beside it */}
           <div className="flex items-center gap-3 sm:gap-6 min-w-0 flex-1">
             {/* Brand Logo & Name */}
@@ -79,7 +79,7 @@ export default function Layout({ children, wide }) {
           </div>
         </div>
       </header>
-      <main className={`mx-auto w-full flex-1 px-3 py-5 sm:px-6 ${wide ? 'max-w-[1800px]' : 'max-w-6xl'}`}>
+      <main className={`mx-auto w-full flex-1 px-4 sm:px-6 pt-5 pb-8 sm:pt-6 sm:pb-10 ${wide ? 'max-w-[1800px]' : 'max-w-6xl'}`}>
         {children}
       </main>
     </div>
