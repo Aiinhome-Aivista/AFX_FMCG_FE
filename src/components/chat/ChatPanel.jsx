@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ArrowRight, Bot, CheckCircle2, ChevronRight, CloudUpload, HelpCircle, Lock, MessageSquare, Send, SkipForward, Sparkles, User, Zap } from 'lucide-react'
-import { Spinner } from '../common/States'
+import { Loading, Spinner } from '../common/States'
 import { chat } from '../../api'
 import { useToast } from '../../context/ToastContext'
 
@@ -284,11 +284,25 @@ export default function ChatPanel({
 
   useEffect(() => {
     try {
-      setHasStartedConversation(sessionStorage.getItem(`afx_conv_started_${slug}`) === 'true')
+      const fromSession = sessionStorage.getItem(`afx_conv_started_${slug}`) === 'true'
+      const fromBackend = Boolean(
+        activeSnap?.conversation_id ||
+        (Array.isArray(activeSnap?.messages) && activeSnap.messages.length > 0)
+      )
+      if (fromSession || fromBackend) {
+        setHasStartedConversation(true)
+        if (fromBackend) {
+          try {
+            sessionStorage.setItem(`afx_conv_started_${slug}`, 'true')
+          } catch {}
+        }
+      } else {
+        setHasStartedConversation(false)
+      }
     } catch {
       setHasStartedConversation(false)
     }
-  }, [slug])
+  }, [slug, activeSnap?.conversation_id, activeSnap?.messages])
 
   const handleStart = () => {
     try {
@@ -305,8 +319,23 @@ export default function ChatPanel({
     }
   }
 
-  // Welcome state on initial screen before user starts a conversation
-  if (!hasStartedConversation || !activeSnap.conversation_id) {
+  const hasExistingConversation = Boolean(
+    hasStartedConversation ||
+    activeSnap?.conversation_id ||
+    (Array.isArray(activeSnap?.messages) && activeSnap.messages.length > 0)
+  )
+
+  // Loading state while checking conversation
+  if (snap === null && !hasExistingConversation) {
+    return (
+      <div className="flex h-full items-center justify-center p-8 text-muted">
+        <Loading label="Loading conversation..." />
+      </div>
+    )
+  }
+
+  // Welcome state on initial screen only if no conversation exists yet
+  if (!hasExistingConversation) {
     return (
       <div className="relative flex h-full flex-col items-center justify-center overflow-hidden p-6 sm:p-8 text-center bg-gradient-to-b from-surface via-surface to-surface2">
         {/* Ambient glow */}

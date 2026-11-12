@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
 import {
   AlertCircle,
   AlertTriangle,
@@ -18,6 +18,7 @@ import {
   Sparkles,
   X,
   XCircle,
+  Zap,
 } from 'lucide-react'
 import Layout from '../components/common/Layout'
 import ConfirmDialog from '../components/common/ConfirmDialog'
@@ -642,10 +643,10 @@ function CalibrationSection({ activeDiff, impactSummary, displayTemplateName, sl
           name: 'CostingAllocationModel',
           badge: 'Activity-Based Costing & Allocation',
           modelTemplate:
-            'The formal costing machinery beneath profitability: technique choice (standard marginal vs absorption - ABC TD-ABC job/batch/process), the cost build-up ladder Prime Cost - Works Cost - COGM - COGS - Cost of Sale, and absorption mechanics (FOAR = budgeted overhead + budgeted normal activity; over/under-recovery).',
+            'The formal costing machinery beneath profitability: technique choice (standard marginal vs absorption - ABC TD-ABC - job/batch/process), the cost build-up ladder Prime Cost - Works Cost - COGM - COGS - Cost of Sale, and absorption mechanics (FOAR = budgeted overhead + budgeted normal activity; over/under-recovery).',
           currentModel:
-            'The formal costing machinery beneath profitability: technique choice (standard marginal vs absorption - ABC TD-ABC job/batch/process), the cost build-up ladder Direct Costs - Indirect Costs - Overhead Costs - Final Cost Allocation, and absorption mechanics (FOAR = budgeted overhead + budgeted normal activity; over/under-recovery).',
-          addedAttr: 'costBuildUpLadder[Direct Costs - Indirect Costs - Overhead Costs - Final Cost Allocation]',
+            'The formal costing machinery beneath profitability: technique choice (standard marginal vs absorption - ABC TD-ABC - job/batch/process), the cost build-up ladder Direct Costs - Indirect Costs - Overhead Costs - Final Cost Allocation, and absorption mechanics (FOAR = budgeted overhead + budgeted normal activity; over/under-recovery).',
+          addedAttr: 'costBuildUpLadder[Direct Costs -> Indirect Costs -> Overhead Costs -> Final Cost Allocation]',
           businessImpact:
             'Defines multi-tiered cost distribution rules across shared services and production cost centers for precise unit economics.',
           suggestion:
@@ -657,8 +658,7 @@ function CalibrationSection({ activeDiff, impactSummary, displayTemplateName, sl
           badge: 'Customer & Channel Cost-to-Serve',
           modelTemplate:
             'Supply-chain customer model (Warehoused / Cross-Dock / DSD) with baseline UoM drivers',
-          currentModel:
-            'Enriched "CostToServe Model" with dynamic warehouse and supply-chain customer attributes.',
+          currentModel: '',
           addedAttr:
             'warehouseActivityDrivers[storage space, order volume, picking and packing activities, handling time, shipment frequency]',
           businessImpact:
@@ -672,8 +672,7 @@ function CalibrationSection({ activeDiff, impactSummary, displayTemplateName, sl
           badge: 'Customer & SKU Profitability P&L',
           modelTemplate:
             'Customer×SKU P&L at customer × brand/MPG × size × month, COPA-extended: full G2N to marketing profit with baseline allocation logic.',
-          currentModel:
-            'Customer×SKU P&L enriched with dynamic activity driver rates, direct/indirect overhead absorption, and customer cost-to-serve reconciliation.',
+          currentModel: '',
           addedAttr:
             'dynamicAllocationRules[mfg OH on planned volume, warehousing on net weight shipped, variances on DMC@std]',
           businessImpact:
@@ -762,7 +761,7 @@ function CalibrationSection({ activeDiff, impactSummary, displayTemplateName, sl
               {/* Middle Connector */}
               <div className="hidden lg:flex flex-col items-center justify-center shrink-0 px-2 py-4 select-none">
                 <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 tracking-wider">
-                  SUGGESTIONS
+                  {state === 'adjusting' ? 'GUIDANCE' : 'SUGGESTIONS'}
                 </span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-bold text-base">
                   ──▶
@@ -770,17 +769,19 @@ function CalibrationSection({ activeDiff, impactSummary, displayTemplateName, sl
               </div>
               <div className="flex lg:hidden items-center justify-center py-1 select-none">
                 <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 tracking-wider flex items-center gap-1">
-                  <span>SUGGESTIONS</span>
+                  <span>{state === 'adjusting' ? 'GUIDANCE' : 'SUGGESTIONS'}</span>
                   <span>▼</span>
                 </span>
               </div>
 
-              {/* Right Card: AgentForgeX Suggestions */}
+              {/* Right Card: AgentForgeX Suggestions / Guidance */}
               <div className="rounded-2xl border border-line bg-surface p-5 shadow-card flex flex-col justify-between space-y-4">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Sparkles size={16} className="text-emerald-500 fill-emerald-500/20" />
-                    <h3 className="text-sm sm:text-base font-bold text-ink">AgentForgeX Suggestions</h3>
+                    <h3 className="text-sm sm:text-base font-bold text-ink">
+                      {state === 'adjusting' ? 'AgentForgeX Guidance' : 'AgentForgeX Suggestions'}
+                    </h3>
                   </div>
                   <p className="text-xs text-muted leading-relaxed">
                     {item.suggestion}
@@ -796,13 +797,13 @@ function CalibrationSection({ activeDiff, impactSummary, displayTemplateName, sl
                     <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3.5 space-y-2 text-xs">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-300">
-                          <RotateCcw size={13} />
+                          <Zap size={13} className="text-amber-600 fill-amber-500/30" />
                           <span>Parameter Adjustment Requested</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleReset(item.key)}
-                          className="text-[11px] font-semibold text-muted hover:text-ink cursor-pointer"
+                          className="text-[11px] font-semibold text-muted hover:text-ink cursor-pointer underline"
                         >
                           Reset
                         </button>
@@ -862,7 +863,6 @@ function CalibrationSection({ activeDiff, impactSummary, displayTemplateName, sl
 export default function Finalize() {
   const { slug } = useParams()
   const location = useLocation()
-  const navigate = useNavigate()
   const toast = useToast()
   const wf = useAsync(() => domains.workflow(slug), [slug])
   const dom = useAsync(() => domains.list(), [])
@@ -873,20 +873,6 @@ export default function Finalize() {
   const [ack, setAck] = useState(false)
   const [busy, setBusy] = useState(false)
   const [viewMode, setViewMode] = useState('executive') // 'executive' | 'technical'
-
-  const finalized = Boolean(wf.data?.finalized_version_number)
-
-  useEffect(() => {
-    if (slug && wf.data) {
-      try {
-        if (finalized) {
-          sessionStorage.setItem(`afx_finalized_${slug}`, 'true')
-        } else {
-          sessionStorage.removeItem(`afx_finalized_${slug}`)
-        }
-      } catch {}
-    }
-  }, [finalized, slug, wf.data])
 
   useEffect(() => {
     if (wf.data?.steps?.[3]?.status === 'completed') fin.reload().catch(() => { })
@@ -920,100 +906,19 @@ export default function Finalize() {
     }
   }, [d?.business_impact, cmp, d?.comparison, d?.validation])
 
-  // Load reconciled graph with telemetry & client discrepancy nodes persisted from Gap Analysis (KG2)
-  const reconciledData = useMemo(() => {
-    if (!slug || typeof sessionStorage === 'undefined') return null
-    try {
-      const raw = sessionStorage.getItem(`afx_reconciled_graph_${slug}`)
-      return raw ? JSON.parse(raw) : null
-    } catch {
-      return null
-    }
-  }, [slug])
-
-  const reviewNodes = useMemo(() => {
-    if (reconciledData?.nodes?.length) return reconciledData.nodes
-    const baseNodes = d?.graph?.nodes || []
-    // Fallback: if telemetry was uploaded in KG2 but session data wasn't saved, synthesize telemetry node
-    const lastUpload = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(`afx_last_uploaded_${slug}`) : null
-    if (lastUpload && baseNodes.length && !baseNodes.some((n) => n.id === 'telemetry-uploaded' || n.origin === 'telemetry')) {
-      const tNode = {
-        id: 'telemetry-uploaded',
-        key: 'telemetry-uploaded',
-        name: `Data: ${lastUpload}`,
-        kind: 'datasource',
-        origin: 'telemetry',
-        role: 'telemetry',
-        change_state: 'added',
-        isDiscrepancy: true,
-        added_in_version: 2,
-        group_name: 'Business Telemetry',
-        group_key: 'telemetry',
-        color: '#EF4444',
-        attributes: ['ingested_records', 'variance_delta', 'batch_id', 'timestamp'],
-        x: 450,
-        y: 520,
-      }
-      return [...baseNodes, tNode]
-    }
-    return baseNodes
-  }, [reconciledData, d?.graph?.nodes, slug])
-
-  const reviewEdges = useMemo(() => {
-    if (reconciledData?.edges?.length) return reconciledData.edges
-    const baseEdges = d?.graph?.edges || []
-    const lastUpload = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(`afx_last_uploaded_${slug}`) : null
-    if (lastUpload && reviewNodes.some((n) => n.id === 'telemetry-uploaded') && !baseEdges.some((e) => e.srcId === 'telemetry-uploaded' || e.source === 'telemetry-uploaded')) {
-      const targetNode = reviewNodes.find((n) => n.id !== 'telemetry-uploaded') || reviewNodes[0]
-      const tgtId = targetNode?.key || targetNode?.id
-      const tEdge = {
-        id: `edge-telemetry-${tgtId}`,
-        source: 'telemetry-uploaded',
-        target: tgtId,
-        srcId: 'telemetry-uploaded',
-        tgtId: tgtId,
-        label: 'supplies telemetry',
-        isDiscrepancy: true,
-        kind: 'telemetry',
-      }
-      return [...baseEdges, tEdge]
-    }
-    return baseEdges
-  }, [reconciledData, d?.graph?.edges, reviewNodes, slug])
-
-  const reviewDiscrepancies = useMemo(() => {
-    const addedKeys = new Set(reconciledData?.discrepancyAddedKeys || [])
-    const missingKeys = new Set(reconciledData?.discrepancyMissingKeys || [])
-    reviewNodes.forEach((n) => {
-      if (n.color === '#EF4444' || n.isDiscrepancy || n.role === 'telemetry' || n.origin === 'telemetry') {
-        addedKeys.add(n.id)
-        addedKeys.add(n.key)
-      }
-    })
-    return { addedKeys, missingKeys }
-  }, [reconciledData, reviewNodes])
-
   if (wf.error) return <Layout wide><ErrorState error={wf.error} onRetry={wf.reload} /></Layout>
   if (wf.loading || !wf.data) return <Layout wide><Loading /></Layout>
   if (!wf.data.started) return <Navigate to={`/fmcg/${slug}`} replace />
   const hasKg1 = Boolean(wf.data?.steps?.[3]?.status === 'completed')
+  const finalized = Boolean(wf.data?.finalized_version_number)
 
   const doFinalize = async () => {
     setBusy(true)
     try {
       await graphs.finalize(slug, { confirm: true, acknowledge_warnings: ack })
-      toast.success('Ontology finalised as Digital Twin!')
-      try {
-        sessionStorage.setItem(`afx_finalized_${slug}`, 'true')
-        window.dispatchEvent(
-          new CustomEvent('afx-workflow-state', {
-            detail: { slug, isFinalized: true, version: 2 },
-          })
-        )
-      } catch {}
+      toast.success('Ontology finalised as Digital Twin. Telemetry upload is now unlocked.')
       setDlg(null)
-      // Navigate directly to the Digital Twin Explorer page (next page)!
-      navigate(`${prefix}/${slug}/twin`)
+      await Promise.all([wf.reload(), fin.reload()])
     } catch (e) {
       toast.error(e.message)
     } finally {
@@ -1026,14 +931,6 @@ export default function Finalize() {
     try {
       await graphs.reopen(slug)
       toast.success('Ontology re-opened.')
-      try {
-        sessionStorage.removeItem(`afx_finalized_${slug}`)
-        window.dispatchEvent(
-          new CustomEvent('afx-workflow-state', {
-            detail: { slug, isFinalized: false },
-          })
-        )
-      } catch {}
       setDlg(null)
       await Promise.all([wf.reload(), fin.reload()])
     } catch (e) {
@@ -1076,18 +973,6 @@ export default function Finalize() {
 
   return (
     <Layout wide>
-      {/* Back button below navbar on the left */}
-      <div className="mb-3.5 flex items-center select-none">
-        <Link
-          to={`${prefix}/${slug}?stage=kg2&view=graph`}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface/90 hover:bg-surface2 px-3 py-1.5 text-xs font-semibold text-muted hover:text-ink hover:border-brand/40 transition cursor-pointer shadow-2xs group"
-          title="Return to Business Telemetry Gap Analysis"
-        >
-          <ArrowLeft size={13} className="text-brand shrink-0 group-hover:-translate-x-0.5 transition-transform" />
-          <span>Back to Business Telemetry</span>
-        </Link>
-      </div>
-
       {!hasKg1 && (
         <div className="card mt-3">
           <EmptyState
@@ -1106,7 +991,7 @@ export default function Finalize() {
 
       {d && (
         <div className="space-y-5">
-          {/* Main 2-Column Grid: Left Graph Preview | Right Digital Twin Governance (Screenshot 1) */}
+          {/* Main 2-Column Grid: Left Graph Preview | Right Digital Twin Governance (Screenshot 2) */}
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
             {/* Left Card: Graph Preview */}
             <section className="card flex flex-col overflow-hidden p-0 border border-line shadow-card">
@@ -1116,21 +1001,16 @@ export default function Finalize() {
                     Current &ldquo;{displayTemplateName}&rdquo; Template
                   </h2>
                   <span className="text-xs text-muted">
-                    {reviewNodes.length} entities · {reviewEdges.length} relationships
+                    {d?.graph?.nodes?.length || 11} entities · {d?.graph?.edges?.length || 10} relationships
                   </span>
-                </div>
-                <div className="flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs font-medium text-ink shadow-sm">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>{displayTemplateName} Radial Spine Active</span>
                 </div>
               </div>
               <div className="h-[520px] min-h-[420px] w-full relative bg-surface">
                 <ErrorBoundary title="Ontology Canvas Rendering Error">
                   <OntologyGraphCanvas
-                    nodes={reviewNodes}
-                    edges={reviewEdges}
+                    nodes={d?.graph?.nodes || []}
+                    edges={d?.graph?.edges || []}
                     domainMeta={domain}
-                    discrepancies={reviewDiscrepancies}
                     className="w-full h-full"
                   />
                 </ErrorBoundary>
@@ -1187,11 +1067,11 @@ export default function Finalize() {
                 {/* Entities and Relationships Stats Grid */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-line bg-surface2/40 p-3.5 text-center">
-                    <div className="text-2xl font-bold text-ink">{reviewNodes.length}</div>
+                    <div className="text-2xl font-bold text-ink">{d?.graph?.nodes?.length || 11}</div>
                     <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">ENTITIES</div>
                   </div>
                   <div className="rounded-xl border border-line bg-surface2/40 p-3.5 text-center">
-                    <div className="text-2xl font-bold text-ink">{reviewEdges.length}</div>
+                    <div className="text-2xl font-bold text-ink">{d?.graph?.edges?.length || 10}</div>
                     <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">RELATIONSHIPS</div>
                   </div>
                 </div>
@@ -1230,7 +1110,7 @@ export default function Finalize() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Link
-                        to={`${prefix}/${slug}/twin`}
+                        to={`${prefix}/${slug}/telemetry`}
                         className="btn-primary flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold"
                       >
                         <span>Explore Digital Twin</span>

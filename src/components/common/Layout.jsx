@@ -11,7 +11,7 @@ export default function Layout({ children, wide }) {
   const location = useLocation()
 
   const isFinance = location.pathname.startsWith('/finance') || user?.selected_app === 'finance'
-  const subTitle = isFinance ? 'Finance KG' : 'FMCG KG'
+  const subTitle = isFinance ? 'FMCG KG' : 'FMCG KG'
 
   return (
     <div className="flex min-h-full flex-col bg-bg text-ink">
