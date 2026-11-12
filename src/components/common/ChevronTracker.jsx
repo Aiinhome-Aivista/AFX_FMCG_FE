@@ -322,12 +322,15 @@ export default function ChevronTracker({ showNextButton = false }) {
       <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
         {stages.map((stage) => {
           const { isCompleted, isActive } = getStageStatus(stage.id)
-          const isClickable = !stage.disabled && Boolean(stage.targetUrl)
+          // Strictly only allow navigating to previous (completed) steps or staying on active step.
+          // Users cannot proceed to next/future steps by clicking on the header chevrons.
+          const isUnlocked = isCompleted || isActive
+          const isClickable = isUnlocked && !stage.disabled && Boolean(stage.targetUrl)
 
           // Colors tailored to match the design in both Light Mode and Dark Mode:
-          // 🟢 Completed: Solid Emerald Green (#10b981), dark checkmark circle, bold dark text
+          // 🟢 Completed / Previous (Unlocked): Solid Emerald Green (#10b981), dark checkmark circle, clickable to go back
           // 🔵 Active: Highlighted glowing border (Emerald-Cyan gradient), dark surface in dark mode, stark white/emerald text
-          // ⚪ Inactive / Upcoming: Subtle border outline, dark surface in dark mode, clean typography
+          // ⚪ Inactive / Future (Locked): Subtle border outline, dimmed opacity, not clickable to jump forward
           let outerBg = 'bg-slate-200/90 dark:bg-slate-700/60'
           let innerBg = 'bg-white dark:bg-[#192027]'
           let textColor = 'text-slate-600 dark:text-slate-300 font-semibold'
@@ -402,6 +405,14 @@ export default function ChevronTracker({ showNextButton = false }) {
             </div>
           )
 
+          const tooltipTitle = isCompleted
+            ? `Return to Step ${stage.id}: ${stage.title}`
+            : isActive
+            ? `Current Step: ${stage.title} (${stage.subtitle})`
+            : !isDomainSelected
+            ? 'Please select a sub-domain first'
+            : 'Complete the current step to unlock this step'
+
           if (isClickable) {
             return (
               <Link
@@ -410,7 +421,7 @@ export default function ChevronTracker({ showNextButton = false }) {
                 className={`group relative flex items-center transition-all duration-300 cursor-pointer ${
                   isActive ? 'scale-[1.02] z-10' : 'hover:scale-[1.01]'
                 }`}
-                title={`${stage.title}: ${stage.subtitle}`}
+                title={tooltipTitle}
               >
                 {chevronInner}
               </Link>
@@ -425,11 +436,7 @@ export default function ChevronTracker({ showNextButton = false }) {
                   ? 'scale-[1.02] z-10 cursor-default'
                   : 'cursor-not-allowed opacity-50 select-none'
               }`}
-              title={
-                isActive
-                  ? `${stage.title}: ${stage.subtitle}`
-                  : 'Please select a sub-domain first to proceed'
-              }
+              title={tooltipTitle}
               aria-disabled={!isActive}
             >
               {chevronInner}
