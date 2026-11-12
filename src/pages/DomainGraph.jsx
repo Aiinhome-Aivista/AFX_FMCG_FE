@@ -137,7 +137,11 @@ export default function DomainGraph() {
     }
   }, [location.search, slug])
 
-  const hasUploadedFiles = uploadedFiles.length > 0 || isKg2Active
+  const hasUploadedFiles = Boolean(
+    (Array.isArray(uploadedFiles) && uploadedFiles.length > 0) ||
+    lastUploadedName ||
+    (slug && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(`afx_last_uploaded_${slug}`))
+  )
 
   const userChatCount = useMemo(() => {
     if (!snap?.messages) return 0
@@ -962,40 +966,42 @@ export default function DomainGraph() {
             </span>
           )}
 
-          {/* Red Gap Analysis button at the very end of the line (in KG1, clicking navigates to KG2; persists after file upload) */}
-          <div className="flex items-center gap-2.5 ml-auto">
-            <button
-              type="button"
-              onClick={() => {
-                setIsKg2Active(true)
-                setGapAnalysisMode(true)
-                setActiveLeftView('graph')
-                if (slug) {
-                  try {
-                    sessionStorage.setItem(`afx_is_kg2_${slug}`, 'true')
-                  } catch {}
-                }
-                const url = new URL(window.location.href)
-                url.searchParams.set('stage', 'kg2')
-                url.searchParams.delete('view')
-                nav(`${location.pathname}?${url.searchParams.toString()}`, { replace: true })
-                window.dispatchEvent(
-                  new CustomEvent('afx-workflow-state', {
-                    detail: { slug, activeLeftView: 'graph', isKg2: true, version: 2 },
-                  })
-                )
-              }}
-              className={`inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-xs sm:text-[13px] font-bold transition-all shadow-sm select-none ${
-                isKg2Active
-                  ? 'bg-[#ef4444] text-white ring-2 ring-rose-400/50 shadow-rose-500/30'
-                  : 'bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-rose-500/25 cursor-pointer active:scale-95'
-              }`}
-              title={isKg2Active ? 'Gap Analysis Active (KG2)' : 'Go to Gap Analysis (KG2)'}
-            >
-              <AlertTriangle size={15} strokeWidth={2.4} />
-              <span>{isKg2Active ? 'Gap Analysis Active' : 'Gap Analysis'}</span>
-            </button>
-          </div>
+          {/* Red Gap Analysis button at the very end of the line - ONLY visible once a CSV or data file has been uploaded */}
+          {hasUploadedFiles && (
+            <div className="flex items-center gap-2.5 ml-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsKg2Active(true)
+                  setGapAnalysisMode(true)
+                  setActiveLeftView('graph')
+                  if (slug) {
+                    try {
+                      sessionStorage.setItem(`afx_is_kg2_${slug}`, 'true')
+                    } catch {}
+                  }
+                  const url = new URL(window.location.href)
+                  url.searchParams.set('stage', 'kg2')
+                  url.searchParams.delete('view')
+                  nav(`${location.pathname}?${url.searchParams.toString()}`, { replace: true })
+                  window.dispatchEvent(
+                    new CustomEvent('afx-workflow-state', {
+                      detail: { slug, activeLeftView: 'graph', isKg2: true, version: 2 },
+                    })
+                  )
+                }}
+                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-1.5 text-xs sm:text-[13px] font-bold transition-all shadow-sm select-none ${
+                  isKg2Active
+                    ? 'bg-[#ef4444] text-white ring-2 ring-rose-400/50 shadow-rose-500/30'
+                    : 'bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-rose-500/25 cursor-pointer active:scale-95'
+                }`}
+                title={isKg2Active ? 'Gap Analysis Active (KG2)' : 'Go to Gap Analysis (KG2)'}
+              >
+                <AlertTriangle size={15} strokeWidth={2.4} />
+                <span>{isKg2Active ? 'Gap Analysis Active' : 'Gap Analysis'}</span>
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="mb-4 flex flex-col gap-2.5 rounded-2xl border border-line bg-surface/70 p-3 sm:p-3.5 backdrop-blur shadow-2xs">
