@@ -230,7 +230,7 @@ export default function ChevronTracker({ showNextButton = false }) {
         {
           id: 4,
           title: 'Review',
-          subtitle: 'Digital Twin',
+          subtitle: 'Governed Twin',
           targetUrl: null,
           disabled: true,
         },
