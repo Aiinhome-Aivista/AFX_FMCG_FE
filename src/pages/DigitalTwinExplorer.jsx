@@ -94,53 +94,32 @@ export default function DigitalTwinExplorer() {
   }, [slug])
 
   const rawNodes = useMemo(() => {
-    if (reconciledData?.nodes?.length) return reconciledData.nodes
-    const baseNodes = g.data?.nodes || []
-    const lastUpload = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(`afx_last_uploaded_${slug}`) : null
-    if (lastUpload && baseNodes.length && !baseNodes.some((n) => n.id === 'telemetry-uploaded' || n.origin === 'telemetry')) {
-      const tNode = {
-        id: 'telemetry-uploaded',
-        key: 'telemetry-uploaded',
-        name: `Data: ${lastUpload}`,
-        kind: 'datasource',
-        origin: 'telemetry',
-        role: 'telemetry',
-        change_state: 'added',
-        isDiscrepancy: true,
-        added_in_version: 2,
-        group_name: 'Business Telemetry',
-        group_key: 'telemetry',
-        color: '#EF4444',
-        attributes: ['ingested_records', 'variance_delta', 'batch_id', 'timestamp'],
-        x: 450,
-        y: 520,
-      }
-      return [...baseNodes, tNode]
-    }
-    return baseNodes
-  }, [reconciledData, g.data?.nodes, slug])
+    const baseNodes = (reconciledData?.nodes?.length ? reconciledData.nodes : g.data?.nodes) || []
+    return baseNodes.filter(
+      (n) =>
+        n.id !== 'telemetry-uploaded' &&
+        !String(n.id || '').startsWith('data-file-') &&
+        n.origin !== 'telemetry' &&
+        n.role !== 'telemetry' &&
+        n.kind !== 'datasource' &&
+        n.group_key !== 'telemetry' &&
+        n.group_name !== 'Business Telemetry'
+    )
+  }, [reconciledData, g.data?.nodes])
 
   const edges = useMemo(() => {
-    if (reconciledData?.edges?.length) return reconciledData.edges
-    const baseEdges = g.data?.edges || []
-    const lastUpload = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(`afx_last_uploaded_${slug}`) : null
-    if (lastUpload && rawNodes.some((n) => n.id === 'telemetry-uploaded') && !baseEdges.some((e) => e.srcId === 'telemetry-uploaded' || e.source === 'telemetry-uploaded')) {
-      const targetNode = rawNodes.find((n) => n.id !== 'telemetry-uploaded') || rawNodes[0]
-      const tgtId = targetNode?.key || targetNode?.id
-      const tEdge = {
-        id: `edge-telemetry-${tgtId}`,
-        source: 'telemetry-uploaded',
-        target: tgtId,
-        srcId: 'telemetry-uploaded',
-        tgtId: tgtId,
-        label: 'supplies telemetry',
-        isDiscrepancy: true,
-        kind: 'telemetry',
-      }
-      return [...baseEdges, tEdge]
-    }
-    return baseEdges
-  }, [reconciledData, g.data?.edges, rawNodes, slug])
+    const baseEdges = (reconciledData?.edges?.length ? reconciledData.edges : g.data?.edges) || []
+    return baseEdges.filter(
+      (e) =>
+        e.srcId !== 'telemetry-uploaded' &&
+        e.tgtId !== 'telemetry-uploaded' &&
+        e.source !== 'telemetry-uploaded' &&
+        e.target !== 'telemetry-uploaded' &&
+        !String(e.source || '').startsWith('data-file-') &&
+        !String(e.target || '').startsWith('data-file-') &&
+        e.kind !== 'telemetry'
+    )
+  }, [reconciledData, g.data?.edges])
 
   const discrepancies = useMemo(() => {
     const addedKeys = new Set(reconciledData?.discrepancyAddedKeys || [])

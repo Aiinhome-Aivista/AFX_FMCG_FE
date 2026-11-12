@@ -372,6 +372,19 @@ export default function DomainGraph() {
     const rawList = rawBase?.nodes || []
 
     rawList.forEach((n) => {
+      // Exclude raw telemetry datasource nodes so they do not create an extra node cluster on the canvas
+      if (
+        n.kind === 'datasource' ||
+        n.origin === 'telemetry' ||
+        n.role === 'telemetry' ||
+        n.group_key === 'telemetry' ||
+        n.group_name === 'Business Telemetry' ||
+        n.id === 'telemetry-uploaded' ||
+        String(n.id || '').startsWith('data-file-')
+      ) {
+        return
+      }
+
       const isClientOrNew =
         n.role === 'client' ||
         n.group_key === 'client' ||
@@ -395,82 +408,13 @@ export default function DomainGraph() {
     return { templateNodes: tNodes, chatNewNodes: cNodes }
   }, [rawBase?.nodes])
 
-  // When in Gap Analysis (KG2), dynamically generate newly introduced node(s) ONLY if file was uploaded
-  const uploadedTelemetryNodes = useMemo(() => {
-    if (!isKg2Active || !gapAnalysisMode) return []
-
-    // ONLY if file was actually uploaded (either present in uploaded files list or uploaded in current session)
-    const fileItems = uploadedFiles.length > 0
-      ? uploadedFiles
-      : lastUploadedName
-        ? [{ id: 'telemetry-uploaded', name: lastUploadedName }]
-        : []
-
-    // If no file was uploaded, do NOT show any extra telemetry node or discrepancy!
-    if (fileItems.length === 0) return []
-
-    const existingNodes = [...templateNodes, ...chatNewNodes]
-    const avgX = existingNodes.length > 0
-      ? existingNodes.reduce((acc, n) => acc + (n.x || 450), 0) / existingNodes.length
-      : 450
-    const maxY = existingNodes.length > 0
-      ? existingNodes.reduce((acc, n) => Math.max(acc, (n.y || 250)), 250)
-      : 250
-
-    return fileItems.map((f, idx) => {
-      const cleanId = `data-file-${f.id || String(f.name || 'stream').replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`
-      const fName = f.name || f.original_name || 'Business_Telemetry.csv'
-      const displayName = fName.startsWith('Data:') ? fName : `Data: ${fName}`
-
-      return {
-        id: cleanId,
-        key: cleanId,
-        name: displayName,
-        kind: 'datasource',
-        origin: 'telemetry',
-        role: 'telemetry',
-        change_state: 'added',
-        isDiscrepancy: true,
-        added_in_version: 2,
-        group_name: 'Business Telemetry',
-        group_key: 'telemetry',
-        color: '#EF4444',
-        attributes: f.metadata?.columns || f.metadata?.fields || [
-          'ingested_records',
-          'variance_delta',
-          'batch_id',
-          'timestamp',
-        ],
-        definition: `Refined business telemetry ingested from uploaded file “${fName}”. Discrepancy node newly introduced in KG2.`,
-        x: avgX + (idx % 2 === 0 ? 110 : -110),
-        y: maxY + 95 + idx * 55,
-      }
-    })
-  }, [isKg2Active, gapAnalysisMode, uploadedFiles, lastUploadedName, templateNodes, chatNewNodes])
-
-  // Edges connecting newly introduced telemetry nodes to matching baseline nodes
-  const uploadedTelemetryEdges = useMemo(() => {
-    if (!isKg2Active || !gapAnalysisMode || !uploadedTelemetryNodes.length || !templateNodes.length) return []
-
-    return uploadedTelemetryNodes.map((tNode, idx) => {
-      const targetNode = templateNodes[idx % templateNodes.length] || templateNodes[0]
-      const tgtId = targetNode.key || targetNode.id
-      return {
-        id: `edge-${tNode.id}-${tgtId}`,
-        source: tNode.id,
-        target: tgtId,
-        srcId: tNode.id,
-        tgtId: tgtId,
-        label: 'supplies telemetry',
-        isDiscrepancy: true,
-        kind: 'telemetry',
-      }
-    })
-  }, [isKg2Active, gapAnalysisMode, uploadedTelemetryNodes, templateNodes])
+  // Telemetry raw file nodes are not rendered on the graph canvas (only real business entities are displayed)
+  const uploadedTelemetryNodes = useMemo(() => [], [])
+  const uploadedTelemetryEdges = useMemo(() => [], [])
 
   // Graph state:
   // - In KG1 (Discovery / Core Nuances chat): Baseline model template ONLY. Client-specific new entities are hidden.
-  // - In KG2 (Business Telemetry / Gap Analysis): Merged graph showing baseline template + client entities from chat nuances + uploaded telemetry
+  // - In KG2 (Business Telemetry / Gap Analysis): Merged graph showing baseline template + client entities from chat nuances
   const base = useMemo(() => {
     if (!rawBase) return null
     if (!isKg2Active || !gapAnalysisMode) {
@@ -486,10 +430,17 @@ export default function DomainGraph() {
     return {
       ...rawBase,
       version: { number: 2, label: 'KG2' },
-      nodes: [...templateNodes, ...chatNewNodes, ...uploadedTelemetryNodes],
-      edges: [...(rawBase.edges || []), ...uploadedTelemetryEdges],
+      nodes: [...templateNodes, ...chatNewNodes],
+      edges: (rawBase.edges || []).filter(
+        (e) =>
+          e.kind !== 'telemetry' &&
+          e.srcId !== 'telemetry-uploaded' &&
+          e.tgtId !== 'telemetry-uploaded' &&
+          !String(e.source || '').startsWith('data-file-') &&
+          !String(e.target || '').startsWith('data-file-')
+      ),
     }
-  }, [rawBase, isKg2Active, gapAnalysisMode, templateNodes, chatNewNodes, uploadedTelemetryNodes, uploadedTelemetryEdges])
+  }, [rawBase, isKg2Active, gapAnalysisMode, templateNodes, chatNewNodes])
 
   const groups = useMemo(() => {
     const m = new Map()
