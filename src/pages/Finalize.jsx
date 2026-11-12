@@ -906,6 +906,106 @@ export default function Finalize() {
     }
   }, [d?.business_impact, cmp, d?.comparison, d?.validation])
 
+  // Load reconciled graph with telemetry & client discrepancy nodes persisted from Gap Analysis (KG2)
+  const reconciledData = useMemo(() => {
+    if (!slug || typeof sessionStorage === 'undefined') return null
+    try {
+      const raw = sessionStorage.getItem(`afx_reconciled_graph_${slug}`)
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  }, [slug])
+
+  const reviewNodes = useMemo(() => {
+    if (reconciledData?.nodes?.length) return reconciledData.nodes
+    const baseNodes = d?.graph?.nodes || []
+    const lastUpload = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(`afx_last_uploaded_${slug}`) : null
+    if (lastUpload && baseNodes.length && !baseNodes.some((n) => n.id === 'telemetry-uploaded' || n.origin === 'telemetry')) {
+      const tNode = {
+        id: 'telemetry-uploaded',
+        key: 'telemetry-uploaded',
+        name: `Data: ${lastUpload}`,
+        kind: 'datasource',
+        origin: 'telemetry',
+        role: 'telemetry',
+        change_state: 'added',
+        isDiscrepancy: true,
+        added_in_version: 2,
+        group_name: 'Business Telemetry',
+        group_key: 'telemetry',
+        color: '#EF4444',
+        attributes: ['ingested_records', 'variance_delta', 'batch_id', 'timestamp'],
+        x: 450,
+        y: 520,
+      }
+      return [...baseNodes, tNode]
+    }
+    return baseNodes
+  }, [reconciledData, d?.graph?.nodes, slug])
+
+  const reviewEdges = useMemo(() => {
+    if (reconciledData?.edges?.length) return reconciledData.edges
+    const baseEdges = d?.graph?.edges || []
+    const lastUpload = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(`afx_last_uploaded_${slug}`) : null
+    if (lastUpload && reviewNodes.some((n) => n.id === 'telemetry-uploaded') && !baseEdges.some((e) => e.srcId === 'telemetry-uploaded' || e.source === 'telemetry-uploaded')) {
+      const targetNode = reviewNodes.find((n) => n.id !== 'telemetry-uploaded') || reviewNodes[0]
+      const tgtId = targetNode?.key || targetNode?.id
+      const tEdge = {
+        id: `edge-telemetry-${tgtId}`,
+        source: 'telemetry-uploaded',
+        target: tgtId,
+        srcId: 'telemetry-uploaded',
+        tgtId: tgtId,
+        label: 'supplies telemetry',
+        isDiscrepancy: true,
+        kind: 'telemetry',
+      }
+      return [...baseEdges, tEdge]
+    }
+    return baseEdges
+  }, [reconciledData, d?.graph?.edges, reviewNodes, slug])
+
+  const reviewDiscrepancies = useMemo(() => {
+    const addedKeys = new Set(reconciledData?.discrepancyAddedKeys || [])
+    const modifiedKeys = new Set(reconciledData?.discrepancyModifiedKeys || [])
+    const missingKeys = new Set(reconciledData?.discrepancyMissingKeys || [])
+
+    const activeDiff = cmp || d?.comparison
+    activeDiff?.nodes_added?.forEach((n) => {
+      const k = typeof n === 'string' ? n : n.key || n.id || n.name
+      if (k) addedKeys.add(k)
+    })
+    activeDiff?.nodes_modified?.forEach((n) => {
+      const k = typeof n === 'string' ? n : n.key || n.id || n.name
+      if (k) modifiedKeys.add(k)
+    })
+    activeDiff?.nodes_removed?.forEach((n) => {
+      const k = typeof n === 'string' ? n : n.key || n.id || n.name
+      if (k) missingKeys.add(k)
+    })
+
+    if (slug === 'cost-profitability-management') {
+      modifiedKeys.add('CostingAllocationModel')
+      modifiedKeys.add('CostToServe Model')
+      modifiedKeys.add('ProfitabilityRecord')
+    }
+
+    reviewNodes.forEach((n) => {
+      const k = n.key || n.id || n.name
+      if (n.color === '#EF4444' || n.isDiscrepancy || n.role === 'telemetry' || n.origin === 'telemetry' || n.change_state === 'added') {
+        addedKeys.add(k)
+        if (n.name) addedKeys.add(n.name)
+      }
+      if (n.change_state === 'modified' || n.isModified || n.isEdited) {
+        modifiedKeys.add(k)
+        if (n.name) modifiedKeys.add(n.name)
+      }
+    })
+
+    return { addedKeys, modifiedKeys, missingKeys }
+  }, [reconciledData, cmp, d?.comparison, reviewNodes, slug])
+
   if (wf.error) return <Layout wide><ErrorState error={wf.error} onRetry={wf.reload} /></Layout>
   if (wf.loading || !wf.data) return <Layout wide><Loading /></Layout>
   if (!wf.data.started) return <Navigate to={`/fmcg/${slug}`} replace />
@@ -1001,16 +1101,17 @@ export default function Finalize() {
                     Current &ldquo;{displayTemplateName}&rdquo; Template
                   </h2>
                   <span className="text-xs text-muted">
-                    {d?.graph?.nodes?.length || 11} entities · {d?.graph?.edges?.length || 10} relationships
+                    {reviewNodes.length} entities · {reviewEdges.length} relationships
                   </span>
                 </div>
               </div>
               <div className="h-[520px] min-h-[420px] w-full relative bg-surface">
                 <ErrorBoundary title="Ontology Canvas Rendering Error">
                   <OntologyGraphCanvas
-                    nodes={d?.graph?.nodes || []}
-                    edges={d?.graph?.edges || []}
+                    nodes={reviewNodes}
+                    edges={reviewEdges}
                     domainMeta={domain}
+                    discrepancies={reviewDiscrepancies}
                     className="w-full h-full"
                   />
                 </ErrorBoundary>
@@ -1067,11 +1168,11 @@ export default function Finalize() {
                 {/* Entities and Relationships Stats Grid */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-line bg-surface2/40 p-3.5 text-center">
-                    <div className="text-2xl font-bold text-ink">{d?.graph?.nodes?.length || 11}</div>
+                    <div className="text-2xl font-bold text-ink">{reviewNodes.length}</div>
                     <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">ENTITIES</div>
                   </div>
                   <div className="rounded-xl border border-line bg-surface2/40 p-3.5 text-center">
-                    <div className="text-2xl font-bold text-ink">{d?.graph?.edges?.length || 10}</div>
+                    <div className="text-2xl font-bold text-ink">{reviewEdges.length}</div>
                     <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">RELATIONSHIPS</div>
                   </div>
                 </div>

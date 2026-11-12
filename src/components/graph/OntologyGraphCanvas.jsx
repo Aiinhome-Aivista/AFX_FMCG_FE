@@ -705,8 +705,13 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                 e.isDiscrepancy ||
                 e.kind === 'telemetry' ||
                 e.color === '#EF4444' ||
+                e.color === '#ef4444' ||
+                e.change_state === 'added' ||
+                e.change_state === 'modified' ||
                 discrepancies?.addedKeys?.has(e.srcId) ||
                 discrepancies?.addedKeys?.has(e.tgtId) ||
+                discrepancies?.modifiedKeys?.has(e.srcId) ||
+                discrepancies?.modifiedKeys?.has(e.tgtId) ||
                 discrepancies?.missingKeys?.has(e.srcId) ||
                 discrepancies?.missingKeys?.has(e.tgtId)
               )
@@ -790,7 +795,7 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
 
               const opacity = isDim ? 0.1 : isNeighbour ? 0.38 : 1
 
-              // Check if node is a discrepancy during Gap Analysis (KG1 vs KG2)
+              // Check if node is edited or newly added in template
               const isClientEntity =
                 n.role === 'client' ||
                 n.origin === 'user' ||
@@ -805,29 +810,42 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                 n.group_key === 'telemetry' ||
                 String(n.group_name || '').toLowerCase().includes('telemetry')
 
-              const isRedDiscrepancy = Boolean(
+              const isEdited = Boolean(
+                n.change_state === 'modified' ||
+                n.isModified ||
+                n.isEdited ||
+                discrepancies?.modifiedKeys?.has(n.id) ||
+                discrepancies?.modifiedKeys?.has(n.key) ||
+                (n.name && discrepancies?.modifiedKeys?.has(n.name))
+              )
+
+              const isNewlyAdded = Boolean(
+                n.change_state === 'added' ||
+                n.isAdded ||
+                n.status === 'new' ||
                 n.color === '#EF4444' ||
                 n.color === '#ef4444' ||
                 n.isDiscrepancy ||
+                isClientEntity ||
                 isTelemetryNode ||
+                (n.added_in_version && n.added_in_version >= 2) ||
                 discrepancies?.addedKeys?.has(n.id) ||
                 discrepancies?.addedKeys?.has(n.key) ||
-                (gapAnalysis && (
-                  isClientEntity ||
-                  (n.added_in_version && n.added_in_version >= 2) ||
-                  (n.isDiscrepancy && !n.isMissing)
-                ))
-              ) && !(n.origin === 'reference' && !n.isDiscrepancy && n.color !== '#EF4444')
+                (n.name && discrepancies?.addedKeys?.has(n.name))
+              )
 
               const isMissingDiscrepancy = Boolean(
                 n.isMissing ||
                 discrepancies?.missingKeys?.has(n.id) ||
-                discrepancies?.missingKeys?.has(n.key)
+                discrepancies?.missingKeys?.has(n.key) ||
+                (n.name && discrepancies?.missingKeys?.has(n.name))
               )
-              const isDiscrepancy = isRedDiscrepancy || isMissingDiscrepancy
 
-              // Stroke: Discrepancies are RED (#EF4444) in Gap Analysis, Review, and Digital Twin.
-              // All matching/baseline entities maintain their respective domain, spine, or nuance colors.
+              // Highlight all edited or newly added items in RED across Gap Analysis, Review, and Twin
+              const isRedHighlight = isEdited || isNewlyAdded
+              const isDiscrepancy = isRedHighlight || isMissingDiscrepancy
+
+              // Stroke: Edited or newly added items are RED (#EF4444)
               const strokeColor = isSelected
                 ? themeColors.accent
                 : isDiscrepancy
@@ -836,11 +854,7 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                     ? (isDark ? '#475569' : '#CBD5E1')
                     : n.color
                       ? n.color
-                      : n.change_state === 'added'
-                        ? '#10B981'
-                        : n.change_state === 'modified'
-                          ? '#F59E0B'
-                          : nodeColor
+                      : nodeColor
 
               const strokeW = isSelected
                 ? 3.2
@@ -850,9 +864,7 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                     ? 1.4
                     : isFound
                       ? 2.6
-                      : n.change_state === 'added' || n.change_state === 'modified'
-                        ? 2.4
-                        : 1.6
+                      : 1.6
 
               const dropShadow = isSelected
                 ? `drop-shadow(0 0 10px ${nodeColor}88)`
@@ -862,19 +874,15 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                     ? isDark
                       ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))'
                       : 'drop-shadow(0 1px 1.5px rgba(0,0,0,0.06))'
-                    : n.change_state === 'added'
-                      ? 'drop-shadow(0 0 8px rgba(16,185,129,0.45))'
-                      : n.change_state === 'modified'
-                        ? 'drop-shadow(0 0 8px rgba(245,158,11,0.45))'
-                        : isDark
-                          ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))'
-                          : 'drop-shadow(0 1px 1.5px rgba(0,0,0,0.12))'
+                    : isDark
+                      ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))'
+                      : 'drop-shadow(0 1px 1.5px rgba(0,0,0,0.12))'
 
               const dotColor = isDiscrepancy
                 ? '#EF4444'
                 : gapAnalysis
                   ? (isDark ? '#64748B' : '#94A3B8')
-                  : n.color || (n.change_state === 'added' ? '#10B981' : n.change_state === 'modified' ? '#F59E0B' : nodeColor)
+                  : n.color || nodeColor
 
               const labelTextColor = isDiscrepancy
                 ? (isDark ? '#FCA5A5' : '#DC2626')
@@ -900,7 +908,7 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                     rx={9}
                     stroke={strokeColor}
                     strokeWidth={strokeW}
-                    strokeDasharray={isMissingDiscrepancy ? '6 3' : isFound ? '5 3' : undefined}
+                    strokeDasharray={isMissingDiscrepancy ? '6 3' : isEdited ? '5 2.5' : isFound ? '5 3' : undefined}
                     style={{
                       fill: isDiscrepancy
                         ? (isDark ? 'rgba(239, 68, 68, 0.12)' : 'rgba(254, 242, 242, 0.95)')
@@ -916,12 +924,28 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                     r={3.4}
                     fill={dotColor}
                   />
-                  {/* Status badge: Red for discrepancies in Gap Analysis, Review, and Twin */}
+                  {/* Status badge: Red for edited or newly added items across Gap Analysis, Review, and Twin */}
                   {isDiscrepancy && (() => {
-                    const badgeText = isMissingDiscrepancy
-                      ? 'MISSING'
-                      : (isTelemetryNode || n.color === '#EF4444' ? 'EXTRA NODE' : isClientEntity ? 'NEW ENTITY' : 'EXTRA NODE')
-                    const badgeWidth = badgeText === 'NEW ENTITY' ? 76 : badgeText === 'EXTRA NODE' ? 70 : 54
+                    let badgeText = ''
+                    let badgeWidth = 44
+
+                    if (isMissingDiscrepancy) {
+                      badgeText = 'MISSING'
+                      badgeWidth = 54
+                    } else if (isEdited) {
+                      badgeText = 'EDITED'
+                      badgeWidth = 46
+                    } else if (isTelemetryNode || n.color === '#EF4444') {
+                      badgeText = 'EXTRA NODE'
+                      badgeWidth = 70
+                    } else if (isClientEntity) {
+                      badgeText = 'NEW ENTITY'
+                      badgeWidth = 76
+                    } else {
+                      badgeText = 'NEW'
+                      badgeWidth = 36
+                    }
+
                     return (
                       <g transform={`translate(${n.x + n.w / 2 - (badgeWidth - 14)}, ${n.y - n.h / 2 - 8})`}>
                         <rect width={badgeWidth} height={16} rx={5} fill="#EF4444" />
@@ -930,7 +954,7 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                           y={11.5}
                           textAnchor="middle"
                           fill="#FFFFFF"
-                          fontSize="8"
+                          fontSize="8.5"
                           fontWeight="bold"
                           fontFamily="system-ui"
                         >
@@ -939,22 +963,6 @@ const OntologyGraphCanvas = forwardRef(function OntologyGraphCanvas(
                       </g>
                     )
                   })()}
-                  {!gapAnalysis && n.change_state === 'added' && !isClientEntity && (
-                    <g transform={`translate(${n.x + n.w / 2 - 28}, ${n.y - n.h / 2 - 7})`}>
-                      <rect width={32} height={15} rx={5} fill="#10B981" />
-                      <text x={16} y={11} textAnchor="middle" fill="#FFFFFF" fontSize="9" fontWeight="bold" fontFamily="system-ui">
-                        NEW
-                      </text>
-                    </g>
-                  )}
-                  {!gapAnalysis && n.change_state === 'modified' && (
-                    <g transform={`translate(${n.x + n.w / 2 - 38}, ${n.y - n.h / 2 - 7})`}>
-                      <rect width={42} height={15} rx={5} fill="#F59E0B" />
-                      <text x={21} y={11} textAnchor="middle" fill="#FFFFFF" fontSize="8.5" fontWeight="bold" fontFamily="system-ui">
-                        EDITED
-                      </text>
-                    </g>
-                  )}
                   {/* Label (1 or 2 lines) */}
                   {n.l2 ? (
                     <>

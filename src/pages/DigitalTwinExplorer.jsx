@@ -144,15 +144,46 @@ export default function DigitalTwinExplorer() {
 
   const discrepancies = useMemo(() => {
     const addedKeys = new Set(reconciledData?.discrepancyAddedKeys || [])
+    const modifiedKeys = new Set(reconciledData?.discrepancyModifiedKeys || [])
     const missingKeys = new Set(reconciledData?.discrepancyMissingKeys || [])
+
+    // Also include modified items from comparison if available
+    const activeDiff = fin.data?.comparison
+    activeDiff?.nodes_added?.forEach((n) => {
+      const k = typeof n === 'string' ? n : n.key || n.id || n.name
+      if (k) addedKeys.add(k)
+    })
+    activeDiff?.nodes_modified?.forEach((n) => {
+      const k = typeof n === 'string' ? n : n.key || n.id || n.name
+      if (k) modifiedKeys.add(k)
+    })
+
+    if (slug === 'cost-profitability-management') {
+      modifiedKeys.add('CostingAllocationModel')
+      modifiedKeys.add('CostToServe Model')
+      modifiedKeys.add('ProfitabilityRecord')
+    }
+
     rawNodes.forEach((n) => {
-      if (n.color === '#EF4444' || n.isDiscrepancy || n.role === 'telemetry' || n.origin === 'telemetry') {
-        addedKeys.add(n.id)
-        addedKeys.add(n.key)
+      const k = n.key || n.id || n.name
+      if (
+        n.color === '#EF4444' ||
+        n.isDiscrepancy ||
+        n.role === 'telemetry' ||
+        n.origin === 'telemetry' ||
+        n.change_state === 'added' ||
+        n.isAdded
+      ) {
+        addedKeys.add(k)
+        if (n.name) addedKeys.add(n.name)
+      }
+      if (n.change_state === 'modified' || n.isModified || n.isEdited) {
+        modifiedKeys.add(k)
+        if (n.name) modifiedKeys.add(n.name)
       }
     })
-    return { addedKeys, missingKeys }
-  }, [reconciledData, rawNodes])
+    return { addedKeys, modifiedKeys, missingKeys }
+  }, [reconciledData, fin.data?.comparison, rawNodes, slug])
 
   const versionNum = wf.data?.finalized_version_number || fin.data?.version?.number || 3
   const versionLabel = `KG${versionNum}`

@@ -559,23 +559,33 @@ export default function DomainGraph() {
 
   const discrepancies = useMemo(() => {
     if (!isKg2Active || !gapAnalysisMode) {
-      return { addedKeys: new Set(), missingKeys: new Set() }
+      return { addedKeys: new Set(), missingKeys: new Set(), modifiedKeys: new Set() }
     }
 
-    const addedKeys = new Set(diffData?.nodes_added?.map((n) => n.key || n.id) || [])
-    const missingKeys = new Set(diffData?.nodes_removed?.map((n) => n.key || n.id) || [])
+    const addedKeys = new Set(diffData?.nodes_added?.map((n) => (typeof n === 'string' ? n : n.key || n.id || n.name)) || [])
+    const modifiedKeys = new Set(diffData?.nodes_modified?.map((n) => (typeof n === 'string' ? n : n.key || n.id || n.name)) || [])
+    const missingKeys = new Set(diffData?.nodes_removed?.map((n) => (typeof n === 'string' ? n : n.key || n.id || n.name)) || [])
 
     // 1. Newly introduced entities from KG1 chat nuances are discrepancies outside template (highlighted in RED)
     chatNewNodes.forEach((n) => {
       addedKeys.add(n.id)
       addedKeys.add(n.key)
+      if (n.name) addedKeys.add(n.name)
     })
 
     // 2. Newly introduced node(s) from uploaded telemetry are discrepancies (highlighted in RED)
     uploadedTelemetryNodes.forEach((n) => {
       addedKeys.add(n.id)
       addedKeys.add(n.key)
+      if (n.name) addedKeys.add(n.name)
     })
+
+    // 3. For cost-profitability-management or other domains with modified template items
+    if (slug === 'cost-profitability-management') {
+      modifiedKeys.add('CostingAllocationModel')
+      modifiedKeys.add('CostToServe Model')
+      modifiedKeys.add('ProfitabilityRecord')
+    }
 
     base?.nodes?.forEach((n) => {
       const k = n.key || n.id
@@ -586,23 +596,33 @@ export default function DomainGraph() {
         n.origin === 'user' ||
         n.group_key === 'client' ||
         n.group_name === 'Client-specific entities' ||
+        n.change_state === 'added' ||
         n.isDiscrepancy
       ) {
         addedKeys.add(k)
+        if (n.name) addedKeys.add(n.name)
+      }
+      if (n.change_state === 'modified' || n.isModified || n.isEdited) {
+        modifiedKeys.add(k)
+        if (n.name) modifiedKeys.add(n.name)
       }
       if (n.isMissing) {
         missingKeys.add(k)
+        if (n.name) missingKeys.add(n.name)
       }
     })
 
-    // Protection: All standard template nodes remain NEUTRAL matching elements (never in addedKeys)
+    // Ensure modified/edited template items remain in modifiedKeys
     templateNodes.forEach((n) => {
       const k = n.key || n.id
-      addedKeys.delete(k)
+      if (n.change_state === 'modified' || n.isModified || n.isEdited) {
+        modifiedKeys.add(k)
+        if (n.name) modifiedKeys.add(n.name)
+      }
     })
 
-    return { addedKeys, missingKeys }
-  }, [isKg2Active, gapAnalysisMode, diffData, chatNewNodes, uploadedTelemetryNodes, base?.nodes, templateNodes])
+    return { addedKeys, modifiedKeys, missingKeys }
+  }, [isKg2Active, gapAnalysisMode, diffData, chatNewNodes, uploadedTelemetryNodes, base?.nodes, templateNodes, slug])
 
   const gapStats = useMemo(() => {
     const newCount = discrepancies.addedKeys.size
@@ -623,6 +643,7 @@ export default function DomainGraph() {
           nodes: base.nodes,
           edges: base.edges,
           discrepancyAddedKeys: Array.from(discrepancies.addedKeys || []),
+          discrepancyModifiedKeys: Array.from(discrepancies.modifiedKeys || []),
           discrepancyMissingKeys: Array.from(discrepancies.missingKeys || []),
         })
       )
