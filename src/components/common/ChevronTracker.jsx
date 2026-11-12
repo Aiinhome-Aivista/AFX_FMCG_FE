@@ -34,21 +34,6 @@ export function useChevronTrackerState() {
     return null
   }, [path])
 
-  // Retain last selected domain slug for seamless forward navigation
-  const effectiveSlug = useMemo(() => {
-    if (slug) {
-      try {
-        localStorage.setItem('afx_last_domain_slug', slug)
-      } catch {}
-      return slug
-    }
-    try {
-      const stored = localStorage.getItem('afx_last_domain_slug')
-      if (stored) return stored
-    } catch {}
-    return '01-sales-distribution'
-  }, [slug])
-
   // Track live workflow state (e.g. when file upload starts, KG2 is active, etc.)
   const [workflowDetail, setWorkflowDetail] = useState(() => {
     if (!slug) return { isKg2: false, canUpload: false }
@@ -81,19 +66,17 @@ export function useChevronTrackerState() {
   const searchParams = new URLSearchParams(location.search)
   const isExplicitKg1 = searchParams.get('stage') === 'kg1'
   const isExplicitKg2 = searchParams.get('stage') === 'kg2'
-  const currentSlug = slug || effectiveSlug
+  const currentSlug = slug
   const isSessionKg2 = currentSlug
     ? (typeof sessionStorage !== 'undefined' && (
-        sessionStorage.getItem(`afx_is_kg2_${currentSlug}`) === 'true' ||
-        sessionStorage.getItem(`afx_is_kg2_${slug}`) === 'true'
+        sessionStorage.getItem(`afx_is_kg2_${currentSlug}`) === 'true'
       ))
     : false
 
   const isConversationStarted = Boolean(
     workflowDetail?.conversationStarted ||
     (currentSlug && typeof sessionStorage !== 'undefined' && (
-      sessionStorage.getItem(`afx_conv_started_${currentSlug}`) === 'true' ||
-      sessionStorage.getItem(`afx_conv_started_${slug}`) === 'true'
+      sessionStorage.getItem(`afx_conv_started_${currentSlug}`) === 'true'
     ))
   )
 
@@ -118,43 +101,31 @@ export function useChevronTrackerState() {
   )
 
   // Calculate dynamic next step action button right to Review chevron for new users
+  // Strictly null if no sub-domain is selected yet (cannot proceed to KG1 or subsequent steps)
   const nextStepInfo = useMemo(() => {
-    if (isIndustryStep) {
-      return {
-        label: 'Next: Select Domain',
-        route: prefix || '/fmcg',
-      }
+    if (!isDomainSelected || !slug) {
+      return null
     }
 
     if (isFinalize) {
       return null // Already on final review step
     }
 
-    // If user has NOT selected a sub-domain yet (on domain overview/landing page)
-    if (!isDomainSelected) {
-      return {
-        label: 'Next: Select Domain',
-        route: `${prefix}/${effectiveSlug}?stage=kg1&view=graph`,
-      }
-    }
-
-    if (!currentSlug) return null
-
     if (isKg2Active) {
       const isFin = Boolean(
         workflowDetail?.isFinalized ||
-        (currentSlug && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(`afx_finalized_${currentSlug}`) === 'true')
+        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(`afx_finalized_${slug}`) === 'true')
       )
       if (isFin) {
         return {
           label: 'Explore Digital Twin',
-          route: `${prefix}/${currentSlug}/twin`,
+          route: `${prefix}/${slug}/twin`,
         }
       }
       // In KG2 stage: next step is Finalize Twin (navigates to review / finalize page)
       return {
         label: 'Next: Finalize Twin',
-        route: `${prefix}/${currentSlug}/finalize`,
+        route: `${prefix}/${slug}/finalize`,
       }
     }
 
@@ -162,22 +133,21 @@ export function useChevronTrackerState() {
       // In Upload stage: next step is Gap Analysis
       return {
         label: 'Next: Gap Analysis',
-        route: `${prefix}/${currentSlug}?stage=kg2&view=graph`,
+        route: `${prefix}/${slug}?stage=kg2&view=graph`,
       }
     }
 
     // In Core Nuances stage: Next step is Business Telemetry (not 'Upload Data')
     return {
       label: 'Next: Business Telemetry',
-      route: `${prefix}/${currentSlug}?stage=kg1&view=upload`,
+      route: `${prefix}/${slug}?stage=kg1&view=upload`,
     }
-  }, [isIndustryStep, isFinalize, isDomainSelected, isKg2Active, isUploadView, workflowDetail, prefix, currentSlug, effectiveSlug])
+  }, [isDomainSelected, isFinalize, isKg2Active, isUploadView, workflowDetail, prefix, slug])
 
   return {
     path,
     prefix,
     slug,
-    effectiveSlug,
     currentSlug,
     isIndustryStep,
     isDomainSelected,
@@ -219,7 +189,6 @@ export default function ChevronTracker({ showNextButton = false }) {
   const {
     prefix,
     slug,
-    effectiveSlug,
     isIndustryStep,
     isDomainSelected,
     isFinalize,
@@ -229,11 +198,11 @@ export default function ChevronTracker({ showNextButton = false }) {
     nextStepInfo,
   } = useChevronTrackerState()
 
-  // Stages matching screenshot when navigating domain workflow:
+  // Stages matching workflow:
   // 1: Domain (Prompts & Overview)
-  // 2: Core Nuances (Process Discovery)
-  // 3: Business Telemetry (Data Gap Analysis)
-  // 4: Review (Digital Twin)
+  // 2: Core Nuances (Discovery / KG1) - locked until sub-domain is selected
+  // 3: Business Telemetry (Data Gap Analysis) - locked until sub-domain is selected
+  // 4: Review (Digital Twin) - locked until sub-domain is selected
   const stages = useMemo(() => {
     if (isIndustryStep) {
       return [
@@ -241,25 +210,29 @@ export default function ChevronTracker({ showNextButton = false }) {
           id: 1,
           title: 'Industry',
           subtitle: 'Identification',
-          route: () => '/apps',
+          targetUrl: '/apps',
+          disabled: false,
         },
         {
           id: 2,
           title: 'Domain',
           subtitle: 'Prompts & Overview',
-          route: () => prefix,
+          targetUrl: prefix,
+          disabled: false,
         },
         {
           id: 3,
           title: 'Core Nuances',
           subtitle: 'Process Discovery',
-          route: (s, p, eff) => `${p}/${s || eff}?stage=kg1&view=graph`,
+          targetUrl: null,
+          disabled: true,
         },
         {
           id: 4,
           title: 'Review',
           subtitle: 'Digital Twin',
-          route: (s, p, eff) => `${p}/${s || eff}/finalize`,
+          targetUrl: null,
+          disabled: true,
         },
       ]
     }
@@ -269,34 +242,38 @@ export default function ChevronTracker({ showNextButton = false }) {
         id: 1,
         title: 'Domain',
         subtitle: 'Prompts & Overview',
-        route: () => prefix,
+        targetUrl: prefix,
+        disabled: false,
       },
       {
         id: 2,
         title: 'Core Nuances',
         subtitle: 'Discovery',
-        route: (s, p, eff) => `${p}/${s || eff}?stage=kg1&view=graph`,
+        targetUrl: isDomainSelected && slug ? `${prefix}/${slug}?stage=kg1&view=graph` : null,
+        disabled: !isDomainSelected,
       },
       {
         id: 3,
         title: 'Business Telemetry',
         subtitle: 'Gap Analysis',
-        route: (s, p, eff) => {
-          if (workflowDetail?.isKg2) return `${p}/${s || eff}?stage=kg2&view=graph`
-          if (workflowDetail?.canUpload || workflowDetail?.hasUploadedFiles) {
-            return `${p}/${s || eff}?stage=kg1&view=upload`
-          }
-          return `${p}/${s || eff}?stage=kg1&view=graph`
-        },
+        targetUrl: isDomainSelected && slug
+          ? workflowDetail?.isKg2
+            ? `${prefix}/${slug}?stage=kg2&view=graph`
+            : workflowDetail?.canUpload || workflowDetail?.hasUploadedFiles
+            ? `${prefix}/${slug}?stage=kg1&view=upload`
+            : `${prefix}/${slug}?stage=kg1&view=graph`
+          : null,
+        disabled: !isDomainSelected,
       },
       {
         id: 4,
         title: 'Review',
         subtitle: 'Digital Twin',
-        route: (s, p, eff) => `${p}/${s || eff}/finalize`,
+        targetUrl: isDomainSelected && slug ? `${prefix}/${slug}/finalize` : null,
+        disabled: !isDomainSelected,
       },
     ]
-  }, [isIndustryStep, prefix, workflowDetail])
+  }, [isIndustryStep, isDomainSelected, prefix, slug, workflowDetail])
 
   // Calculate status for each stage
   const getStageStatus = (stageId) => {
@@ -345,23 +322,22 @@ export default function ChevronTracker({ showNextButton = false }) {
       <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
         {stages.map((stage) => {
           const { isCompleted, isActive } = getStageStatus(stage.id)
+          const isClickable = !stage.disabled && Boolean(stage.targetUrl)
 
           // Colors tailored to match the design in both Light Mode and Dark Mode:
           // 🟢 Completed: Solid Emerald Green (#10b981), dark checkmark circle, bold dark text
           // 🔵 Active: Highlighted glowing border (Emerald-Cyan gradient), dark surface in dark mode, stark white/emerald text
           // ⚪ Inactive / Upcoming: Subtle border outline, dark surface in dark mode, clean typography
-          let outerBg = 'bg-slate-200/90 dark:bg-slate-700/60 group-hover:bg-slate-300 dark:group-hover:bg-slate-600/70'
-          let innerBg = 'bg-white dark:bg-[#192027] group-hover:bg-slate-50 dark:group-hover:bg-[#222a33]'
-          let textColor = 'text-slate-600 dark:text-slate-300 font-semibold group-hover:dark:text-white'
+          let outerBg = 'bg-slate-200/90 dark:bg-slate-700/60'
+          let innerBg = 'bg-white dark:bg-[#192027]'
+          let textColor = 'text-slate-600 dark:text-slate-300 font-semibold'
           let subColor = 'text-slate-400 dark:text-slate-400'
-          let iconColor = 'text-slate-400 dark:text-slate-400'
 
           if (isCompleted) {
             outerBg = 'bg-[#10b981]'
             innerBg = 'bg-[#10b981]' // Solid Primary Green
             textColor = 'text-white font-extrabold'
             subColor = 'text-white/90 font-medium'
-            iconColor = 'text-white'
           } else if (isActive) {
             outerBg =
               'bg-gradient-to-r from-[#10b981] via-[#06b6d4] to-[#10b981] dark:from-[#10b981] dark:via-[#22d3ee] dark:to-[#10b981]'
@@ -369,67 +345,95 @@ export default function ChevronTracker({ showNextButton = false }) {
               'bg-gradient-to-r from-emerald-100/95 via-cyan-50/90 to-emerald-100/95 dark:!bg-none dark:bg-[#132822]'
             textColor = 'text-emerald-950 dark:text-emerald-200 font-extrabold'
             subColor = 'text-emerald-800 dark:text-[#34d399] font-bold'
-            iconColor = 'text-[#10b981]'
+          } else if (isClickable) {
+            outerBg = 'bg-slate-200/90 dark:bg-slate-700/60 group-hover:bg-slate-300 dark:group-hover:bg-slate-600/70'
+            innerBg = 'bg-white dark:bg-[#192027] group-hover:bg-slate-50 dark:group-hover:bg-[#222a33]'
+            textColor = 'text-slate-600 dark:text-slate-300 font-semibold group-hover:dark:text-white'
+          } else {
+            textColor = 'text-slate-400 dark:text-slate-500 font-medium'
+            subColor = 'text-slate-400/80 dark:text-slate-500/80'
           }
 
-          const targetUrl =
-            (typeof stage.route === 'function' ? stage.route(slug, prefix, effectiveSlug) : null) || prefix || '/fmcg'
-
-          return (
-            <Link
-              key={stage.id}
-              to={targetUrl}
-              className={`group relative flex items-center transition-all duration-300 cursor-pointer ${
-                isActive ? 'scale-[1.02] z-10' : 'hover:scale-[1.01]'
+          const chevronInner = (
+            <div
+              className={`p-[1.5px] transition-colors duration-200 ${outerBg} ${
+                isActive ? 'shadow-[0_0_12px_rgba(16,185,129,0.35)]' : ''
               }`}
+              style={{
+                clipPath:
+                  'polygon(0% 0%, calc(100% - 13px) 0%, 100% 50%, calc(100% - 13px) 100%, 0% 100%, 13px 50%)',
+              }}
             >
-              {/* Outer Chevron Clip Path (Border layer) */}
+              {/* Inner Content Container */}
               <div
-                className={`p-[1.5px] transition-colors duration-200 ${outerBg} ${
-                  isActive ? 'shadow-[0_0_12px_rgba(16,185,129,0.35)]' : ''
-                }`}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 pl-4 sm:pl-5 py-1.5 transition-colors duration-200 ${innerBg}`}
                 style={{
                   clipPath:
                     'polygon(0% 0%, calc(100% - 13px) 0%, 100% 50%, calc(100% - 13px) 100%, 0% 100%, 13px 50%)',
                 }}
               >
-                {/* Inner Content Container */}
-                <div
-                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 pl-4 sm:pl-5 py-1.5 transition-colors duration-200 ${innerBg}`}
-                  style={{
-                    clipPath:
-                      'polygon(0% 0%, calc(100% - 13px) 0%, 100% 50%, calc(100% - 13px) 100%, 0% 100%, 13px 50%)',
-                  }}
-                >
-                  {/* Step Circle: Checkmark if completed, blinking dot badge if active, empty circle if upcoming */}
-                  <span className="flex h-4 w-4 items-center justify-center shrink-0">
-                    {isCompleted ? (
-                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white dark:bg-slate-950 text-[#10b981] dark:text-emerald-400 shrink-0 shadow-xs">
-                        <Check size={11} strokeWidth={3.5} />
+                {/* Step Circle: Checkmark if completed, blinking dot badge if active, empty circle if upcoming */}
+                <span className="flex h-4 w-4 items-center justify-center shrink-0">
+                  {isCompleted ? (
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white dark:bg-slate-950 text-[#10b981] dark:text-emerald-400 shrink-0 shadow-xs">
+                      <Check size={11} strokeWidth={3.5} />
+                    </span>
+                  ) : isActive ? (
+                    <span className="relative flex h-4 w-4 items-center justify-center shrink-0">
+                      <span className="relative flex h-4 w-4 items-center justify-center rounded-full bg-[#10b981]/25 dark:bg-[#10b981]/35 border border-[#10b981]/50 dot-blink">
+                        <span className="h-2 w-2 rounded-full bg-[#10b981]" />
                       </span>
-                    ) : isActive ? (
-                      <span className="relative flex h-4 w-4 items-center justify-center shrink-0">
-                        <span className="relative flex h-4 w-4 items-center justify-center rounded-full bg-[#10b981]/25 dark:bg-[#10b981]/35 border border-[#10b981]/50 dot-blink">
-                          <span className="h-2 w-2 rounded-full bg-[#10b981]" />
-                        </span>
-                      </span>
-                    ) : (
-                      <span className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border-2 border-slate-300 dark:border-slate-600 bg-transparent shrink-0" />
-                    )}
-                  </span>
+                    </span>
+                  ) : (
+                    <span className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border-2 border-slate-300 dark:border-slate-600 bg-transparent shrink-0" />
+                  )}
+                </span>
 
-                  {/* Step Title & Subtitle */}
-                  <div className="flex flex-col min-w-0 leading-tight">
-                    <span className={`text-[10px] sm:text-[11.5px] truncate font-bold ${textColor}`}>
-                      {stage.title}
-                    </span>
-                    <span className={`text-[8.5px] sm:text-[9.5px] truncate ${subColor}`}>
-                      {stage.subtitle}
-                    </span>
-                  </div>
+                {/* Step Title & Subtitle */}
+                <div className="flex flex-col min-w-0 leading-tight">
+                  <span className={`text-[10px] sm:text-[11.5px] truncate font-bold ${textColor}`}>
+                    {stage.title}
+                  </span>
+                  <span className={`text-[8.5px] sm:text-[9.5px] truncate ${subColor}`}>
+                    {stage.subtitle}
+                  </span>
                 </div>
               </div>
-            </Link>
+            </div>
+          )
+
+          if (isClickable) {
+            return (
+              <Link
+                key={stage.id}
+                to={stage.targetUrl}
+                className={`group relative flex items-center transition-all duration-300 cursor-pointer ${
+                  isActive ? 'scale-[1.02] z-10' : 'hover:scale-[1.01]'
+                }`}
+                title={`${stage.title}: ${stage.subtitle}`}
+              >
+                {chevronInner}
+              </Link>
+            )
+          }
+
+          return (
+            <div
+              key={stage.id}
+              className={`group relative flex items-center transition-all duration-300 ${
+                isActive
+                  ? 'scale-[1.02] z-10 cursor-default'
+                  : 'cursor-not-allowed opacity-50 select-none'
+              }`}
+              title={
+                isActive
+                  ? `${stage.title}: ${stage.subtitle}`
+                  : 'Please select a sub-domain first to proceed'
+              }
+              aria-disabled={!isActive}
+            >
+              {chevronInner}
+            </div>
           )
         })}
       </div>
