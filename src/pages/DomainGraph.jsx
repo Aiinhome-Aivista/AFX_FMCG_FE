@@ -579,6 +579,24 @@ export default function DomainGraph() {
     return { newCount, missingCount, totalGaps, matchedCount }
   }, [discrepancies, base?.nodes?.length])
 
+  // Persist reconciled graph with telemetry & discrepancy nodes to sessionStorage for Review and Digital Twin
+  useEffect(() => {
+    if (!slug || !base?.nodes?.length) return
+    try {
+      sessionStorage.setItem(
+        `afx_reconciled_graph_${slug}`,
+        JSON.stringify({
+          nodes: base.nodes,
+          edges: base.edges,
+          discrepancyAddedKeys: Array.from(discrepancies.addedKeys || []),
+          discrepancyMissingKeys: Array.from(discrepancies.missingKeys || []),
+        })
+      )
+    } catch (err) {
+      console.warn('Failed to persist reconciled graph to sessionStorage', err)
+    }
+  }, [slug, base, discrepancies])
+
   // Listen for view param in URL (?view=upload / ?view=graph)
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search)

@@ -83,8 +83,77 @@ export default function DigitalTwinExplorer() {
   const domain = domList.data?.domains?.find((d) => d.slug === slug)
   const domainName = domain?.name || DOMMETA[domainKey]?.n || 'Digital Twin'
 
-  const rawNodes = g.data?.nodes || []
-  const edges = g.data?.edges || []
+  const reconciledData = useMemo(() => {
+    if (!slug || typeof sessionStorage === 'undefined') return null
+    try {
+      const raw = sessionStorage.getItem(`afx_reconciled_graph_${slug}`)
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  }, [slug])
+
+  const rawNodes = useMemo(() => {
+    if (reconciledData?.nodes?.length) return reconciledData.nodes
+    const baseNodes = g.data?.nodes || []
+    const lastUpload = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(`afx_last_uploaded_${slug}`) : null
+    if (lastUpload && baseNodes.length && !baseNodes.some((n) => n.id === 'telemetry-uploaded' || n.origin === 'telemetry')) {
+      const tNode = {
+        id: 'telemetry-uploaded',
+        key: 'telemetry-uploaded',
+        name: `Data: ${lastUpload}`,
+        kind: 'datasource',
+        origin: 'telemetry',
+        role: 'telemetry',
+        change_state: 'added',
+        isDiscrepancy: true,
+        added_in_version: 2,
+        group_name: 'Business Telemetry',
+        group_key: 'telemetry',
+        color: '#EF4444',
+        attributes: ['ingested_records', 'variance_delta', 'batch_id', 'timestamp'],
+        x: 450,
+        y: 520,
+      }
+      return [...baseNodes, tNode]
+    }
+    return baseNodes
+  }, [reconciledData, g.data?.nodes, slug])
+
+  const edges = useMemo(() => {
+    if (reconciledData?.edges?.length) return reconciledData.edges
+    const baseEdges = g.data?.edges || []
+    const lastUpload = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(`afx_last_uploaded_${slug}`) : null
+    if (lastUpload && rawNodes.some((n) => n.id === 'telemetry-uploaded') && !baseEdges.some((e) => e.srcId === 'telemetry-uploaded' || e.source === 'telemetry-uploaded')) {
+      const targetNode = rawNodes.find((n) => n.id !== 'telemetry-uploaded') || rawNodes[0]
+      const tgtId = targetNode?.key || targetNode?.id
+      const tEdge = {
+        id: `edge-telemetry-${tgtId}`,
+        source: 'telemetry-uploaded',
+        target: tgtId,
+        srcId: 'telemetry-uploaded',
+        tgtId: tgtId,
+        label: 'supplies telemetry',
+        isDiscrepancy: true,
+        kind: 'telemetry',
+      }
+      return [...baseEdges, tEdge]
+    }
+    return baseEdges
+  }, [reconciledData, g.data?.edges, rawNodes, slug])
+
+  const discrepancies = useMemo(() => {
+    const addedKeys = new Set(reconciledData?.discrepancyAddedKeys || [])
+    const missingKeys = new Set(reconciledData?.discrepancyMissingKeys || [])
+    rawNodes.forEach((n) => {
+      if (n.color === '#EF4444' || n.isDiscrepancy || n.role === 'telemetry' || n.origin === 'telemetry') {
+        addedKeys.add(n.id)
+        addedKeys.add(n.key)
+      }
+    })
+    return { addedKeys, missingKeys }
+  }, [reconciledData, rawNodes])
+
   const versionNum = wf.data?.finalized_version_number || fin.data?.version?.number || 3
   const versionLabel = `KG${versionNum}`
 
@@ -100,7 +169,19 @@ export default function DigitalTwinExplorer() {
       if (!matchesSearch) return false
 
       if (entityFilter === 'client') {
-        return n.status === 'new' || n.badge === 'NEW' || group.includes('client') || group.includes('specific') || n.is_client_entity
+        return (
+          n.status === 'new' ||
+          n.badge === 'NEW' ||
+          n.role === 'client' ||
+          n.role === 'telemetry' ||
+          n.origin === 'telemetry' ||
+          n.isDiscrepancy ||
+          n.color === '#EF4444' ||
+          group.includes('client') ||
+          group.includes('specific') ||
+          group.includes('telemetry') ||
+          n.is_client_entity
+        )
       }
       if (entityFilter === 'spine') {
         return group.includes('spine') || group.includes('master') || n.group === 'spine'
@@ -431,6 +512,7 @@ export default function DigitalTwinExplorer() {
                 onSelectNode={setSelectedNodeId}
                 searchQuery={searchQuery}
                 gapAnalysis={false}
+                discrepancies={discrepancies}
                 className="w-full h-full border-0 rounded-none shadow-none"
               />
             </div>
